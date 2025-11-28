@@ -569,13 +569,10 @@ function downloadResult() {
     XLSX.utils.book_append_sheet(workbook, worksheet, "处理结果");
     console.log("工作表添加到工作簿成功");
 
-    // 生成文件名
+    // 生成简洁的文件名
     const originalName = uploadedFile.name.replace(/\.[^/.]+$/, "");
-    const timestamp = new Date()
-      .toISOString()
-      .slice(0, 19)
-      .replace(/[:-]/g, "");
-    const fileName = `${originalName}_处理结果_${timestamp}.xlsx`;
+    const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    const fileName = `${originalName}_已处理_${date}.xlsx`;
     console.log("文件名生成成功:", fileName);
 
     // 下载文件
