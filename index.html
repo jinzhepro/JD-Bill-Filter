@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>京东万商对帐单处理系统</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <h1>京东万商对帐单处理系统</h1>
+        <p class="subtitle">自动过滤和处理对帐单数据</p>
+      </header>
+
+      <main class="main-content">
+        <!-- 文件上传区域 -->
+        <section class="upload-section">
+          <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <h3>上传Excel/CSV文件</h3>
+            <p>拖拽文件到此处或点击选择文件（支持 .xlsx, .xls, .csv 格式）</p>
+            <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden />
+            <button class="upload-btn" id="uploadBtn">选择文件</button>
+          </div>
+          <div class="file-info" id="fileInfo" style="display: none">
+            <span class="file-name" id="fileName"></span>
+            <button class="remove-file-btn" id="removeFileBtn">✕</button>
+          </div>
+        </section>
+
+        <!-- 商品单价输入区域 -->
+        <section
+          class="price-input-section"
+          id="priceInputSection"
+          style="display: none"
+        >
+          <h3>设置商品单价</h3>
+          <div class="price-input-info">
+            <p>请为以下商品设置单价（所有相同商品编号将使用相同单价）</p>
+            <div class="price-progress">
+              <span id="priceProgressText">0/0 商品已设置单价</span>
+              <div class="progress-bar">
+                <div class="progress-fill" id="priceProgressFill"></div>
+              </div>
+            </div>
+          </div>
+          <div class="price-table-container">
+            <table class="price-input-table" id="priceInputTable">
+              <thead>
+                <tr>
+                  <th>商品编号</th>
+                  <th>商品名称</th>
+                  <th>单价（元）</th>
+                  <th>状态</th>
+                </tr>
+              </thead>
+              <tbody id="priceInputTableBody">
+                <!-- 动态生成商品行 -->
+              </tbody>
+            </table>
+          </div>
+          <div class="price-input-actions">
+            <button class="batch-price-btn" id="batchPriceBtn">
+              批量设置单价
+            </button>
+            <button class="reset-price-btn" id="resetPriceBtn">
+              重置所有单价
+            </button>
+          </div>
+          <div class="price-confirm-actions">
+            <button class="process-btn" id="processBtn" disabled>
+              开始处理
+            </button>
+            <button class="cancel-price-btn" id="cancelPriceBtn">取消</button>
+          </div>
+        </section>
+
+        <!-- 处理进度区域 -->
+        <section
+          class="progress-section"
+          id="progressSection"
+          style="display: none"
+        >
+          <h3>处理进度</h3>
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+          <div class="progress-text" id="progressText">准备中...</div>
+          <div class="log-area" id="logArea"></div>
+        </section>
+
+        <!-- 结果展示区域 -->
+        <section
+          class="result-section"
+          id="resultSection"
+          style="display: none"
+        >
+          <h3>处理结果</h3>
+          <div class="result-stats" id="resultStats"></div>
+          <div class="result-actions">
+            <button class="download-btn" id="downloadBtn" disabled>
+              下载处理后的Excel
+            </button>
+            <button class="preview-btn" id="previewBtn">预览数据</button>
+          </div>
+          <div class="preview-area" id="previewArea" style="display: none">
+            <div class="table-container">
+              <table id="previewTable"></table>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <p>京东万商对帐单处理系统 v1.0</p>
+      </footer>
+    </div>
+
+    <!-- 加载提示 -->
+    <div class="loading-overlay" id="loadingOverlay" style="display: none">
+      <div class="loading-spinner"></div>
+      <p>处理中，请稍候...</p>
+    </div>
+
+    <!-- 批量设置单价模态框 -->
+    <div class="batch-price-modal" id="batchPriceModal" style="display: none">
+      <div class="modal-content">
+        <h3>批量设置单价</h3>
+        <div class="batch-price-form">
+          <label for="batchPriceInput">请输入统一单价：</label>
+          <input
+            type="number"
+            id="batchPriceInput"
+            step="0.01"
+            min="0"
+            max="999999.99"
+            placeholder="0.00"
+          />
+          <div class="batch-price-options">
+            <label>
+              <input type="checkbox" id="batchPriceOverride" /> 覆盖已设置的单价
+            </label>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="modal-confirm-btn" id="batchPriceConfirmBtn">
+            确认
+          </button>
+          <button class="modal-cancel-btn" id="batchPriceCancelBtn">
+            取消
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 错误提示 -->
+    <div class="error-modal" id="errorModal" style="display: none">
+      <div class="modal-content">
+        <h3>错误提示</h3>
+        <p id="errorMessage"></p>
+        <button class="modal-close-btn" id="modalCloseBtn">确定</button>
+      </div>
+    </div>
+
+    <!-- 引入外部库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

@@ -1,0 +1,869 @@
+/* 全局样式 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  color: #333;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 头部样式 */
+.header {
+  text-align: center;
+  margin-bottom: 40px;
+  color: white;
+}
+
+.header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.subtitle {
+  font-size: 1.1rem;
+  opacity: 0.9;
+}
+
+/* 主要内容区域 */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+/* 区块通用样式 */
+section {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+section:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* 上传区域样式 */
+.upload-section {
+  text-align: center;
+}
+
+.upload-area {
+  border: 3px dashed #667eea;
+  border-radius: 8px;
+  padding: 60px 20px;
+  background: #f8f9ff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.upload-area:hover {
+  border-color: #764ba2;
+  background: #f0f2ff;
+}
+
+.upload-area.dragover {
+  border-color: #4caf50;
+  background: #e8f5e8;
+  transform: scale(1.02);
+}
+
+.upload-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+}
+
+.upload-area h3 {
+  color: #667eea;
+  margin-bottom: 10px;
+  font-size: 1.5rem;
+}
+
+.upload-area p {
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.upload-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 25px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.upload-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f0f2ff;
+  padding: 15px 20px;
+  border-radius: 8px;
+  margin-top: 20px;
+}
+
+.file-name {
+  font-weight: 500;
+  color: #667eea;
+}
+
+.remove-file-btn {
+  background: #ff4757;
+  color: white;
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: all 0.3s ease;
+}
+
+.remove-file-btn:hover {
+  background: #ff3838;
+  transform: rotate(90deg);
+}
+
+/* 控制按钮区域 */
+.control-section {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+}
+
+.process-btn,
+.reset-btn {
+  padding: 15px 40px;
+  border: none;
+  border-radius: 25px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.process-btn {
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  color: white;
+}
+
+.process-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+}
+
+.process-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.reset-btn {
+  background: #f1f2f6;
+  color: #666;
+}
+
+.reset-btn:hover {
+  background: #e1e2e6;
+}
+
+/* 进度区域 */
+.progress-section h3 {
+  color: #667eea;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 20px;
+  background: #f0f2ff;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 15px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  width: 0%;
+  transition: width 0.3s ease;
+  border-radius: 10px;
+}
+
+.progress-text {
+  text-align: center;
+  color: #666;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+.log-area {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 15px;
+  max-height: 200px;
+  overflow-y: auto;
+  font-family: "Courier New", monospace;
+  font-size: 0.9rem;
+  color: #495057;
+}
+
+.log-entry {
+  margin-bottom: 5px;
+  padding: 2px 0;
+}
+
+.log-entry.success {
+  color: #28a745;
+}
+
+.log-entry.error {
+  color: #dc3545;
+}
+
+.log-entry.info {
+  color: #17a2b8;
+}
+
+/* 结果区域 */
+.result-section h3 {
+  color: #667eea;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.result-stats {
+  background: #f8f9ff;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.stat-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.stat-label {
+  font-weight: 500;
+  color: #666;
+}
+
+.stat-value {
+  font-weight: 600;
+  color: #667eea;
+}
+
+.result-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.download-btn,
+.preview-btn {
+  padding: 12px 30px;
+  border: none;
+  border-radius: 25px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.download-btn {
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  color: white;
+}
+
+.download-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+}
+
+.preview-btn {
+  background: #f1f2f6;
+  color: #666;
+}
+
+.preview-btn:hover {
+  background: #e1e2e6;
+}
+
+/* 预览区域 */
+.preview-area {
+  margin-top: 20px;
+}
+
+.table-container {
+  max-height: 400px;
+  overflow: auto;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+}
+
+#previewTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+#previewTable th,
+#previewTable td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #e9ecef;
+}
+
+#previewTable th {
+  background: #f8f9ff;
+  font-weight: 600;
+  color: #667eea;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+#previewTable tr:hover {
+  background: #f8f9fa;
+}
+
+/* 页脚 */
+.footer {
+  text-align: center;
+  margin-top: 40px;
+  color: white;
+  opacity: 0.8;
+}
+
+/* 加载遮罩 */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #f3f3f3;
+  border-top: 5px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-overlay p {
+  color: white;
+  font-size: 1.1rem;
+}
+
+/* 错误模态框 */
+.error-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  max-width: 500px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.modal-content h3 {
+  color: #dc3545;
+  margin-bottom: 15px;
+}
+
+.modal-content p {
+  color: #666;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.modal-close-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 10px 30px;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.modal-close-btn:hover {
+  background: #c82333;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .container {
+    padding: 15px;
+  }
+
+  .header h1 {
+    font-size: 2rem;
+  }
+
+  section {
+    padding: 20px;
+  }
+
+  .upload-area {
+    padding: 40px 15px;
+  }
+
+  .control-section {
+    flex-direction: column;
+  }
+
+  .result-actions {
+    flex-direction: column;
+  }
+
+  .table-container {
+    font-size: 0.8rem;
+  }
+
+  #previewTable th,
+  #previewTable td {
+    padding: 8px;
+  }
+
+  /* 商品单价输入区域响应式 */
+  .price-progress {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  #priceProgressText {
+    min-width: auto;
+    text-align: center;
+  }
+
+  .price-input-actions {
+    flex-direction: column;
+  }
+
+  .price-confirm-actions {
+    flex-direction: column;
+  }
+
+  .batch-price-modal .modal-content {
+    padding: 20px;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+  }
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+section {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* 成功状态 */
+.success-message {
+  background: #d4edda;
+  color: #155724;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #c3e6cb;
+  margin-bottom: 20px;
+}
+
+/* 商品单价输入区域 */
+.price-input-section h3 {
+  color: #667eea;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.price-input-info {
+  background: #f8f9ff;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.price-input-info p {
+  color: #666;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.price-progress {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+#priceProgressText {
+  font-weight: 500;
+  color: #667eea;
+  min-width: 120px;
+}
+
+.price-table-container {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.price-input-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.price-input-table th,
+.price-input-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.price-input-table th {
+  background: #f8f9ff;
+  font-weight: 600;
+  color: #667eea;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.price-input-table tr:hover {
+  background: #f8f9fa;
+}
+
+.price-input-cell {
+  position: relative;
+}
+
+.price-input-field {
+  width: 100%;
+  padding: 8px 12px;
+  border: 2px solid #e9ecef;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  transition: border-color 0.3s ease;
+}
+
+.price-input-field:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.price-input-field.valid {
+  border-color: #28a745;
+}
+
+.price-input-field.invalid {
+  border-color: #dc3545;
+}
+
+.price-status {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.price-status.pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.price-status.valid {
+  background: #d4edda;
+  color: #155724;
+}
+
+.price-status.invalid {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.price-input-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.batch-price-btn,
+.reset-price-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.batch-price-btn {
+  background: #17a2b8;
+  color: white;
+}
+
+.batch-price-btn:hover {
+  background: #138496;
+  transform: translateY(-1px);
+}
+
+.reset-price-btn {
+  background: #6c757d;
+  color: white;
+}
+
+.reset-price-btn:hover {
+  background: #5a6268;
+  transform: translateY(-1px);
+}
+
+.price-confirm-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  padding-top: 20px;
+  border-top: 1px solid #e9ecef;
+}
+
+.confirm-price-btn,
+.cancel-price-btn {
+  padding: 12px 30px;
+  border: none;
+  border-radius: 25px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.confirm-price-btn {
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  color: white;
+}
+
+.confirm-price-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+}
+
+.confirm-price-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cancel-price-btn {
+  background: #f1f2f6;
+  color: #666;
+}
+
+.cancel-price-btn:hover {
+  background: #e1e2e6;
+}
+
+/* 批量设置单价模态框 */
+.batch-price-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.batch-price-modal .modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.batch-price-modal h3 {
+  color: #667eea;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.batch-price-form {
+  margin-bottom: 20px;
+}
+
+.batch-price-form label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #666;
+}
+
+.batch-price-form input[type="number"] {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e9ecef;
+  border-radius: 6px;
+  font-size: 1rem;
+  margin-bottom: 15px;
+  transition: border-color 0.3s ease;
+}
+
+.batch-price-form input[type="number"]:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.batch-price-options {
+  margin-bottom: 20px;
+}
+
+.batch-price-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: normal;
+  cursor: pointer;
+}
+
+.batch-price-options input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+}
+
+.modal-confirm-btn,
+.modal-cancel-btn {
+  padding: 10px 25px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.modal-confirm-btn {
+  background: #667eea;
+  color: white;
+}
+
+.modal-confirm-btn:hover {
+  background: #5a6fd8;
+  transform: translateY(-1px);
+}
+
+.modal-cancel-btn {
+  background: #f1f2f6;
+  color: #666;
+}
+
+.modal-cancel-btn:hover {
+  background: #e1e2e6;
+}
+
+/* 警告状态 */
+.warning-message {
+  background: #fff3cd;
+  color: #856404;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #ffeaa7;
+  margin-bottom: 20px;
+}
