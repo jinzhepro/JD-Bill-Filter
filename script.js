@@ -219,7 +219,7 @@ async function processData() {
     clearLog();
 
     // 步骤1：按订单编号分组
-    updateProgress(20, "正在按订单编号分组...");
+    updateProgress(15, "正在按订单编号分组...");
     const groupedData = groupByOrderNumber(originalData);
     addLog(
       `按订单编号分组完成，共 ${Object.keys(groupedData).length} 个订单组`,
@@ -227,24 +227,32 @@ async function processData() {
     );
 
     // 步骤2：应用业务规则
-    updateProgress(40, "正在应用业务规则...");
+    updateProgress(35, "正在应用业务规则...");
     processedData = applyBusinessRules(groupedData);
     addLog("业务规则处理完成", "success");
 
     // 步骤3：应用单价到数据
-    updateProgress(60, "正在应用单价到数据...");
+    updateProgress(55, "正在应用单价到数据...");
     console.log("应用单价前的 productPrices:", productPrices);
     processedData = applyUnitPrices(processedData, productPrices);
     console.log("应用单价后的 processedData 样本:", processedData.slice(0, 2));
     addLog("单价应用完成", "success");
 
-    // 步骤4：生成统计信息
-    updateProgress(80, "正在生成统计信息...");
+    // 步骤4：合并相同SKU的商品
+    updateProgress(70, "正在合并相同SKU的商品...");
+    const beforeMergeCount = processedData.length;
+    processedData = mergeSameSKU(processedData);
+    const afterMergeCount = processedData.length;
+    const mergedCount = beforeMergeCount - afterMergeCount;
+    addLog(`SKU合并完成，合并了 ${mergedCount} 行重复数据`, "success");
+
+    // 步骤5：生成统计信息
+    updateProgress(85, "正在生成统计信息...");
     const stats = generateStatistics(originalData, processedData);
     displayStatistics(stats);
     addLog("统计信息生成完成", "success");
 
-    // 步骤5：完成处理
+    // 步骤6：完成处理
     updateProgress(100, "处理完成！");
     addLog("所有数据处理完成", "success");
 
@@ -1290,6 +1298,51 @@ function cancelPriceInput() {
   downloadBtn.disabled = false;
 
   addLog("已取消单价输入", "info");
+}
+
+// 合并相同SKU的商品，数量相加
+function mergeSameSKU(data) {
+  const mergedMap = new Map();
+
+  data.forEach((row) => {
+    const productCode = row["商品编码"];
+    const productName = row["商品名"];
+    const unitPrice = row["单价"];
+    const quantity = parseFloat(row["数量"]) || 0;
+
+    if (mergedMap.has(productCode)) {
+      // 如果已存在相同SKU，累加数量
+      const existingItem = mergedMap.get(productCode);
+      existingItem.quantity += quantity;
+      // 重新计算总价
+      existingItem.totalPrice = existingItem.unitPrice * existingItem.quantity;
+    } else {
+      // 如果是新SKU，添加到Map中
+      mergedMap.set(productCode, {
+        productCode,
+        productName,
+        unitPrice,
+        quantity,
+        totalPrice: unitPrice * quantity,
+      });
+    }
+  });
+
+  // 将Map转换回数组格式
+  const mergedData = Array.from(mergedMap.values()).map((item) => ({
+    商品名: item.productName,
+    商品编码: item.productCode,
+    单价: item.unitPrice,
+    数量: item.quantity,
+    总价: item.totalPrice,
+  }));
+
+  addLog(
+    `SKU合并完成，合并前 ${data.length} 行，合并后 ${mergedData.length} 行`,
+    "info"
+  );
+
+  return mergedData;
 }
 
 // 应用单价到数据行
