@@ -5,6 +5,7 @@ let processedData = [];
 let uniqueProducts = [];
 let productPrices = {};
 let priceInputStatus = "pending"; // 'pending', 'inputting', 'completed'
+let defaultPricesConfig = {}; // 默认单价配置
 
 // DOM元素
 const uploadArea = document.getElementById("uploadArea");
@@ -274,77 +275,189 @@ async function processData() {
 // 读取文件（支持Excel和CSV）
 function readFile(file, fileType) {
   return new Promise((resolve, reject) => {
+    console.log("=== 文件读取开始 ===");
+    console.log("文件名:", file.name);
+    console.log("文件类型:", fileType);
+    console.log("文件大小:", file.size, "字节");
+    console.log("文件MIME类型:", file.type);
+
     // 检查XLSX库是否可用
     if (typeof XLSX === "undefined") {
       reject(new Error("XLSX库未加载，请刷新页面重试"));
       return;
     }
 
-    const reader = new FileReader();
+    if (fileType === "csv") {
+      // 对于CSV文件，先尝试UTF-8，如果失败再尝试GBK
+      console.log("使用UTF-8编码读取CSV文件");
+      const reader = new FileReader();
 
-    reader.onload = function (e) {
-      try {
-        let jsonData;
-
-        if (fileType === "csv") {
-          // 处理CSV文件
+      reader.onload = function (e) {
+        try {
           const csvText = e.target.result;
-          const workbook = XLSX.read(csvText, { type: "string" });
+          console.log("CSV文本长度:", csvText.length);
+          console.log("CSV前100个字符:", csvText.substring(0, 100));
 
-          // 获取第一个工作表
-          const firstSheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[firstSheetName];
+          // 检查编码问题
+          const hasChinese = /[\u4e00-\u9fa5]/.test(csvText);
+          console.log("CSV包含中文字符:", hasChinese);
 
-          // 转换为JSON格式
-          jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-          if (jsonData.length === 0) {
-            throw new Error("CSV文件中没有数据");
+          if (!hasChinese && csvText.length > 0) {
+            console.log("检测到可能的编码问题，尝试GBK编码...");
+            // 尝试使用GBK编码重新读取
+            tryReadFileWithGBK(file)
+              .then((gbkText) => {
+                if (gbkText && /[\u4e00-\u9fa5]/.test(gbkText)) {
+                  console.log("GBK编码读取成功，包含中文字符");
+                  parseCSVText(gbkText, resolve, reject);
+                } else {
+                  console.log("GBK编码也失败，使用原始文本");
+                  parseCSVText(csvText, resolve, reject);
+                }
+              })
+              .catch((error) => {
+                console.log("GBK编码读取失败，使用原始文本:", error);
+                parseCSVText(csvText, resolve, reject);
+              });
+          } else {
+            parseCSVText(csvText, resolve, reject);
           }
-        } else {
-          // 处理Excel文件
+        } catch (error) {
+          console.error("CSV文件读取失败:", error);
+          reject(new Error(`CSV文件读取失败: ${error.message}`));
+        }
+      };
+
+      reader.onerror = function () {
+        reject(new Error("CSV文件读取失败"));
+      };
+
+      reader.readAsText(file, "UTF-8");
+    } else {
+      // 处理Excel文件
+      const reader = new FileReader();
+
+      reader.onload = function (e) {
+        try {
+          console.log("文件读取完成，开始解析Excel文件...");
           const data = new Uint8Array(e.target.result);
+          console.log("Excel数据长度:", data.length);
+
           const workbook = XLSX.read(data, { type: "array" });
+          console.log(
+            "工作簿解析完成，工作表数量:",
+            workbook.SheetNames.length
+          );
+          console.log("工作表名称:", workbook.SheetNames);
 
           // 获取第一个工作表
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
+          console.log("使用工作表:", firstSheetName);
 
           // 转换为JSON格式
-          jsonData = XLSX.utils.sheet_to_json(worksheet);
+          const jsonData = XLSX.utils.sheet_to_json(worksheet);
+          console.log("Excel转换为JSON完成，行数:", jsonData.length);
 
           if (jsonData.length === 0) {
             throw new Error("Excel文件中没有数据");
           }
+
+          console.log("文件解析成功，返回数据");
+          console.log("=== 文件读取完成 ===");
+          resolve(jsonData);
+        } catch (error) {
+          console.error("Excel文件解析失败:", error);
+          reject(new Error(`Excel文件解析失败: ${error.message}`));
         }
+      };
 
-        resolve(jsonData);
-      } catch (error) {
-        const fileTypeName = fileType === "csv" ? "CSV" : "Excel";
-        reject(new Error(`${fileTypeName}文件解析失败: ${error.message}`));
-      }
-    };
+      reader.onerror = function (error) {
+        console.error("Excel文件读取失败:", error);
+        reject(new Error("Excel文件读取失败"));
+      };
 
-    reader.onerror = function () {
-      reject(new Error("文件读取失败"));
-    };
-
-    // 根据文件类型选择读取方式
-    if (fileType === "csv") {
-      reader.readAsText(file, "UTF-8");
-    } else {
+      console.log("使用ArrayBuffer读取Excel文件");
       reader.readAsArrayBuffer(file);
     }
   });
 }
 
+// 尝试使用GBK编码读取文件
+function tryReadFileWithGBK(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = function (e) {
+      try {
+        // 使用TextDecoder尝试GBK解码
+        const buffer = e.target.result;
+        const decoder = new TextDecoder("gbk", { fatal: false });
+        const gbkText = decoder.decode(buffer);
+        resolve(gbkText);
+      } catch (error) {
+        reject(error);
+      }
+    };
+
+    reader.onerror = function () {
+      reject(new Error("GBK编码读取失败"));
+    };
+
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+// 解析CSV文本
+function parseCSVText(csvText, resolve, reject) {
+  try {
+    console.log("开始解析CSV文本...");
+    const workbook = XLSX.read(csvText, { type: "string" });
+    console.log("工作簿解析完成，工作表数量:", workbook.SheetNames.length);
+    console.log("工作表名称:", workbook.SheetNames);
+
+    // 获取第一个工作表
+    const firstSheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[firstSheetName];
+    console.log("使用工作表:", firstSheetName);
+
+    // 转换为JSON格式
+    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+    console.log("CSV转换为JSON完成，行数:", jsonData.length);
+
+    if (jsonData.length === 0) {
+      throw new Error("CSV文件中没有数据");
+    }
+
+    console.log("文件解析成功，返回数据");
+    console.log("=== 文件读取完成 ===");
+    resolve(jsonData);
+  } catch (error) {
+    console.error("CSV解析失败:", error);
+    reject(new Error(`CSV文件解析失败: ${error.message}`));
+  }
+}
+
 // 验证数据结构
 function validateDataStructure(data) {
+  console.log("=== 数据结构验证开始 ===");
+  console.log("数据行数:", data.length);
+
   if (data.length === 0) {
     throw new Error("数据为空");
   }
 
   const firstRow = data[0];
+  console.log("第一行数据:", firstRow);
+  console.log("第一行的所有键名:", Object.keys(firstRow));
+
+  // 检查键名中是否包含中文字符（编码问题）
+  Object.keys(firstRow).forEach((key) => {
+    console.log(
+      `键名: "${key}", 长度: ${key.length}, 包含中文: /[\u4e00-\u9fa5]/.test(key)`
+    );
+  });
+
   const requiredColumns = [
     "订单编号",
     "单据类型",
@@ -353,13 +466,32 @@ function validateDataStructure(data) {
     "商品数量",
   ];
 
+  console.log("期望的列名:", requiredColumns);
+
   for (const column of requiredColumns) {
+    console.log(`检查列: "${column}"`);
+    console.log(`  直接查找结果: ${column in firstRow}`);
+
+    // 尝试模糊匹配
+    const similarKeys = Object.keys(firstRow).filter((key) => {
+      return (
+        key.includes(column) ||
+        column.includes(key) ||
+        key.replace(/\s+/g, "") === column.replace(/\s+/g, "")
+      );
+    });
+
+    console.log(`  相似键名: ${similarKeys.length > 0 ? similarKeys : "无"}`);
+
     if (!(column in firstRow)) {
+      console.error(`缺少必要的列: ${column}`);
+      console.error("实际存在的列名:", Object.keys(firstRow));
       throw new Error(`缺少必要的列: ${column}`);
     }
   }
 
   addLog("数据结构验证: 包含所有必要的列", "info");
+  console.log("=== 数据结构验证完成 ===");
 }
 
 // 按订单编号分组
@@ -698,6 +830,9 @@ document.addEventListener("DOMContentLoaded", function () {
     addLog("XLSX库加载成功", "success");
   }
 
+  // 加载默认单价配置
+  loadDefaultPricesConfig();
+
   initializeEventListeners();
   addLog("京东万商对帐单处理系统已就绪", "success");
 });
@@ -714,6 +849,104 @@ window.addEventListener("beforeunload", function (e) {
   }
 });
 
+// ========== 默认单价配置相关功能 ==========
+
+// 加载默认单价配置
+function loadDefaultPricesConfig() {
+  console.log("初始化默认单价配置...");
+
+  // 直接在代码中配置默认单价
+  defaultPricesConfig = {
+    10200796175741: {
+      sku: "10200796175741",
+      unitPrice: 42.5,
+      productName: "",
+      enabled: true,
+    },
+    10200814928185: {
+      sku: "10200814928185",
+      unitPrice: 55.5,
+      productName: "",
+      enabled: true,
+    },
+    10199074958287: {
+      sku: "10199074958287",
+      unitPrice: 40.5,
+      productName: "",
+      enabled: true,
+    },
+    10201815227215: {
+      sku: "10201815227215",
+      unitPrice: 43.5,
+      productName: "",
+      enabled: true,
+    },
+    10201814645784: {
+      sku: "10201814645784",
+      unitPrice: 43.5,
+      productName: "",
+      enabled: true,
+    },
+    10201817771173: {
+      sku: "10201817771173",
+      unitPrice: 43.5,
+      productName: "",
+      enabled: true,
+    },
+    10203301079131: {
+      sku: "10203301079131",
+      unitPrice: 38.3,
+      productName: "",
+      enabled: true,
+    },
+    10203301852356: {
+      sku: "10203301852356",
+      unitPrice: 38.3,
+      productName: "",
+      enabled: true,
+    },
+    10202009959202: {
+      sku: "10202009959202",
+      unitPrice: 55.0,
+      productName: "",
+      enabled: true,
+    },
+    10202010367245: {
+      sku: "10202010367245",
+      unitPrice: 55.0,
+      productName: "",
+      enabled: true,
+    },
+  };
+
+  console.log("默认单价配置初始化完成:", defaultPricesConfig);
+  addLog(
+    `默认单价配置初始化完成，共 ${
+      Object.keys(defaultPricesConfig).length
+    } 个商品`,
+    "success"
+  );
+
+  return true;
+}
+
+// 获取商品的默认单价
+function getDefaultPrice(sku) {
+  const priceInfo = defaultPricesConfig[sku];
+  if (priceInfo && priceInfo.enabled && priceInfo.unitPrice) {
+    return priceInfo.unitPrice;
+  }
+  return null;
+}
+
+// 检查商品是否有默认单价
+function hasDefaultPrice(sku) {
+  const priceInfo = defaultPricesConfig[sku];
+  return (
+    priceInfo && priceInfo.enabled && typeof priceInfo.unitPrice === "number"
+  );
+}
+
 // ========== 商品单价相关功能 ==========
 
 // 提取唯一商品
@@ -725,16 +958,30 @@ function extractUniqueProducts(data) {
     const productName = row["商品名称"] || "";
 
     if (productCode && !productMap.has(productCode)) {
+      // 检查是否有默认单价
+      const defaultPrice = getDefaultPrice(productCode);
+      const hasDefault = hasDefaultPrice(productCode);
+
       productMap.set(productCode, {
         productCode,
         productName,
-        unitPrice: null,
-        status: "pending",
+        unitPrice: defaultPrice,
+        status: hasDefault ? "valid" : "pending",
+        hasDefaultPrice: hasDefault,
       });
     }
   });
 
-  return Array.from(productMap.values());
+  const products = Array.from(productMap.values());
+  console.log("提取唯一商品完成，应用默认单价:", products);
+
+  // 统计应用了默认单价的商品数量
+  const defaultPriceCount = products.filter((p) => p.hasDefaultPrice).length;
+  if (defaultPriceCount > 0) {
+    addLog(`自动应用了 ${defaultPriceCount} 个商品的默认单价`, "info");
+  }
+
+  return products;
 }
 
 // 显示商品单价输入界面
@@ -785,12 +1032,20 @@ function renderPriceInputTable() {
 
   uniqueProducts.forEach((product, index) => {
     const row = document.createElement("tr");
+
+    // 检查是否为默认单价
+    const isDefaultPrice = product.hasDefaultPrice;
+    const defaultPriceClass = isDefaultPrice ? "default-price" : "";
+    const defaultPriceIndicator = isDefaultPrice
+      ? " <span class='default-indicator'>(默认)</span>"
+      : "";
+
     row.innerHTML = `
       <td>${product.productCode}</td>
       <td>${product.productName}</td>
       <td class="price-input-cell">
         <input type="number"
-               class="price-input-field"
+               class="price-input-field ${defaultPriceClass}"
                data-product-code="${product.productCode}"
                data-index="${index}"
                step="0.01"
@@ -798,12 +1053,20 @@ function renderPriceInputTable() {
                max="999999.99"
                placeholder="0.00"
                value="${product.unitPrice || ""}">
+        ${
+          isDefaultPrice
+            ? `<div class="default-price-info">默认: ${product.unitPrice}</div>`
+            : ""
+        }
       </td>
       <td>
         <span class="price-status ${product.status}" id="status-${
       product.productCode
     }">
-          ${getStatusText(product.status)}
+          ${getStatusText(
+            product.status,
+            product.hasDefaultPrice
+          )}${defaultPriceIndicator}
         </span>
       </td>
     `;
@@ -817,6 +1080,11 @@ function renderPriceInputTable() {
     inputField.addEventListener("blur", (e) =>
       handlePriceBlur(e, product.productCode)
     );
+
+    // 如果是默认单价，添加特殊样式
+    if (isDefaultPrice) {
+      inputField.title = "此单价来自默认配置，可以修改";
+    }
   });
 }
 
@@ -874,10 +1142,10 @@ function updateProductStatus(productCode, status) {
 }
 
 // 获取状态文本
-function getStatusText(status) {
+function getStatusText(status, isDefault = false) {
   const statusMap = {
     pending: "待输入",
-    valid: "已输入",
+    valid: isDefault ? "默认单价" : "已输入",
     invalid: "格式错误",
   };
   return statusMap[status] || "未知";
