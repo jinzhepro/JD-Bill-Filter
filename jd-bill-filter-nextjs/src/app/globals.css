@@ -1,0 +1,164 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 全局样式重置 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  color: #333;
+}
+
+/* 自定义工具类 */
+.container {
+  @apply max-w-6xl mx-auto px-5 min-h-screen flex flex-col;
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* 滚动条样式 */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  @apply bg-gray-100 rounded;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400;
+}
+
+/* 表格样式 */
+.table-container {
+  @apply max-h-96 overflow-auto border border-gray-200 rounded-lg;
+}
+
+.preview-table {
+  @apply w-full border-collapse text-sm;
+}
+
+.preview-table th,
+.preview-table td {
+  @apply px-3 py-3 text-left border-b border-gray-200;
+}
+
+.preview-table th {
+  @apply bg-gray-50 font-semibold text-primary-600 sticky top-0 z-10;
+}
+
+.preview-table tr:hover {
+  @apply bg-gray-50;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .container {
+    @apply px-4;
+  }
+
+  .preview-table th,
+  .preview-table td {
+    @apply px-2 py-2;
+  }
+}
+
+/* 组件样式 */
+.header {
+  @apply text-center mb-10;
+}
+
+.header h1 {
+  @apply text-4xl font-bold text-white mb-3;
+}
+
+.subtitle {
+  @apply text-xl text-white opacity-90;
+}
+
+.main-content {
+  @apply flex-1;
+}
+
+.footer {
+  @apply text-center mt-10 text-white opacity-80;
+}
+
+/* 步骤进度条样式 */
+.step-progress {
+  @apply flex items-center justify-between;
+}
+
+.step-item {
+  @apply flex flex-col items-center;
+}
+
+.step-circle {
+  @apply w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-200;
+}
+
+.step-circle.completed {
+  @apply bg-green-500 text-white;
+}
+
+.step-circle.active {
+  @apply bg-primary-500 text-white ring-4 ring-primary-100;
+}
+
+.step-circle.pending {
+  @apply bg-gray-200 text-gray-500;
+}
+
+.step-label {
+  @apply mt-2 text-xs font-medium;
+}
+
+.step-label.active {
+  @apply text-primary-600;
+}
+
+.step-label.completed {
+  @apply text-green-600;
+}
+
+.step-label.pending {
+  @apply text-gray-500;
+}
+
+.step-line {
+  @apply flex-1 h-0.5 mx-2;
+}
+
+.step-line.completed {
+  @apply bg-green-500;
+}
+
+.step-line.pending {
+  @apply bg-gray-200;
+}
