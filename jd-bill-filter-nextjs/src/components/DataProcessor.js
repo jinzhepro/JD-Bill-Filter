@@ -70,6 +70,20 @@ export default function DataProcessor() {
       console.log("应用单价前的 productPrices:", productPrices);
       const pricedData = applyUnitPrices(filteredData, productPrices);
       console.log("应用单价后的 pricedData 样本:", pricedData.slice(0, 2));
+
+      // 统计费用项过滤情况
+      const beforeFilterCount = filteredData.length;
+      const afterFilterCount = pricedData.length;
+      const filteredFeeCount = beforeFilterCount - afterFilterCount;
+
+      if (filteredFeeCount > 0) {
+        addLog(
+          `费用项过滤完成，仅保留费用项为"货款"的记录，过滤掉 ${filteredFeeCount} 条其他费用项记录`,
+          "info"
+        );
+      } else {
+        addLog("所有记录均为费用项'货款'，无需额外过滤", "info");
+      }
       addLog("单价应用完成", "success");
 
       // 步骤4：合并相同SKU的商品

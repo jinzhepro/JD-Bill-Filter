@@ -106,17 +106,32 @@ export function applyBusinessRules(groupedData, addLog) {
     const allOrders = uniqueTypes.length === 1 && uniqueTypes[0] === "订单";
 
     if (allOrders) {
-      // 如果全是订单，过滤掉费用项为直营服务费的行
+      // 如果全是订单，过滤掉费用项为直营服务费和代收配送费的行
       const filteredGroup = group.filter(
-        (row) => row["费用项"] !== "直营服务费"
+        (row) =>
+          row["费用项"] !== "直营服务费" && row["费用项"] !== "代收配送费"
       );
       const removedCount = group.length - filteredGroup.length;
 
       if (removedCount > 0) {
-        addLog(
-          `订单 ${orderNumber}: 过滤掉 ${removedCount} 行直营服务费`,
-          "info"
-        );
+        // 统计各种费用项的过滤数量
+        const directServiceCount = group.filter(
+          (row) => row["费用项"] === "直营服务费"
+        ).length;
+        const deliveryFeeCount = group.filter(
+          (row) => row["费用项"] === "代收配送费"
+        ).length;
+
+        let filterMessage = `订单 ${orderNumber}: 过滤掉 ${removedCount} 行`;
+        if (directServiceCount > 0) {
+          filterMessage += `直营服务费(${directServiceCount}行)`;
+        }
+        if (deliveryFeeCount > 0) {
+          if (directServiceCount > 0) filterMessage += "、";
+          filterMessage += `代收配送费(${deliveryFeeCount}行)`;
+        }
+
+        addLog(filterMessage, "info");
         filteredRows += removedCount;
       }
 
@@ -146,8 +161,10 @@ export function extractUniqueProducts(data, defaultPricesConfig) {
   data.forEach((row) => {
     const productCode = row["商品编号"];
     const productName = row["商品名称"] || "";
+    const feeItem = row["费用项"] || "";
 
-    if (productCode && !productMap.has(productCode)) {
+    // 只有费用项为"货款"的商品才需要设置单价
+    if (productCode && feeItem === "货款" && !productMap.has(productCode)) {
       // 检查是否有默认单价
       const defaultPriceInfo = defaultPricesConfig[productCode];
       const defaultPrice = defaultPriceInfo?.enabled
@@ -163,12 +180,13 @@ export function extractUniqueProducts(data, defaultPricesConfig) {
         unitPrice: defaultPrice,
         status: hasDefault ? "valid" : "pending",
         hasDefaultPrice: hasDefault,
+        feeItem: feeItem, // 添加费用项信息用于显示
       });
     }
   });
 
   const products = Array.from(productMap.values());
-  console.log("提取唯一商品完成，应用默认单价:", products);
+  console.log("提取唯一商品完成，仅包含费用项为'货款'的商品:", products);
 
   // 统计应用了默认单价的商品数量
   const defaultPriceCount = products.filter((p) => p.hasDefaultPrice).length;
@@ -176,31 +194,46 @@ export function extractUniqueProducts(data, defaultPricesConfig) {
     console.log(`自动应用了 ${defaultPriceCount} 个商品的默认单价`);
   }
 
+  // 统计过滤掉的商品数量
+  const totalProducts = new Set(
+    data.map((row) => row["商品编号"]).filter((code) => code)
+  ).size;
+  const filteredCount = totalProducts - products.length;
+  if (filteredCount > 0) {
+    console.log(`过滤掉了 ${filteredCount} 个费用项不为'货款'的商品`);
+  }
+
   return products;
 }
 
 // 应用单价到数据行
 export function applyUnitPrices(data, productPrices) {
-  return data.map((row) => {
-    const productCode = row["商品编号"];
-    const productName = row["商品名称"] || "";
-    const priceInfo = productPrices[productCode];
-    const unitPrice = priceInfo ? priceInfo.unitPrice : null;
-    const quantity = parseFloat(row["商品数量"]) || 0;
+  return data
+    .filter((row) => {
+      // 只处理费用项为"货款"的记录
+      const feeItem = row["费用项"] || "";
+      return feeItem === "货款";
+    })
+    .map((row) => {
+      const productCode = row["商品编号"];
+      const productName = row["商品名称"] || "";
+      const priceInfo = productPrices[productCode];
+      const unitPrice = priceInfo ? priceInfo.unitPrice : null;
+      const quantity = parseFloat(row["商品数量"]) || 0;
 
-    // 计算总价
-    const totalPrice = unitPrice !== null ? unitPrice * quantity : null;
+      // 计算总价
+      const totalPrice = unitPrice !== null ? unitPrice * quantity : null;
 
-    // 返回简化的数据结构：商品名、商品编码、单价、数量、总价
-    // 将商品编码转换为字符串以避免Excel中的科学计数法
-    return {
-      商品名: productName,
-      商品编码: String(productCode),
-      单价: unitPrice,
-      数量: quantity,
-      总价: totalPrice,
-    };
-  });
+      // 返回简化的数据结构：商品名、商品编码、单价、数量、总价
+      // 将商品编码转换为字符串以避免Excel中的科学计数法
+      return {
+        商品名: productName,
+        商品编码: String(productCode),
+        单价: unitPrice,
+        数量: quantity,
+        总价: totalPrice,
+      };
+    });
 }
 
 // 合并相同SKU的商品，数量相加

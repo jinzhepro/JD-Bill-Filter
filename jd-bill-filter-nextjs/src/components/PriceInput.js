@@ -185,7 +185,7 @@ export default function PriceInput() {
       {/* 进度信息 */}
       <div className="bg-primary-50 rounded-lg p-6 mb-6">
         <p className="text-gray-700 mb-4 text-center">
-          请为以下商品设置单价（所有相同商品编号将使用相同单价）
+          请为以下商品设置单价（仅显示费用项为&ldquo;货款&rdquo;的商品，所有相同商品编号将使用相同单价）
         </p>
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-primary-700">
