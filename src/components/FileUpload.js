@@ -7,7 +7,11 @@ import {
   validateFileSize,
   readFile,
 } from "@/lib/excelHandler";
-import { validateDataStructure } from "@/lib/dataProcessor";
+import {
+  validateDataStructure,
+  processDataFirstStage,
+  extractUniqueProducts,
+} from "@/lib/dataProcessor";
 import { ProcessingStep } from "@/types";
 import Button from "./ui/Button";
 
@@ -15,6 +19,7 @@ export default function FileUpload() {
   const {
     setFile,
     setOriginalData,
+    setOrderStats,
     setUniqueProducts,
     setStep,
     addLog,
@@ -58,15 +63,19 @@ export default function FileUpload() {
 
         // 设置原始数据
         setOriginalData(data);
+        addLog(`成功读取 ${data.length} 行数据`, "info");
 
-        // 提取唯一商品
-        const uniqueProducts =
-          require("@/lib/dataProcessor").extractUniqueProducts(
-            data,
-            defaultPricesConfig
-          );
+        // 第一阶段数据处理
+        const { orderStats, statistics } = processDataFirstStage(data, addLog);
+        setOrderStats(orderStats);
+
+        // 提取唯一商品用于价格输入
+        const uniqueProducts = extractUniqueProducts(
+          orderStats,
+          defaultPricesConfig
+        );
         setUniqueProducts(uniqueProducts);
-        addLog(`提取到 ${uniqueProducts.length} 个唯一商品`, "info");
+        addLog(`提取到 ${uniqueProducts.length} 个需要设置单价的商品`, "info");
 
         // 统计应用了默认单价的商品数量
         const defaultPriceCount = uniqueProducts.filter(
@@ -76,7 +85,7 @@ export default function FileUpload() {
           addLog(`自动应用了 ${defaultPriceCount} 个商品的默认单价`, "info");
         }
 
-        // 切换到单价输入步骤
+        // 跳转到价格输入步骤
         setStep(ProcessingStep.PRICE_INPUT);
         addLog("请为商品设置单价", "info");
       } catch (error) {
@@ -90,6 +99,7 @@ export default function FileUpload() {
     [
       setFile,
       setOriginalData,
+      setOrderStats,
       setUniqueProducts,
       setStep,
       addLog,
@@ -181,6 +191,18 @@ export default function FileUpload() {
         <div className="mt-6 text-sm text-gray-500">
           <p>支持的文件格式：.xlsx, .xls, .csv</p>
           <p>最大文件大小：50MB</p>
+        </div>
+
+        {/* 处理说明 */}
+        <div className="mt-8 p-4 bg-blue-50 rounded-lg text-left">
+          <h4 className="text-sm font-medium text-blue-900 mb-2">处理说明</h4>
+          <ul className="text-sm text-blue-700 space-y-1">
+            <li>• 系统将自动删除费用项为"直营服务费"的行</li>
+            <li>• 统计所有单据类型为"订单"的商品数量</li>
+            <li>• 根据商品名称扣减"取消退款单"和"售后服务单"的数量</li>
+            <li>• 为商品设置单价并计算总价</li>
+            <li>• 生成最终的商品统计结果供下载</li>
+          </ul>
         </div>
       </div>
     </section>

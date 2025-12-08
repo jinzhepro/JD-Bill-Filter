@@ -23,6 +23,7 @@ export function validateDataStructure(data) {
     "单据类型",
     "费用项",
     "商品编号",
+    "商品名称",
     "商品数量",
   ];
 
@@ -54,119 +55,94 @@ export function validateDataStructure(data) {
   return true;
 }
 
-// 按订单编号分组
-export function groupByOrderNumber(data) {
-  const grouped = {};
+// 删除费用项为"直营服务费"的行
+export function removeDirectServiceFeeRows(data, addLog) {
+  const originalCount = data.length;
+  const filteredData = data.filter((row) => row["费用项"] !== "直营服务费");
+  const removedCount = originalCount - filteredData.length;
 
-  for (const row of data) {
-    const orderNumber = row["订单编号"];
-    if (!orderNumber) {
-      console.log("发现空订单编号，跳过该行");
-      continue;
-    }
-
-    if (!grouped[orderNumber]) {
-      grouped[orderNumber] = [];
-    }
-    grouped[orderNumber].push(row);
+  if (removedCount > 0) {
+    addLog(`已删除 ${removedCount} 行费用项为"直营服务费"的数据`, "info");
   }
 
-  return grouped;
+  return filteredData;
 }
 
-// 应用业务规则
-export function applyBusinessRules(groupedData, addLog) {
-  const result = [];
-  let processedGroups = 0;
-  let filteredGroups = 0;
-  let filteredRows = 0;
+// 统计订单数据
+export function processOrderData(data, addLog) {
+  const orderRows = data.filter((row) => row["单据类型"] === "订单");
+  const orderCount = orderRows.length;
 
-  for (const [orderNumber, group] of Object.entries(groupedData)) {
-    processedGroups++;
+  addLog(`找到 ${orderCount} 行单据类型为"订单"的数据`, "info");
 
-    // 获取该订单组的所有单据类型
-    const documentTypes = group.map((row) => row["单据类型"]);
-    const uniqueTypes = [...new Set(documentTypes)];
+  // 按商品名称分组统计
+  const orderStats = {};
+  orderRows.forEach((row) => {
+    const productName = row["商品名称"] || "未知商品";
+    const productCode = row["商品编号"] || "";
+    const quantity = parseFloat(row["商品数量"]) || 0;
 
-    // 检查是否包含取消退款单
-    const hasRefund = uniqueTypes.includes("取消退款单");
-
-    if (hasRefund) {
-      // 如果包含取消退款单，过滤整个订单组
-      addLog(
-        `订单 ${orderNumber}: 包含取消退款单，过滤整个订单组 (${group.length} 行)`,
-        "info"
-      );
-      filteredGroups++;
-      filteredRows += group.length;
-      continue;
+    if (!orderStats[productName]) {
+      orderStats[productName] = {
+        productName,
+        productCode,
+        orderQuantity: 0,
+        refundQuantity: 0,
+        finalQuantity: 0,
+      };
     }
 
-    // 检查是否全是订单
-    const allOrders = uniqueTypes.length === 1 && uniqueTypes[0] === "订单";
+    orderStats[productName].orderQuantity += quantity;
+    orderStats[productName].finalQuantity += quantity;
+  });
 
-    if (allOrders) {
-      // 如果全是订单，过滤掉费用项为直营服务费和代收配送费的行
-      const filteredGroup = group.filter(
-        (row) =>
-          row["费用项"] !== "直营服务费" && row["费用项"] !== "代收配送费"
-      );
-      const removedCount = group.length - filteredGroup.length;
+  return { orderRows, orderStats, orderCount };
+}
 
-      if (removedCount > 0) {
-        // 统计各种费用项的过滤数量
-        const directServiceCount = group.filter(
-          (row) => row["费用项"] === "直营服务费"
-        ).length;
-        const deliveryFeeCount = group.filter(
-          (row) => row["费用项"] === "代收配送费"
-        ).length;
-
-        let filterMessage = `订单 ${orderNumber}: 过滤掉 ${removedCount} 行`;
-        if (directServiceCount > 0) {
-          filterMessage += `直营服务费(${directServiceCount}行)`;
-        }
-        if (deliveryFeeCount > 0) {
-          if (directServiceCount > 0) filterMessage += "、";
-          filterMessage += `代收配送费(${deliveryFeeCount}行)`;
-        }
-
-        addLog(filterMessage, "info");
-        filteredRows += removedCount;
-      }
-
-      result.push(...filteredGroup);
-    } else {
-      // 其他情况，保留所有行
-      addLog(
-        `订单 ${orderNumber}: 混合单据类型，保留所有行 (${group.length} 行)`,
-        "info"
-      );
-      result.push(...group);
-    }
-  }
+// 处理退款和售后服务单数据
+export function processRefundData(data, orderStats, addLog) {
+  const refundTypes = ["取消退款单", "售后服务单"];
+  const refundRows = data.filter((row) =>
+    refundTypes.includes(row["单据类型"])
+  );
+  const refundCount = refundRows.length;
 
   addLog(
-    `处理完成: 共处理 ${processedGroups} 个订单组，过滤 ${filteredGroups} 个订单组，过滤 ${filteredRows} 行数据`,
-    "success"
+    `找到 ${refundCount} 行单据类型为"取消退款单"或"售后服务单"的数据`,
+    "info"
   );
 
-  return result;
+  // 按商品名称扣减数量
+  refundRows.forEach((row) => {
+    const productName = row["商品名称"] || "未知商品";
+    const quantity = parseFloat(row["商品数量"]) || 0;
+    const documentType = row["单据类型"];
+
+    if (orderStats[productName]) {
+      orderStats[productName].refundQuantity += quantity;
+      orderStats[productName].finalQuantity -= quantity;
+
+      addLog(
+        `商品"${productName}"因${documentType}扣减数量: ${quantity}`,
+        "info"
+      );
+    } else {
+      addLog(`警告: 找到退款商品"${productName}"但无对应订单数据`, "warning");
+    }
+  });
+
+  return { refundRows, refundCount };
 }
 
-// 提取唯一商品
-export function extractUniqueProducts(data, defaultPricesConfig) {
-  const productMap = new Map();
+// 提取唯一商品用于价格输入
+export function extractUniqueProducts(orderStats, defaultPricesConfig) {
+  const products = [];
 
-  data.forEach((row) => {
-    const productCode = row["商品编号"];
-    const productName = row["商品名称"] || "";
-    const feeItem = row["费用项"] || "";
-
-    // 只有费用项为"货款"的商品才需要设置单价
-    if (productCode && feeItem === "货款" && !productMap.has(productCode)) {
+  Object.values(orderStats).forEach((stat) => {
+    if (stat.finalQuantity > 0) {
+      // 只处理最终数量大于0的商品
       // 检查是否有默认单价
-      const defaultPriceInfo = defaultPricesConfig[productCode];
+      const defaultPriceInfo = defaultPricesConfig[stat.productCode];
       const defaultPrice = defaultPriceInfo?.enabled
         ? defaultPriceInfo.unitPrice
         : null;
@@ -174,114 +150,159 @@ export function extractUniqueProducts(data, defaultPricesConfig) {
         defaultPriceInfo?.enabled &&
         typeof defaultPriceInfo.unitPrice === "number";
 
-      productMap.set(productCode, {
-        productCode,
-        productName,
+      products.push({
+        productCode: stat.productCode,
+        productName: stat.productName,
         unitPrice: defaultPrice,
         status: hasDefault ? "valid" : "pending",
         hasDefaultPrice: hasDefault,
-        feeItem: feeItem, // 添加费用项信息用于显示
+        finalQuantity: stat.finalQuantity,
       });
     }
   });
-
-  const products = Array.from(productMap.values());
-  console.log("提取唯一商品完成，仅包含费用项为'货款'的商品:", products);
-
-  // 统计应用了默认单价的商品数量
-  const defaultPriceCount = products.filter((p) => p.hasDefaultPrice).length;
-  if (defaultPriceCount > 0) {
-    console.log(`自动应用了 ${defaultPriceCount} 个商品的默认单价`);
-  }
-
-  // 统计过滤掉的商品数量
-  const totalProducts = new Set(
-    data.map((row) => row["商品编号"]).filter((code) => code)
-  ).size;
-  const filteredCount = totalProducts - products.length;
-  if (filteredCount > 0) {
-    console.log(`过滤掉了 ${filteredCount} 个费用项不为'货款'的商品`);
-  }
 
   return products;
 }
 
-// 应用单价到数据行
-export function applyUnitPrices(data, productPrices) {
-  return data
-    .filter((row) => {
-      // 只处理费用项为"货款"的记录
-      const feeItem = row["费用项"] || "";
-      return feeItem === "货款";
-    })
-    .map((row) => {
-      const productCode = row["商品编号"];
-      const productName = row["商品名称"] || "";
-      const priceInfo = productPrices[productCode];
-      const unitPrice = priceInfo ? priceInfo.unitPrice : null;
-      const quantity = parseFloat(row["商品数量"]) || 0;
+// 应用单价到数据并计算总价
+export function applyUnitPrices(orderStats, productPrices) {
+  const result = [];
 
-      // 计算总价
-      const totalPrice = unitPrice !== null ? unitPrice * quantity : null;
+  Object.values(orderStats).forEach((stat) => {
+    if (stat.finalQuantity > 0) {
+      // 只处理最终数量大于0的商品
+      const priceInfo = productPrices[stat.productCode];
+      const unitPrice = priceInfo ? priceInfo.unitPrice : 0;
+      const totalPrice = unitPrice * stat.finalQuantity;
 
-      // 返回简化的数据结构：商品名、商品编码、单价、数量、总价
-      // 将商品编码转换为字符串以避免Excel中的科学计数法
-      return {
-        商品名: productName,
-        商品编码: String(productCode),
+      result.push({
+        商品名称: stat.productName,
+        商品编号: stat.productCode,
         单价: unitPrice,
-        数量: quantity,
+        数量: stat.finalQuantity,
         总价: totalPrice,
-      };
-    });
-}
-
-// 合并相同SKU的商品，数量相加
-export function mergeSameSKU(data) {
-  const mergedMap = new Map();
-
-  data.forEach((row) => {
-    const productCode = row["商品编码"];
-    const productName = row["商品名"];
-    const unitPrice = row["单价"];
-    const quantity = parseFloat(row["数量"]) || 0;
-
-    if (mergedMap.has(productCode)) {
-      // 如果已存在相同SKU，累加数量
-      const existingItem = mergedMap.get(productCode);
-      existingItem.quantity += quantity;
-      // 重新计算总价
-      existingItem.totalPrice = existingItem.unitPrice * existingItem.quantity;
-    } else {
-      // 如果是新SKU，添加到Map中
-      mergedMap.set(productCode, {
-        productCode,
-        productName,
-        unitPrice,
-        quantity,
-        totalPrice: unitPrice * quantity,
       });
     }
   });
 
-  // 将Map转换回数组格式
-  const mergedData = Array.from(mergedMap.values()).map((item) => ({
-    商品名: item.productName,
-    商品编码: item.productCode,
-    单价: item.unitPrice,
-    数量: item.quantity,
-    总价: item.totalPrice,
-  }));
-
-  console.log(
-    `SKU合并完成，合并前 ${data.length} 行，合并后 ${mergedData.length} 行`
-  );
-
-  return mergedData;
+  return result;
 }
 
-// 生成统计信息
+// 生成最终统计结果
+export function generateFinalStatistics(processedData, addLog) {
+  let totalOrderQuantity = 0;
+  let totalRefundQuantity = 0;
+  let totalFinalQuantity = 0;
+  let totalAmount = 0;
+
+  processedData.forEach((item) => {
+    totalOrderQuantity += item["订单数量"] || 0;
+    totalRefundQuantity += item["退款扣减数量"] || 0;
+    totalFinalQuantity += item["最终数量"] || 0;
+    totalAmount += item["总价"] || 0;
+  });
+
+  addLog(
+    `统计完成: 总订单数量 ${totalOrderQuantity}，总退款扣减 ${totalRefundQuantity}，最终数量 ${totalFinalQuantity}，总金额 ¥${totalAmount.toFixed(
+      2
+    )}`,
+    "success"
+  );
+
+  return {
+    result: processedData,
+    summary: {
+      totalOrderQuantity,
+      totalRefundQuantity,
+      totalFinalQuantity,
+      totalAmount,
+      productCount: processedData.length,
+    },
+  };
+}
+
+// 主要的数据处理函数（第一阶段：数据处理和商品提取）
+export function processDataFirstStage(data, addLog) {
+  try {
+    addLog("开始数据处理流程", "info");
+
+    // 步骤1: 删除费用项为"直营服务费"的行
+    addLog("步骤1: 删除费用项为'直营服务费'的行", "info");
+    const filteredData = removeDirectServiceFeeRows(data, addLog);
+
+    // 步骤2: 统计订单数据
+    addLog("步骤2: 统计订单数据", "info");
+    const { orderRows, orderStats, orderCount } = processOrderData(
+      filteredData,
+      addLog
+    );
+
+    // 步骤3: 处理退款和售后服务单数据
+    addLog("步骤3: 处理退款和售后服务单数据", "info");
+    const { refundRows, refundCount } = processRefundData(
+      filteredData,
+      orderStats,
+      addLog
+    );
+
+    addLog("数据处理第一阶段完成，等待设置商品单价", "success");
+
+    return {
+      filteredData,
+      orderStats,
+      statistics: {
+        originalCount: data.length,
+        filteredCount: filteredData.length,
+        orderCount,
+        refundCount,
+      },
+    };
+  } catch (error) {
+    addLog(`数据处理失败: ${error.message}`, "error");
+    throw error;
+  }
+}
+
+// 主要的数据处理函数（第二阶段：应用单价和生成最终结果）
+export function processDataSecondStage(orderStats, productPrices, addLog) {
+  try {
+    addLog("开始数据处理第二阶段：应用单价并生成最终结果", "info");
+
+    // 步骤1: 应用单价到数据
+    addLog("步骤1: 应用单价到数据", "info");
+    const processedData = applyUnitPrices(orderStats, productPrices);
+
+    // 步骤2: 生成最终统计结果
+    addLog("步骤2: 生成最终统计结果", "info");
+    const { result, summary } = generateFinalStatistics(processedData, addLog);
+
+    addLog("数据处理流程完成", "success");
+
+    return {
+      processedData: result,
+      summary,
+    };
+  } catch (error) {
+    addLog(`数据处理失败: ${error.message}`, "error");
+    throw error;
+  }
+}
+
+// 生成统计信息（保持向后兼容）
 export function generateStatistics(originalData, processedData) {
+  if (!processedData || processedData.length === 0) {
+    return {
+      originalCount: originalData.length,
+      processedCount: 0,
+      filteredCount: originalData.length,
+      originalOrders: 0,
+      processedOrders: 0,
+      originalTypes: {},
+      processedTypes: {},
+      filterRate: "100.00",
+    };
+  }
+
   const originalCount = originalData.length;
   const processedCount = processedData.length;
   const filteredCount = originalCount - processedCount;
@@ -289,21 +310,14 @@ export function generateStatistics(originalData, processedData) {
   // 按订单编号统计
   const originalOrders = new Set(originalData.map((row) => row["订单编号"]))
     .size;
-  const processedOrders = new Set(processedData.map((row) => row["订单编号"]))
+  const processedOrders = new Set(processedData.map((row) => row["商品编号"]))
     .size;
 
   // 按单据类型统计
   const originalTypes = {};
-  const processedTypes = {};
-
   originalData.forEach((row) => {
     const type = row["单据类型"];
     originalTypes[type] = (originalTypes[type] || 0) + 1;
-  });
-
-  processedData.forEach((row) => {
-    const type = row["单据类型"];
-    processedTypes[type] = (processedTypes[type] || 0) + 1;
   });
 
   return {
@@ -313,7 +327,7 @@ export function generateStatistics(originalData, processedData) {
     originalOrders,
     processedOrders,
     originalTypes,
-    processedTypes,
+    processedTypes: {},
     filterRate: ((filteredCount / originalCount) * 100).toFixed(2),
   };
 }
@@ -321,7 +335,6 @@ export function generateStatistics(originalData, processedData) {
 // 验证单价
 export function validateUnitPrice(price) {
   if (price === "" || price === null) return false;
-
   const numPrice = parseFloat(price);
   return !isNaN(numPrice) && numPrice >= 0 && numPrice <= 999999.99;
 }

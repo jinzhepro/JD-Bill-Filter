@@ -3,19 +3,13 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useApp } from "@/context/AppContext";
 import { ProcessingStep } from "@/types";
-import {
-  groupByOrderNumber,
-  applyBusinessRules,
-  applyUnitPrices,
-  mergeSameSKU,
-  generateStatistics,
-} from "@/lib/dataProcessor";
+import { processDataSecondStage } from "@/lib/dataProcessor";
 import Button from "./ui/Button";
 import ProgressBar from "./ui/ProgressBar";
 
 export default function DataProcessor() {
   const {
-    originalData,
+    orderStats,
     productPrices,
     setProcessedData,
     setStep,
@@ -32,8 +26,8 @@ export default function DataProcessor() {
 
   // 处理数据
   const processData = useCallback(async () => {
-    if (!originalData || originalData.length === 0) {
-      setError("没有可处理的数据，请重新上传文件");
+    if (!orderStats || Object.keys(orderStats).length === 0) {
+      setError("没有可处理的订单统计数据");
       return;
     }
 
@@ -49,65 +43,18 @@ export default function DataProcessor() {
       setProgress(0);
       setProgressText("准备中...");
 
-      // 步骤1：按订单编号分组
-      setProgress(15);
-      setProgressText("正在按订单编号分组...");
-      const groupedData = groupByOrderNumber(originalData);
-      addLog(
-        `按订单编号分组完成，共 ${Object.keys(groupedData).length} 个订单组`,
-        "info"
-      );
+      // 使用第二阶段的处理逻辑
+      setProgress(20);
+      setProgressText("正在应用单价并生成最终结果...");
+      const result = processDataSecondStage(orderStats, productPrices, addLog);
 
-      // 步骤2：应用业务规则
-      setProgress(35);
-      setProgressText("正在应用业务规则...");
-      const filteredData = applyBusinessRules(groupedData, addLog);
-      addLog("业务规则处理完成", "success");
-
-      // 步骤3：应用单价到数据
-      setProgress(55);
-      setProgressText("正在应用单价到数据...");
-      console.log("应用单价前的 productPrices:", productPrices);
-      const pricedData = applyUnitPrices(filteredData, productPrices);
-      console.log("应用单价后的 pricedData 样本:", pricedData.slice(0, 2));
-
-      // 统计费用项过滤情况
-      const beforeFilterCount = filteredData.length;
-      const afterFilterCount = pricedData.length;
-      const filteredFeeCount = beforeFilterCount - afterFilterCount;
-
-      if (filteredFeeCount > 0) {
-        addLog(
-          `费用项过滤完成，仅保留费用项为"货款"的记录，过滤掉 ${filteredFeeCount} 条其他费用项记录`,
-          "info"
-        );
-      } else {
-        addLog("所有记录均为费用项'货款'，无需额外过滤", "info");
-      }
-      addLog("单价应用完成", "success");
-
-      // 步骤4：合并相同SKU的商品
-      setProgress(70);
-      setProgressText("正在合并相同SKU的商品...");
-      const beforeMergeCount = pricedData.length;
-      const mergedData = mergeSameSKU(pricedData);
-      const afterMergeCount = mergedData.length;
-      const mergedCount = beforeMergeCount - afterMergeCount;
-      addLog(`SKU合并完成，合并了 ${mergedCount} 行重复数据`, "success");
-
-      // 步骤5：生成统计信息
-      setProgress(85);
-      setProgressText("正在生成统计信息...");
-      const stats = generateStatistics(originalData, mergedData);
-      addLog("统计信息生成完成", "success");
-
-      // 步骤6：完成处理
+      // 步骤完成
       setProgress(100);
       setProgressText("处理完成！");
       addLog("所有数据处理完成", "success");
 
       // 设置处理后的数据
-      setProcessedData(mergedData);
+      setProcessedData(result.processedData);
 
       // 延迟显示结果
       setTimeout(() => {
@@ -122,7 +69,7 @@ export default function DataProcessor() {
       setIsProcessing(false);
     }
   }, [
-    originalData,
+    orderStats,
     productPrices,
     setProcessedData,
     setStep,
@@ -134,10 +81,15 @@ export default function DataProcessor() {
 
   // 组件挂载时自动开始处理
   useEffect(() => {
-    if (originalData.length > 0 && Object.keys(productPrices).length > 0) {
+    if (
+      orderStats &&
+      Object.keys(orderStats).length > 0 &&
+      productPrices &&
+      Object.keys(productPrices).length > 0
+    ) {
       processData();
     }
-  }, [originalData, productPrices, processData]);
+  }, [orderStats, productPrices, processData]);
 
   // 获取日志类型对应的样式
   const getLogTypeClass = (type) => {
@@ -202,6 +154,17 @@ export default function DataProcessor() {
           <p className="text-gray-600">正在处理数据，请稍候...</p>
         </div>
       )}
+
+      {/* 处理说明 */}
+      <div className="mt-8 p-4 bg-blue-50 rounded-lg">
+        <h4 className="text-sm font-medium text-blue-900 mb-2">处理说明</h4>
+        <ul className="text-sm text-blue-700 space-y-1">
+          <li>• 应用商品单价到最终数量</li>
+          <li>• 计算每个商品的总价（单价 × 最终数量）</li>
+          <li>• 生成包含单价和总价的统计结果</li>
+          <li>• 准备下载处理后的Excel文件</li>
+        </ul>
+      </div>
     </section>
   );
 }

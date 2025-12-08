@@ -13,7 +13,7 @@ import { StepProgressBar } from "./ui/ProgressBar";
 export function AppContent() {
   const { currentStep, error, clearError, reset } = useApp();
 
-  // 步骤配置
+  // 步骤配置 - 重新添加价格输入步骤
   const steps = [
     { label: "上传文件", value: ProcessingStep.UPLOAD },
     { label: "设置单价", value: ProcessingStep.PRICE_INPUT },

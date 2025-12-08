@@ -25,18 +25,33 @@ export default function ResultDisplay() {
   // 生成统计信息
   const stats = generateStatistics(originalData, processedData);
 
-  // 计算总计总价
-  const calculateTotalPrice = useCallback(() => {
+  // 计算总计数量和金额
+  const calculateTotals = useCallback(() => {
     if (!processedData || processedData.length === 0) {
-      return 0;
+      return {
+        totalQuantity: 0,
+        totalAmount: 0,
+      };
     }
-    return processedData.reduce((total, item) => {
-      const price = parseFloat(item["总价"]) || 0;
-      return total + price;
-    }, 0);
+
+    return processedData.reduce(
+      (totals, item) => {
+        const quantity = parseFloat(item["数量"]) || 0;
+        const amount = parseFloat(item["总价"]) || 0;
+
+        return {
+          totalQuantity: totals.totalQuantity + quantity,
+          totalAmount: totals.totalAmount + amount,
+        };
+      },
+      {
+        totalQuantity: 0,
+        totalAmount: 0,
+      }
+    );
   }, [processedData]);
 
-  const totalPrice = calculateTotalPrice();
+  const totals = calculateTotals();
 
   // 下载处理后的Excel文件
   const handleDownload = useCallback(async () => {
@@ -91,19 +106,33 @@ export default function ResultDisplay() {
       <div className="mb-6">
         <StatsTable stats={stats} />
 
-        {/* 总计总价 */}
-        <div className="mt-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-6 border border-green-200">
-          <div className="flex justify-between items-center">
-            <span className="text-lg font-semibold text-gray-700">
-              总计总价：
-            </span>
-            <span className="text-2xl font-bold text-green-600">
-              ¥{totalPrice.toFixed(2)}
-            </span>
+        {/* 总计统计 */}
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200">
+            <div className="flex justify-between items-center">
+              <span className="text-lg font-semibold text-gray-700">
+                总数量：
+              </span>
+              <span className="text-2xl font-bold text-blue-600">
+                {totals.totalQuantity}
+              </span>
+            </div>
+            <p className="text-sm text-gray-500 mt-2">所有商品的数量合计</p>
           </div>
-          <p className="text-sm text-gray-500 mt-2">
-            所有商品的总价合计（单价 × 数量）
-          </p>
+
+          <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-6 border border-purple-200">
+            <div className="flex justify-between items-center">
+              <span className="text-lg font-semibold text-gray-700">
+                总金额：
+              </span>
+              <span className="text-2xl font-bold text-purple-600">
+                ¥{totals.totalAmount.toFixed(2)}
+              </span>
+            </div>
+            <p className="text-sm text-gray-500 mt-2">
+              所有商品的总价合计（单价 × 数量）
+            </p>
+          </div>
         </div>
       </div>
 
@@ -126,13 +155,23 @@ export default function ResultDisplay() {
         <div className="mb-6">
           {/* 预览总计 */}
           <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-gray-600">
-                预览数据总计：
-              </span>
-              <span className="text-lg font-bold text-primary-600">
-                ¥{totalPrice.toFixed(2)}
-              </span>
+            <div className="grid grid-cols-2 gap-4 text-center">
+              <div>
+                <span className="text-sm font-medium text-gray-600">
+                  总数量
+                </span>
+                <div className="text-lg font-bold text-blue-600">
+                  {totals.totalQuantity}
+                </div>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-gray-600">
+                  总金额
+                </span>
+                <div className="text-lg font-bold text-purple-600">
+                  ¥{totals.totalAmount.toFixed(2)}
+                </div>
+              </div>
             </div>
           </div>
           <PreviewTable data={processedData} maxRows={100} />
@@ -150,10 +189,11 @@ export default function ResultDisplay() {
       <div className="mt-8 p-4 bg-blue-50 rounded-lg">
         <h4 className="text-sm font-medium text-blue-900 mb-2">处理说明</h4>
         <ul className="text-sm text-blue-700 space-y-1">
-          <li>• 已根据业务规则过滤数据</li>
+          <li>• 已删除费用项为"直营服务费"的数据行</li>
+          <li>• 已统计所有单据类型为"订单"的商品数量</li>
+          <li>• 已根据商品名称扣减"取消退款单"和"售后服务单"的数量</li>
           <li>• 已应用商品单价并计算总价</li>
-          <li>• 已合并相同商品编码的商品</li>
-          <li>• 下载的文件包含处理后的完整数据</li>
+          <li>• 下载的文件包含：商品名称、商品编号、单价、数量、总价</li>
         </ul>
       </div>
     </section>

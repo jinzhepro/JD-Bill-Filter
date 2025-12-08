@@ -15,6 +15,7 @@ const initialState = {
   processedData: [],
   uniqueProducts: [],
   productPrices: {},
+  orderStats: {},
   currentStep: ProcessingStep.UPLOAD,
   isProcessing: false,
   logs: [],
@@ -29,6 +30,7 @@ const ActionTypes = {
   SET_PROCESSED_DATA: "SET_PROCESSED_DATA",
   SET_UNIQUE_PRODUCTS: "SET_UNIQUE_PRODUCTS",
   SET_PRODUCT_PRICES: "SET_PRODUCT_PRICES",
+  SET_ORDER_STATS: "SET_ORDER_STATS",
   SET_STEP: "SET_STEP",
   SET_PROCESSING: "SET_PROCESSING",
   ADD_LOG: "ADD_LOG",
@@ -55,6 +57,9 @@ function appReducer(state, action) {
 
     case ActionTypes.SET_PRODUCT_PRICES:
       return { ...state, productPrices: action.payload };
+
+    case ActionTypes.SET_ORDER_STATS:
+      return { ...state, orderStats: action.payload };
 
     case ActionTypes.SET_STEP:
       return { ...state, currentStep: action.payload };
@@ -120,6 +125,10 @@ export function AppProvider({ children }) {
 
     setProductPrices: useCallback((prices) => {
       dispatch({ type: ActionTypes.SET_PRODUCT_PRICES, payload: prices });
+    }, []),
+
+    setOrderStats: useCallback((orderStats) => {
+      dispatch({ type: ActionTypes.SET_ORDER_STATS, payload: orderStats });
     }, []),
 
     setStep: useCallback((step) => {
