@@ -6,30 +6,23 @@ import {
   validateFileType,
   validateFileSize,
   readFile,
+  downloadExcel,
 } from "@/lib/excelHandler";
-import {
-  validateDataStructure,
-  processDataFirstStage,
-  extractUniqueProducts,
-} from "@/lib/dataProcessor";
-import { ProcessingStep } from "@/types";
+import { validateDataStructure, processOrderData } from "@/lib/dataProcessor";
 import Button from "./ui/Button";
 
 export default function FileUpload() {
   const {
     setFile,
     setOriginalData,
-    setOrderStats,
-    setUniqueProducts,
-    setStep,
+    setProcessedData,
     addLog,
     setError,
     clearError,
-    defaultPricesConfig,
+    setProcessing,
   } = useApp();
 
   const [isDragOver, setIsDragOver] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef(null);
 
   const handleFileSelect = useCallback(
@@ -37,7 +30,7 @@ export default function FileUpload() {
       if (!file) return;
 
       try {
-        setIsProcessing(true);
+        setProcessing(true);
         clearError();
 
         // 验证文件类型
@@ -65,48 +58,21 @@ export default function FileUpload() {
         setOriginalData(data);
         addLog(`成功读取 ${data.length} 行数据`, "info");
 
-        // 第一阶段数据处理
-        const { orderStats, statistics } = processDataFirstStage(data, addLog);
-        setOrderStats(orderStats);
-
-        // 提取唯一商品用于价格输入
-        const uniqueProducts = extractUniqueProducts(
-          orderStats,
-          defaultPricesConfig
-        );
-        setUniqueProducts(uniqueProducts);
-        addLog(`提取到 ${uniqueProducts.length} 个需要设置单价的商品`, "info");
-
-        // 统计应用了默认单价的商品数量
-        const defaultPriceCount = uniqueProducts.filter(
-          (p) => p.hasDefaultPrice
-        ).length;
-        if (defaultPriceCount > 0) {
-          addLog(`自动应用了 ${defaultPriceCount} 个商品的默认单价`, "info");
-        }
-
-        // 跳转到价格输入步骤
-        setStep(ProcessingStep.PRICE_INPUT);
-        addLog("请为商品设置单价", "info");
+        // 处理订单数据
+        addLog("开始处理订单数据...", "info");
+        const processedData = processOrderData(data);
+        setProcessedData(processedData);
+        addLog(`成功处理 ${processedData.length} 条订单记录`, "success");
+        addLog("文件上传完成", "success");
       } catch (error) {
         console.error("文件处理失败:", error);
         setError(error.message);
         addLog(`文件处理失败: ${error.message}`, "error");
       } finally {
-        setIsProcessing(false);
+        setProcessing(false);
       }
     },
-    [
-      setFile,
-      setOriginalData,
-      setOrderStats,
-      setUniqueProducts,
-      setStep,
-      addLog,
-      setError,
-      clearError,
-      defaultPricesConfig,
-    ]
+    [setFile, setOriginalData, addLog, setError, clearError, setProcessing]
   );
 
   const handleFileInputChange = useCallback(
@@ -170,13 +136,8 @@ export default function FileUpload() {
           <p className="text-gray-600 mb-6 max-w-md mx-auto">
             拖拽文件到此处或点击选择文件（支持 .xlsx, .xls, .csv 格式）
           </p>
-          <Button
-            variant="primary"
-            size="lg"
-            disabled={isProcessing}
-            className="px-8"
-          >
-            {isProcessing ? "处理中..." : "选择文件"}
+          <Button variant="primary" size="lg" disabled={false} className="px-8">
+            选择文件
           </Button>
         </div>
 
@@ -195,13 +156,14 @@ export default function FileUpload() {
 
         {/* 处理说明 */}
         <div className="mt-8 p-4 bg-blue-50 rounded-lg text-left">
-          <h4 className="text-sm font-medium text-blue-900 mb-2">处理说明</h4>
+          <h4 className="text-sm font-medium text-blue-900 mb-2">
+            文件上传说明
+          </h4>
           <ul className="text-sm text-blue-700 space-y-1">
-            <li>• 系统将自动删除费用项为"直营服务费"的行</li>
-            <li>• 统计所有单据类型为"订单"的商品数量</li>
-            <li>• 根据商品名称扣减"取消退款单"和"售后服务单"的数量</li>
-            <li>• 为商品设置单价并计算总价</li>
-            <li>• 生成最终的商品统计结果供下载</li>
+            <li>• 支持上传 Excel (.xlsx, .xls) 和 CSV 文件</li>
+            <li>• 文件大小限制为 50MB</li>
+            <li>• 上传后系统会验证文件格式和数据结构</li>
+            <li>• 成功上传后会显示读取的数据行数</li>
           </ul>
         </div>
       </div>

@@ -1,26 +1,16 @@
 "use client";
 
 import { createContext, useContext, useReducer, useCallback } from "react";
-import {
-  ProcessingStep,
-  ProductStatus,
-  LogType,
-  defaultPricesConfig,
-} from "@/types";
+import { LogType } from "@/types";
 
 // 初始状态
 const initialState = {
   uploadedFile: null,
   originalData: [],
   processedData: [],
-  uniqueProducts: [],
-  productPrices: {},
-  orderStats: {},
-  currentStep: ProcessingStep.UPLOAD,
   isProcessing: false,
   logs: [],
   error: null,
-  defaultPricesConfig,
 };
 
 // Action 类型
@@ -28,10 +18,6 @@ const ActionTypes = {
   SET_FILE: "SET_FILE",
   SET_ORIGINAL_DATA: "SET_ORIGINAL_DATA",
   SET_PROCESSED_DATA: "SET_PROCESSED_DATA",
-  SET_UNIQUE_PRODUCTS: "SET_UNIQUE_PRODUCTS",
-  SET_PRODUCT_PRICES: "SET_PRODUCT_PRICES",
-  SET_ORDER_STATS: "SET_ORDER_STATS",
-  SET_STEP: "SET_STEP",
   SET_PROCESSING: "SET_PROCESSING",
   ADD_LOG: "ADD_LOG",
   CLEAR_LOGS: "CLEAR_LOGS",
@@ -52,18 +38,6 @@ function appReducer(state, action) {
     case ActionTypes.SET_PROCESSED_DATA:
       return { ...state, processedData: action.payload };
 
-    case ActionTypes.SET_UNIQUE_PRODUCTS:
-      return { ...state, uniqueProducts: action.payload };
-
-    case ActionTypes.SET_PRODUCT_PRICES:
-      return { ...state, productPrices: action.payload };
-
-    case ActionTypes.SET_ORDER_STATS:
-      return { ...state, orderStats: action.payload };
-
-    case ActionTypes.SET_STEP:
-      return { ...state, currentStep: action.payload };
-
     case ActionTypes.SET_PROCESSING:
       return { ...state, isProcessing: action.payload };
 
@@ -73,7 +47,7 @@ function appReducer(state, action) {
         logs: [
           ...state.logs,
           {
-            id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // 更安全的唯一ID生成
+            id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             timestamp: new Date().toLocaleTimeString(),
             message: action.payload.message,
             type: action.payload.type || LogType.INFO,
@@ -117,22 +91,6 @@ export function AppProvider({ children }) {
 
     setProcessedData: useCallback((data) => {
       dispatch({ type: ActionTypes.SET_PROCESSED_DATA, payload: data });
-    }, []),
-
-    setUniqueProducts: useCallback((products) => {
-      dispatch({ type: ActionTypes.SET_UNIQUE_PRODUCTS, payload: products });
-    }, []),
-
-    setProductPrices: useCallback((prices) => {
-      dispatch({ type: ActionTypes.SET_PRODUCT_PRICES, payload: prices });
-    }, []),
-
-    setOrderStats: useCallback((orderStats) => {
-      dispatch({ type: ActionTypes.SET_ORDER_STATS, payload: orderStats });
-    }, []),
-
-    setStep: useCallback((step) => {
-      dispatch({ type: ActionTypes.SET_STEP, payload: step });
     }, []),
 
     setProcessing: useCallback((isProcessing) => {

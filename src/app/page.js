@@ -13,7 +13,7 @@ export default function Home() {
             京东万商对帐单处理系统
           </h1>
           <p className="subtitle text-xl text-white opacity-90">
-            自动过滤和处理对帐单数据
+            智能处理Excel/CSV对帐单，自动合并相同商品编码和单价的记录
           </p>
         </header>
 
@@ -22,7 +22,7 @@ export default function Home() {
         </main>
 
         <footer className="footer text-center mt-10 text-white opacity-80">
-          <p>京东万商对帐单处理系统 v2.0</p>
+          <p>京东万商对帐单处理系统 v3.0</p>
         </footer>
       </div>
     </AppProvider>
