@@ -1,3 +1,4 @@
+import { LogType } from "@/types";
 import Decimal from "decimal.js";
 
 // 验证数据结构
@@ -68,23 +69,24 @@ export function processOrderData(data) {
   Object.keys(mergedData).forEach((orderNo) => {
     const items = mergedData[orderNo];
 
-    const FeeIndex = items.findIndex(
-      (item) => item["费用项"] === "合流共配回收运费"
-    );
-
-    console.log(FeeIndex);
-
-    const notFeeIndex = items.findIndex((item) => item["费用项"] === "货款");
-
-    if (FeeIndex >= 0 && notFeeIndex >= 0) {
-      // 确保两个索引都有效，合并货款和运费信息
-      if (items[FeeIndex] && items[notFeeIndex]) {
-        items[FeeIndex] = {
-          ...items[notFeeIndex],
-          金额: items[FeeIndex]["金额"],
-        };
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item["费用项"] === "合流共配回收运费") {
+        items.forEach((n) => {
+          if (
+            n["商品名称"].slice(0, 10) === item["商品名称"].slice(0, 10) &&
+            n["费用项"] === "货款"
+          ) {
+            items[i] = {
+              ...n,
+              金额: item["金额"],
+            };
+          }
+        });
       }
     }
+
+    // console.log(items);
 
     items.forEach((row) => {
       const productNo = row["商品编号"];
@@ -117,7 +119,7 @@ export function processOrderData(data) {
         if (item && item["金额"] !== undefined && item["金额"] !== null) {
           totalPrice = totalPrice.plus(new Decimal(item["金额"]));
         }
-        console.log(items, totalPrice.toNumber());
+        // console.log(items, totalPrice.toNumber());
       });
 
       // 检查第一个item和商品数量是否存在
@@ -144,7 +146,7 @@ export function processOrderData(data) {
   // 合并processedData，相同商品编码和单价的记录合并金额和数量
   const mergedProcessedData = mergeSameSKU(processedData);
 
-  console.log(mergedProcessedData);
+  // console.log(mergedProcessedData);
   return mergedProcessedData;
 }
 
