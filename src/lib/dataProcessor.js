@@ -192,3 +192,38 @@ export function mergeSameSKU(processedData) {
     总价: item["总价"],
   }));
 }
+
+// 处理多个文件的数据合并
+export function processMultipleFilesData(fileDataArray) {
+  if (!fileDataArray || fileDataArray.length === 0) {
+    throw new Error("没有文件数据需要处理");
+  }
+
+  console.log(`开始处理 ${fileDataArray.length} 个文件的数据`);
+
+  // 处理每个文件的数据
+  const allProcessedData = [];
+
+  fileDataArray.forEach((fileData, index) => {
+    try {
+      console.log(`处理第 ${index + 1} 个文件，数据行数: ${fileData.length}`);
+      const processedData = processOrderData(fileData);
+      allProcessedData.push(...processedData);
+      console.log(
+        `第 ${index + 1} 个文件处理完成，生成 ${processedData.length} 条记录`
+      );
+    } catch (error) {
+      console.error(`处理第 ${index + 1} 个文件时出错:`, error);
+      throw new Error(`处理第 ${index + 1} 个文件时出错: ${error.message}`);
+    }
+  });
+
+  console.log(`所有文件处理完成，总记录数: ${allProcessedData.length}`);
+
+  // 对所有处理后的数据进行最终的SKU和单价合并
+  const finalMergedData = mergeSameSKU(allProcessedData);
+
+  console.log(`最终合并完成，生成 ${finalMergedData.length} 条记录`);
+
+  return finalMergedData;
+}
