@@ -74,7 +74,7 @@ export function processOrderData(data) {
       if (item["费用项"] === "合流共配回收运费") {
         items.forEach((n) => {
           if (
-            n["商品名称"].slice(0, 10) === item["商品名称"].slice(0, 10) &&
+            n["商品名称"].includes(item["商品名称"].slice(0, 10)) &&
             n["费用项"] === "货款"
           ) {
             items[i] = {
