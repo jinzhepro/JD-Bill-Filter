@@ -2,85 +2,40 @@
 
 This file provides guidance to agents when working with code in this repository.
 
-## 项目概述
+## 项目特定规则（非显而易见部分）
 
-这是一个基于 Next.js 的京东万商对帐单处理系统，用于处理 Excel/CSV 格式的对帐单数据，支持单文件处理和多文件合并功能。
+### 数据处理关键规则
 
-## 构建和开发命令
+- **金额计算必须使用 Decimal.js** - 避免浮点数精度问题，所有金额运算必须通过 Decimal 对象
+- **订单数据处理必须按"订单编号"分组** - 使用 mergeGroup 函数，这是业务逻辑的核心
+- **CSV 编码自动检测** - 先尝试 UTF-8，失败后自动切换到 GBK 编码
+- **"合流共配回收运费"特殊处理** - 会替换对应商品的货款金额，这是业务特定逻辑
+- **文件大小限制 50MB** - 基于浏览器内存处理能力考虑
 
-- `npm run dev` - 启动开发服务器
-- `npm run build` - 构建生产版本
-- `npm run start` - 启动生产服务器
-- `npm run lint` - 运行 ESLint 检查
+### 文件处理关键规则
 
-## 核心架构
+- **Excel 导出时商品编码列必须设置为文本格式** - 避免长数字变成科学计数法
+- **文件读取使用 Promise 包装** - 确保异步操作正确处理
+- **支持的文件类型必须严格验证** - .xlsx, .xls, .csv 格式
 
-### 数据处理流程
+### 状态管理关键规则
 
-1. 文件上传 → 2. 数据验证 → 3. 订单处理 → 4. 结果展示/下载
+- **全局状态必须通过 AppContext 管理** - 避免直接修改状态
+- **所有状态更新操作必须使用 useCallback 包装** - 避免不必要的重渲染
+- **错误状态必须通过 setError 统一管理** - 确保用户界面一致性
 
-### 关键组件
+### 组件开发关键规则
 
-- `src/lib/excelHandler.js` - Excel/CSV 文件读写处理
-- `src/lib/dataProcessor.js` - 核心数据处理逻辑
-- `src/context/AppContext.js` - 全局状态管理
-- `src/components/` - UI 组件目录
+- **Modal 组件必须处理 body 样式** - 防止背景滚动，组件卸载时必须清理
+- **文件上传组件必须同时支持拖拽和点击上传** - 用户体验要求
+- **Button 组件使用 React.memo 优化** - 避免父组件重渲染时影响按钮性能
 
-## 代码风格指南
+### 导入路径关键规则
 
-### 文件命名
+- **项目内部导入必须使用 @/ 别名指向 src/ 目录** - 统一路径管理
+- **工具函数导入必须明确指定函数名** - 避免使用默认导出
 
-- 组件文件使用 PascalCase: `FileUpload.js`, `ResultDisplay.js`
-- 工具函数文件使用 camelCase: `excelHandler.js`, `dataProcessor.js`
+### 错误处理关键规则
 
-### 导入顺序
-
-1. React 相关导入
-2. 第三方库导入
-3. 项目内部导入（使用 @/ 别名）
-4. 相对路径导入
-
-### 组件结构
-
-- 所有客户端组件必须以 `"use client";` 开头
-- 使用 React.memo 优化性能（如 Button 组件）
-- 使用 useCallback 和 useMemo 优化渲染性能
-
-### 状态管理
-
-- 全局状态通过 AppContext 管理
-- 使用 useReducer 处理复杂状态逻辑
-- 本地状态使用 useState
-
-### 样式规范
-
-- 使用 Tailwind CSS 类名
-- 自定义样式定义在 `src/app/globals.css`
-- 响应式设计使用 Tailwind 断点
-
-## 关键业务逻辑
-
-### 数据处理
-
-- 使用 Decimal.js 处理金额计算，避免浮点数精度问题
-- 订单数据按"订单编号"分组处理
-- 合并相同商品编号和单价的记录
-
-### 文件处理
-
-- 支持 .xlsx, .xls, .csv 格式
-- CSV 文件自动检测编码（UTF-8/GBK）
-- 文件大小限制 50MB
-
-### 错误处理
-
-- 使用 try-catch 包装异步操作
-- 错误信息通过 AppContext 统一管理
-- 用户友好的错误提示
-
-## 注意事项
-
-- 所有文件路径使用 @/ 别名指向 src/ 目录
-- 处理金额时必须使用 Decimal.js 避免精度问题
-- 组件卸载时注意清理副作用（如 Modal 组件的 body 样式）
-- 使用 ESLint 配置确保代码质量
+- **文件处理错误必须包含文件名和具体原因** - 便于调试
+- **数据验证错误必须指出缺失的字段名称** - 用户友好提示
