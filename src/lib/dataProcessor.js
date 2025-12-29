@@ -29,12 +29,89 @@ export function validateDataStructure(data) {
 
 // 处理订单数据
 export function processOrderData(data) {
+  // 处理售后服务单数据
+  const afterSalesData = data
+    .filter((row) => row["单据类型"] === "售后服务单")
+    .sort((a, b) => a["商品编号"] - b["商品编号"]);
+
+  // 合并相同商品编号的售后服务单金额
+  const mergedAfterSalesData = {};
+  afterSalesData.forEach((row) => {
+    const productNo = row["商品编号"];
+    if (!mergedAfterSalesData[productNo]) {
+      mergedAfterSalesData[productNo] = {
+        商品编号: productNo,
+        商品名称: row["商品名称"],
+        单据类型: "售后服务单",
+        金额: new Decimal(0),
+      };
+    }
+    // 使用 Decimal 确保金额计算精度
+    if (row["金额"] !== undefined && row["金额"] !== null) {
+      mergedAfterSalesData[productNo].金额 = mergedAfterSalesData[
+        productNo
+      ].金额.plus(new Decimal(row["金额"]));
+    }
+  });
+
+  // 将 Decimal 转换回普通数字
+  Object.keys(mergedAfterSalesData).forEach((productNo) => {
+    mergedAfterSalesData[productNo].金额 =
+      mergedAfterSalesData[productNo].金额.toNumber();
+  });
+
+  console.log(mergedAfterSalesData);
+
   // 筛选单据类型为"订单"的数据
-  const orderData = data
+  let orderData = data
     .filter(
       (row) => row["单据类型"] === "订单" || row["单据类型"] === "取消退款单"
     )
     .sort((a, b) => a["订单编号"] - b["订单编号"]);
+
+  // 在订单数据中根据商品编号搜索，处理售后服务单金额（可能为负数）
+  // 记录已使用的售后服务单，确保每个售后单只减一次
+  const usedAfterSales = new Set();
+
+  orderData = orderData.map((orderRow) => {
+    const productNo = orderRow["商品编号"];
+    const afterSalesInfo = mergedAfterSalesData[productNo];
+
+    if (afterSalesInfo && !usedAfterSales.has(productNo)) {
+      // 使用 Decimal 确保精度
+      const originalAmount = new Decimal(orderRow["金额"] || 0);
+      const afterSalesAmount = new Decimal(afterSalesInfo["金额"] || 0);
+
+      // 只有当金额 > 售后金额的绝对值时，才进行减法操作
+      const afterSalesAbs = afterSalesAmount.abs();
+      if (originalAmount.greaterThan(afterSalesAbs)) {
+        // 实际操作：从订单金额中减去售后服务单金额的绝对值
+        const newAmount = originalAmount.minus(afterSalesAbs);
+
+        // 打印被减去金额的行
+        console.log("被减去金额的订单行:", {
+          订单编号: orderRow["订单编号"],
+          商品编号: orderRow["商品编号"],
+          商品名称: orderRow["商品名称"],
+          原始金额: originalAmount.toNumber(),
+          售后服务单金额: afterSalesAmount.toNumber(),
+          售后金额绝对值: afterSalesAbs.toNumber(),
+          减后金额: newAmount.toNumber(),
+        });
+
+        // 标记该商品编号的售后服务单已使用
+        usedAfterSales.add(productNo);
+
+        // 更新订单金额
+        orderRow = {
+          ...orderRow,
+          金额: newAmount.toNumber(),
+        };
+      }
+    }
+
+    return orderRow;
+  });
 
   if (orderData.length === 0) {
     throw new Error("没有找到订单类型的数据");
