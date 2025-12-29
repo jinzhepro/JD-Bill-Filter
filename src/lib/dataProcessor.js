@@ -278,29 +278,19 @@ export function processMultipleFilesData(fileDataArray) {
 
   console.log(`开始处理 ${fileDataArray.length} 个文件的数据`);
 
-  // 处理每个文件的数据
-  const allProcessedData = [];
-
+  // 合并所有文件的数据，以便跨文件处理售后服务单
+  const allData = [];
   fileDataArray.forEach((fileData, index) => {
-    try {
-      console.log(`处理第 ${index + 1} 个文件，数据行数: ${fileData.length}`);
-      const processedData = processOrderData(fileData);
-      allProcessedData.push(...processedData);
-      console.log(
-        `第 ${index + 1} 个文件处理完成，生成 ${processedData.length} 条记录`
-      );
-    } catch (error) {
-      console.error(`处理第 ${index + 1} 个文件时出错:`, error);
-      throw new Error(`处理第 ${index + 1} 个文件时出错: ${error.message}`);
-    }
+    console.log(`合并第 ${index + 1} 个文件，数据行数: ${fileData.length}`);
+    allData.push(...fileData);
   });
 
-  console.log(`所有文件处理完成，总记录数: ${allProcessedData.length}`);
+  console.log(`所有文件数据合并完成，总数据行数: ${allData.length}`);
 
-  // 对所有处理后的数据进行最终的SKU和单价合并
-  const finalMergedData = mergeSameSKU(allProcessedData);
+  // 对合并后的数据进行统一处理，包括售后服务单处理
+  const processedData = processOrderData(allData);
 
-  console.log(`最终合并完成，生成 ${finalMergedData.length} 条记录`);
+  console.log(`数据处理完成，生成 ${processedData.length} 条记录`);
 
-  return finalMergedData;
+  return processedData;
 }
