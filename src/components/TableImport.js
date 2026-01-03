@@ -162,9 +162,6 @@ export function TableImport({ onImportItems, onCancel }) {
           row["批号"] ||
           "";
 
-        const invoiceDate =
-          row["付款日期"] || row["开票日期"] || row["日期"] || "";
-
         const sku =
           row["SKU"] || row["sku"] || row["商品编码"] || row["商品SKU"] || "";
 
@@ -174,20 +171,6 @@ export function TableImport({ onImportItems, onCancel }) {
         if (!materialName || !quantity) {
           console.warn(`第 ${index + 1} 行缺少必要字段，跳过`);
           return;
-        }
-
-        // 处理日期格式
-        let formattedDate = invoiceDate;
-        if (invoiceDate && typeof invoiceDate === "string") {
-          // 尝试解析各种日期格式
-          const dateMatch = invoiceDate.match(/(\d{1,2})月(\d{1,2})日/);
-          if (dateMatch) {
-            const month = dateMatch[1].padStart(2, "0");
-            const day = dateMatch[2].padStart(2, "0");
-            // 假设是当前年份
-            const currentYear = new Date().getFullYear();
-            formattedDate = `${currentYear}-${month}-${day}`;
-          }
         }
 
         // 创建库存项
@@ -200,8 +183,6 @@ export function TableImport({ onImportItems, onCancel }) {
           totalPrice: parseFloat(totalPrice) || 0,
           taxRate: parseFloat(taxRate) || 13,
           taxAmount: 0, // 可以根据总价和税率计算
-          invoiceNumber: purchaseBatch.toString().trim(), // 使用采购批号作为发票号
-          invoiceDate: formattedDate,
           warehouse: warehouse.toString().trim(),
         };
 
@@ -350,7 +331,6 @@ export function TableImport({ onImportItems, onCancel }) {
               <div>• 总金额（含税） → 总价</div>
               <div>• 税率（%） → 税率</div>
               <div>• 采购订单 → 采购批号</div>
-              <div>• 付款日期 → 开票日期</div>
               <div>• SKU → 商品SKU</div>
               <div>• 仓库 → 仓库</div>
             </div>

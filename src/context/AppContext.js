@@ -27,8 +27,6 @@ const initialState = {
     totalPrice: "", // 总价
     taxRate: "13", // 税率，默认13%
     taxAmount: "", // 税额
-    invoiceNumber: "", // 发票号码
-    invoiceDate: "", // 开票日期
     warehouse: "", // 仓库
   },
   editingInventoryId: null, // 正在编辑的库存项ID
@@ -183,8 +181,6 @@ function appReducer(state, action) {
           totalPrice: "", // 总价
           taxRate: "13", // 税率，默认13%
           taxAmount: "", // 税额
-          invoiceNumber: "", // 发票号码
-          invoiceDate: "", // 开票日期
           warehouse: "", // 仓库
         },
       };

@@ -163,8 +163,6 @@ export function InventoryManager() {
       totalPrice: item.totalPrice ? item.totalPrice.toString() : "",
       taxRate: item.taxRate ? item.taxRate.toString() : "13",
       taxAmount: item.taxAmount ? item.taxAmount.toString() : "",
-      invoiceNumber: item.invoiceNumber || "",
-      invoiceDate: item.invoiceDate || "",
       warehouse: item.warehouse || "",
     });
     setEditingInventoryId(item.id);
@@ -476,34 +474,6 @@ export function InventoryManager() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  发票号码
-                </label>
-                <input
-                  type="text"
-                  name="invoiceNumber"
-                  value={inventoryForm.invoiceNumber}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  placeholder="可选，输入发票号码"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  开票日期
-                </label>
-                <input
-                  type="date"
-                  name="invoiceDate"
-                  value={inventoryForm.invoiceDate}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  placeholder="可选，选择开票日期"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
                   仓库
                 </label>
                 <input
@@ -573,20 +543,6 @@ export function InventoryManager() {
                       <h3 className="font-semibold text-gray-800">
                         采购批号: {batch}
                       </h3>
-                      {items.length > 0 && (
-                        <>
-                          {items[0].invoiceNumber && (
-                            <p className="text-sm text-gray-600 mt-1">
-                              发票号码: {items[0].invoiceNumber}
-                            </p>
-                          )}
-                          {items[0].invoiceDate && (
-                            <p className="text-sm text-gray-600 mt-1">
-                              开票日期: {items[0].invoiceDate}
-                            </p>
-                          )}
-                        </>
-                      )}
                     </div>
                     <div className="text-right text-sm text-gray-600">
                       <div>

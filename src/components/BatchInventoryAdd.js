@@ -24,8 +24,6 @@ export function BatchInventoryAdd({ onAddItems, onCancel }) {
       totalPrice: "",
       taxRate: "13",
       taxAmount: "",
-      invoiceNumber: "",
-      invoiceDate: "",
       warehouse: "",
     },
   ]);
@@ -46,8 +44,6 @@ export function BatchInventoryAdd({ onAddItems, onCancel }) {
         totalPrice: "",
         taxRate: "13",
         taxAmount: "",
-        invoiceNumber: "",
-        invoiceDate: "",
         warehouse: "",
       },
     ]);
@@ -144,12 +140,6 @@ export function BatchInventoryAdd({ onAddItems, onCancel }) {
                 </th>
                 <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
                   税额
-                </th>
-                <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
-                  发票号码
-                </th>
-                <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
-                  开票日期
                 </th>
                 <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
                   商品SKU
@@ -319,27 +309,6 @@ export function BatchInventoryAdd({ onAddItems, onCancel }) {
                         税额必须是非负数
                       </div>
                     )}
-                  </td>
-                  <td className="px-2 py-2 border whitespace-nowrap">
-                    <input
-                      type="text"
-                      value={row.invoiceNumber}
-                      onChange={(e) =>
-                        updateRow(index, "invoiceNumber", e.target.value)
-                      }
-                      className="w-24 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm"
-                      placeholder="可选"
-                    />
-                  </td>
-                  <td className="px-2 py-2 border whitespace-nowrap">
-                    <input
-                      type="date"
-                      value={row.invoiceDate}
-                      onChange={(e) =>
-                        updateRow(index, "invoiceDate", e.target.value)
-                      }
-                      className="w-28 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm"
-                    />
                   </td>
                   <td className="px-2 py-2 border whitespace-nowrap">
                     <input
