@@ -125,6 +125,18 @@ export default function MergeProcessor() {
 
   return (
     <div className="space-y-8">
+      {/* 返回按钮和标题 */}
+      <div className="flex justify-between items-center">
+        <Button
+          onClick={handleResetMerge}
+          className="bg-gray-200 text-gray-700 hover:bg-gray-300"
+        >
+          ← 返回主界面
+        </Button>
+        <h1 className="text-2xl font-bold text-white">多文件合并处理</h1>
+        <div></div>
+      </div>
+
       {/* 合并处理状态 */}
       <section className="bg-white rounded-xl shadow-lg p-8 animate-fade-in">
         <div className="text-center">

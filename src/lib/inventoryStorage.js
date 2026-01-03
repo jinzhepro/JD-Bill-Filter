@@ -66,6 +66,7 @@ export const createInventoryItem = (formData) => {
     taxAmount: parseFloat(formData.taxAmount) || 0, // 税额
     invoiceNumber: formData.invoiceNumber || "", // 发票号码
     invoiceDate: formData.invoiceDate || "", // 开票日期
+    warehouse: formData.warehouse || "", // 仓库
     createdAt: now,
     updatedAt: now,
   };
@@ -109,6 +110,10 @@ export const updateInventoryItem = (existingItem, formData) => {
       formData.taxAmount !== undefined
         ? parseFloat(formData.taxAmount)
         : existingItem.taxAmount,
+    warehouse:
+      formData.warehouse !== undefined
+        ? formData.warehouse
+        : existingItem.warehouse,
     updatedAt: new Date().toISOString(),
   };
 };
@@ -228,8 +233,10 @@ export const searchInventoryItems = (inventoryItems, searchTerm) => {
   return inventoryItems.filter(
     (item) =>
       item.materialName.toLowerCase().includes(term) ||
-      item.specification.toLowerCase().includes(term) ||
-      item.purchaseBatch.toLowerCase().includes(term)
+      (item.specification && item.specification.toLowerCase().includes(term)) ||
+      item.purchaseBatch.toLowerCase().includes(term) ||
+      (item.warehouse && item.warehouse.toLowerCase().includes(term)) ||
+      (item.sku && item.sku.toLowerCase().includes(term))
   );
 };
 
@@ -295,4 +302,20 @@ export const getInventoryStats = (inventoryItems) => {
   });
 
   return stats;
+};
+
+/**
+ * 清空所有库存数据
+ * @returns {boolean} 是否清空成功
+ */
+export const clearAllInventoryData = () => {
+  try {
+    if (typeof window === "undefined") return false;
+
+    localStorage.removeItem(INVENTORY_STORAGE_KEY);
+    return true;
+  } catch (error) {
+    console.error("清空库存数据失败:", error);
+    return false;
+  }
 };

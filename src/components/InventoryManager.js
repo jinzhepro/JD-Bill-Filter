@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useApp } from "@/context/AppContext";
 import Button from "./ui/Button";
 import { BatchInventoryAdd } from "./BatchInventoryAdd";
+import { TableImport } from "./TableImport";
 import {
   getInventoryFromStorage,
   saveInventoryToStorage,
@@ -16,6 +17,7 @@ import {
   updateItemSku,
   validateMultipleInventoryForms,
   createMultipleInventoryItems,
+  clearAllInventoryData,
 } from "@/lib/inventoryStorage";
 
 export function InventoryManager() {
@@ -39,6 +41,7 @@ export function InventoryManager() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [isBatchFormVisible, setIsBatchFormVisible] = useState(false);
+  const [isTableImportVisible, setIsTableImportVisible] = useState(false);
   const [formErrors, setFormErrors] = useState([]);
 
   // 初始化时从localStorage加载数据
@@ -113,6 +116,42 @@ export function InventoryManager() {
     setIsBatchFormVisible(false);
   };
 
+  // 表格导入处理
+  const handleTableImport = (items) => {
+    try {
+      addMultipleInventoryItems(items);
+      addLog(`成功通过表格导入 ${items.length} 个库存项`, "success");
+      setIsTableImportVisible(false);
+    } catch (error) {
+      setError(`表格导入库存项失败: ${error.message}`);
+    }
+  };
+
+  // 表格导入取消处理
+  const handleTableImportCancel = () => {
+    setIsTableImportVisible(false);
+  };
+
+  // 清空数据库处理
+  const handleClearDatabase = () => {
+    if (
+      inventoryItems.length === 0 ||
+      window.confirm(
+        `确定要清空所有库存数据吗？此操作将删除 ${inventoryItems.length} 条库存记录，且无法恢复！`
+      )
+    ) {
+      try {
+        // 清空localStorage中的数据
+        clearAllInventoryData();
+        // 清空状态中的数据
+        setInventoryItems([]);
+        addLog("所有库存数据已清空", "warning");
+      } catch (error) {
+        setError(`清空数据库失败: ${error.message}`);
+      }
+    }
+  };
+
   // 处理编辑
   const handleEdit = (item) => {
     setInventoryForm({
@@ -126,6 +165,7 @@ export function InventoryManager() {
       taxAmount: item.taxAmount ? item.taxAmount.toString() : "",
       invoiceNumber: item.invoiceNumber || "",
       invoiceDate: item.invoiceDate || "",
+      warehouse: item.warehouse || "",
     });
     setEditingInventoryId(item.id);
     setIsFormVisible(true);
@@ -242,7 +282,7 @@ export function InventoryManager() {
           <div className="w-full md:w-1/2">
             <input
               type="text"
-              placeholder="搜索物料名称或采购批号..."
+              placeholder="搜索物料名称、采购批号、仓库或SKU..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -260,6 +300,19 @@ export function InventoryManager() {
               className="w-full md:w-auto bg-green-600 text-white hover:bg-green-700"
             >
               批量添加库存项
+            </Button>
+            <Button
+              onClick={() => setIsTableImportVisible(true)}
+              className="w-full md:w-auto bg-purple-600 text-white hover:bg-purple-700"
+            >
+              表格导入
+            </Button>
+            <Button
+              onClick={handleClearDatabase}
+              className="w-full md:w-auto bg-red-600 text-white hover:bg-red-700"
+              disabled={inventoryItems.length === 0}
+            >
+              清空数据库
             </Button>
           </div>
         </div>
@@ -433,6 +486,20 @@ export function InventoryManager() {
                   placeholder="可选，选择开票日期"
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  仓库
+                </label>
+                <input
+                  type="text"
+                  name="warehouse"
+                  value={inventoryForm.warehouse}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="可选，输入仓库名称"
+                />
+              </div>
             </div>
 
             <div className="flex gap-3 justify-end">
@@ -456,6 +523,14 @@ export function InventoryManager() {
         <BatchInventoryAdd
           onAddItems={handleBatchAdd}
           onCancel={handleBatchCancel}
+        />
+      )}
+
+      {/* 表格导入表单 */}
+      {isTableImportVisible && (
+        <TableImport
+          onImportItems={handleTableImport}
+          onCancel={handleTableImportCancel}
         />
       )}
 
@@ -486,6 +561,11 @@ export function InventoryManager() {
                       {items.length > 0 && items[0].invoiceNumber && (
                         <p className="text-sm text-gray-600 mt-1">
                           发票号码: {items[0].invoiceNumber}
+                        </p>
+                      )}
+                      {items.length > 0 && items[0].invoiceDate && (
+                        <p className="text-sm text-gray-600 mt-1">
+                          开票日期: {items[0].invoiceDate}
                         </p>
                       )}
                     </div>
@@ -520,10 +600,10 @@ export function InventoryManager() {
                           税额
                         </th>
                         <th className="px-4 py-3 text-left font-semibold text-primary-600">
-                          开票日期
+                          商品SKU
                         </th>
                         <th className="px-4 py-3 text-left font-semibold text-primary-600">
-                          商品SKU
+                          仓库
                         </th>
                         <th className="px-4 py-3 text-left font-semibold text-primary-600">
                           操作
@@ -557,9 +637,6 @@ export function InventoryManager() {
                               : "-"}
                           </td>
                           <td className="px-4 py-3">
-                            {item.invoiceDate || "-"}
-                          </td>
-                          <td className="px-4 py-3">
                             <input
                               type="text"
                               value={item.sku || ""}
@@ -570,6 +647,7 @@ export function InventoryManager() {
                               placeholder="输入SKU"
                             />
                           </td>
+                          <td className="px-4 py-3">{item.warehouse || "-"}</td>
                           <td className="px-4 py-3">
                             <div className="flex gap-2">
                               <Button

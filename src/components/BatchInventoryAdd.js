@@ -26,6 +26,7 @@ export function BatchInventoryAdd({ onAddItems, onCancel }) {
       taxAmount: "",
       invoiceNumber: "",
       invoiceDate: "",
+      warehouse: "",
     },
   ]);
   const [errors, setErrors] = useState({});
@@ -47,6 +48,7 @@ export function BatchInventoryAdd({ onAddItems, onCancel }) {
         taxAmount: "",
         invoiceNumber: "",
         invoiceDate: "",
+        warehouse: "",
       },
     ]);
   };
@@ -151,6 +153,9 @@ export function BatchInventoryAdd({ onAddItems, onCancel }) {
                 </th>
                 <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
                   商品SKU
+                </th>
+                <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
+                  仓库
                 </th>
                 <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
                   操作
@@ -341,6 +346,17 @@ export function BatchInventoryAdd({ onAddItems, onCancel }) {
                       type="text"
                       value={row.sku}
                       onChange={(e) => updateRow(index, "sku", e.target.value)}
+                      className="w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm"
+                      placeholder="可选"
+                    />
+                  </td>
+                  <td className="px-2 py-2 border whitespace-nowrap">
+                    <input
+                      type="text"
+                      value={row.warehouse}
+                      onChange={(e) =>
+                        updateRow(index, "warehouse", e.target.value)
+                      }
                       className="w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm"
                       placeholder="可选"
                     />

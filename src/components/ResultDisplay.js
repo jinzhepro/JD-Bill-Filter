@@ -124,6 +124,18 @@ export default function ResultDisplay() {
 
   return (
     <div className="space-y-8">
+      {/* 返回按钮和标题 */}
+      <div className="flex justify-between items-center">
+        <Button
+          onClick={handleReset}
+          className="bg-gray-200 text-gray-700 hover:bg-gray-300"
+        >
+          ← 返回主界面
+        </Button>
+        <h1 className="text-2xl font-bold text-white">订单处理结果</h1>
+        <div></div>
+      </div>
+
       {/* 处理后数据展示 */}
       {processedData && processedData.length > 0 && (
         <section className="bg-white rounded-xl shadow-lg p-8 animate-fade-in">
