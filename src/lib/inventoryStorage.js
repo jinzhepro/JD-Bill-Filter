@@ -57,10 +57,15 @@ export const createInventoryItem = (formData) => {
   return {
     id: generateId(),
     materialName: formData.materialName || "",
-    specification: formData.specification || "",
     quantity: parseInt(formData.quantity) || 0,
     purchaseBatch: formData.purchaseBatch || "",
     sku: formData.sku || "",
+    unitPrice: parseFloat(formData.unitPrice) || 0, // 单价
+    totalPrice: parseFloat(formData.totalPrice) || 0, // 总价
+    taxRate: parseFloat(formData.taxRate) || 0, // 税率
+    taxAmount: parseFloat(formData.taxAmount) || 0, // 税额
+    invoiceNumber: formData.invoiceNumber || "", // 发票号码
+    invoiceDate: formData.invoiceDate || "", // 开票日期
     createdAt: now,
     updatedAt: now,
   };
@@ -85,10 +90,25 @@ export const updateInventoryItem = (existingItem, formData) => {
   return {
     ...existingItem,
     materialName: formData.materialName || existingItem.materialName,
-    specification: formData.specification || existingItem.specification,
     quantity: parseInt(formData.quantity) || existingItem.quantity,
     purchaseBatch: formData.purchaseBatch || existingItem.purchaseBatch,
     sku: formData.sku !== undefined ? formData.sku : existingItem.sku,
+    unitPrice:
+      formData.unitPrice !== undefined
+        ? parseFloat(formData.unitPrice)
+        : existingItem.unitPrice,
+    totalPrice:
+      formData.totalPrice !== undefined
+        ? parseFloat(formData.totalPrice)
+        : existingItem.totalPrice,
+    taxRate:
+      formData.taxRate !== undefined
+        ? parseFloat(formData.taxRate)
+        : existingItem.taxRate,
+    taxAmount:
+      formData.taxAmount !== undefined
+        ? parseFloat(formData.taxAmount)
+        : existingItem.taxAmount,
     updatedAt: new Date().toISOString(),
   };
 };
@@ -111,6 +131,43 @@ export const validateInventoryForm = (formData) => {
 
   if (!formData.purchaseBatch || formData.purchaseBatch.trim() === "") {
     errors.push("采购批号不能为空");
+  }
+
+  // 验证单价
+  if (
+    formData.unitPrice &&
+    (isNaN(parseFloat(formData.unitPrice)) ||
+      parseFloat(formData.unitPrice) < 0)
+  ) {
+    errors.push("单价必须是非负数");
+  }
+
+  // 验证总价
+  if (
+    formData.totalPrice &&
+    (isNaN(parseFloat(formData.totalPrice)) ||
+      parseFloat(formData.totalPrice) < 0)
+  ) {
+    errors.push("总价必须是非负数");
+  }
+
+  // 验证税率
+  if (
+    formData.taxRate &&
+    (isNaN(parseFloat(formData.taxRate)) ||
+      parseFloat(formData.taxRate) < 0 ||
+      parseFloat(formData.taxRate) > 100)
+  ) {
+    errors.push("税率必须是0-100之间的数字");
+  }
+
+  // 验证税额
+  if (
+    formData.taxAmount &&
+    (isNaN(parseFloat(formData.taxAmount)) ||
+      parseFloat(formData.taxAmount) < 0)
+  ) {
+    errors.push("税额必须是非负数");
   }
 
   return {

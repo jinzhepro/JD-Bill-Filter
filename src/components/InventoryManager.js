@@ -49,9 +49,8 @@ export function InventoryManager() {
 
   // 保存数据到localStorage
   useEffect(() => {
-    if (inventoryItems.length > 0) {
-      saveInventoryToStorage(inventoryItems);
-    }
+    // 总是保存数据，包括空数组的情况
+    saveInventoryToStorage(inventoryItems);
   }, [inventoryItems]);
 
   // 处理表单输入变化
@@ -118,10 +117,15 @@ export function InventoryManager() {
   const handleEdit = (item) => {
     setInventoryForm({
       materialName: item.materialName,
-      specification: item.specification,
       quantity: item.quantity.toString(),
       purchaseBatch: item.purchaseBatch,
       sku: item.sku || "",
+      unitPrice: item.unitPrice ? item.unitPrice.toString() : "",
+      totalPrice: item.totalPrice ? item.totalPrice.toString() : "",
+      taxRate: item.taxRate ? item.taxRate.toString() : "13",
+      taxAmount: item.taxAmount ? item.taxAmount.toString() : "",
+      invoiceNumber: item.invoiceNumber || "",
+      invoiceDate: item.invoiceDate || "",
     });
     setEditingInventoryId(item.id);
     setIsFormVisible(true);
@@ -136,9 +140,17 @@ export function InventoryManager() {
   };
 
   // 处理删除
-  const handleDelete = (id) => {
+  const handleDelete = (id, event) => {
+    // 阻止事件冒泡
+    if (event) {
+      event.stopPropagation();
+    }
+
     const item = inventoryItems.find((item) => item.id === id);
-    if (window.confirm(`确定要删除库存项 "${item.materialName}" 吗？`)) {
+    if (
+      item &&
+      window.confirm(`确定要删除库存项 "${item.materialName}" 吗？`)
+    ) {
       deleteInventoryItem(id);
       addLog(`库存项 "${item.materialName}" 已删除`, "warning");
     }
@@ -160,6 +172,16 @@ export function InventoryManager() {
 
   // 获取统计信息
   const stats = getInventoryStats(inventoryItems);
+
+  // 计算总价和总税额
+  const totalAmount = inventoryItems.reduce(
+    (sum, item) => sum + (item.totalPrice || 0),
+    0
+  );
+  const totalTax = inventoryItems.reduce(
+    (sum, item) => sum + (item.taxAmount || 0),
+    0
+  );
 
   return (
     <div className="space-y-6">
@@ -198,6 +220,20 @@ export function InventoryManager() {
             <div className="text-sm text-gray-600">采购批次数</div>
           </div>
         </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div className="text-center p-3 bg-green-50 rounded-lg">
+            <div className="text-2xl font-bold text-green-600">
+              ¥{totalAmount.toFixed(2)}
+            </div>
+            <div className="text-sm text-gray-600">总金额</div>
+          </div>
+          <div className="text-center p-3 bg-orange-50 rounded-lg">
+            <div className="text-2xl font-bold text-orange-600">
+              ¥{totalTax.toFixed(2)}
+            </div>
+            <div className="text-sm text-gray-600">总税额</div>
+          </div>
+        </div>
       </section>
 
       {/* 搜索和添加按钮 */}
@@ -206,7 +242,7 @@ export function InventoryManager() {
           <div className="w-full md:w-1/2">
             <input
               type="text"
-              placeholder="搜索物料名称、规格或采购批号..."
+              placeholder="搜索物料名称或采购批号..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -264,19 +300,6 @@ export function InventoryManager() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  规格
-                </label>
-                <input
-                  type="text"
-                  name="specification"
-                  value={inventoryForm.specification}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
                   数量 *
                 </label>
                 <input
@@ -315,6 +338,99 @@ export function InventoryManager() {
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                   placeholder="可选，输入商品SKU"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  单价
+                </label>
+                <input
+                  type="number"
+                  name="unitPrice"
+                  value={inventoryForm.unitPrice}
+                  onChange={handleInputChange}
+                  min="0"
+                  step="0.01"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="可选，输入单价"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  总价
+                </label>
+                <input
+                  type="number"
+                  name="totalPrice"
+                  value={inventoryForm.totalPrice}
+                  onChange={handleInputChange}
+                  min="0"
+                  step="0.01"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="可选，输入总价"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  税率 (%)
+                </label>
+                <input
+                  type="number"
+                  name="taxRate"
+                  value={inventoryForm.taxRate}
+                  onChange={handleInputChange}
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="可选，输入税率"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  税额
+                </label>
+                <input
+                  type="number"
+                  name="taxAmount"
+                  value={inventoryForm.taxAmount}
+                  onChange={handleInputChange}
+                  min="0"
+                  step="0.01"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="可选，输入税额"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  发票号码
+                </label>
+                <input
+                  type="text"
+                  name="invoiceNumber"
+                  value={inventoryForm.invoiceNumber}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="可选，输入发票号码"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  开票日期
+                </label>
+                <input
+                  type="date"
+                  name="invoiceDate"
+                  value={inventoryForm.invoiceDate}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="可选，选择开票日期"
                 />
               </div>
             </div>
@@ -363,9 +479,16 @@ export function InventoryManager() {
                 {/* 批号标题 */}
                 <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
                   <div className="flex justify-between items-center">
-                    <h3 className="font-semibold text-gray-800">
-                      采购批号: {batch}
-                    </h3>
+                    <div>
+                      <h3 className="font-semibold text-gray-800">
+                        采购批号: {batch}
+                      </h3>
+                      {items.length > 0 && items[0].invoiceNumber && (
+                        <p className="text-sm text-gray-600 mt-1">
+                          发票号码: {items[0].invoiceNumber}
+                        </p>
+                      )}
+                    </div>
                     <span className="text-sm text-gray-600">
                       共 {items.length} 种物品，总计{" "}
                       {items.reduce((sum, item) => sum + item.quantity, 0)} 件
@@ -382,10 +505,22 @@ export function InventoryManager() {
                           物料名称
                         </th>
                         <th className="px-4 py-3 text-left font-semibold text-primary-600">
-                          规格
+                          数量
                         </th>
                         <th className="px-4 py-3 text-left font-semibold text-primary-600">
-                          数量
+                          单价
+                        </th>
+                        <th className="px-4 py-3 text-left font-semibold text-primary-600">
+                          总价
+                        </th>
+                        <th className="px-4 py-3 text-left font-semibold text-primary-600">
+                          税率
+                        </th>
+                        <th className="px-4 py-3 text-left font-semibold text-primary-600">
+                          税额
+                        </th>
+                        <th className="px-4 py-3 text-left font-semibold text-primary-600">
+                          开票日期
                         </th>
                         <th className="px-4 py-3 text-left font-semibold text-primary-600">
                           商品SKU
@@ -402,10 +537,28 @@ export function InventoryManager() {
                           className="border-b border-gray-200 hover:bg-gray-50"
                         >
                           <td className="px-4 py-3">{item.materialName}</td>
-                          <td className="px-4 py-3">
-                            {item.specification || "-"}
-                          </td>
                           <td className="px-4 py-3">{item.quantity}</td>
+                          <td className="px-4 py-3">
+                            {item.unitPrice
+                              ? `¥${item.unitPrice.toFixed(2)}`
+                              : "-"}
+                          </td>
+                          <td className="px-4 py-3">
+                            {item.totalPrice
+                              ? `¥${item.totalPrice.toFixed(2)}`
+                              : "-"}
+                          </td>
+                          <td className="px-4 py-3">
+                            {item.taxRate ? `${item.taxRate}%` : "-"}
+                          </td>
+                          <td className="px-4 py-3">
+                            {item.taxAmount
+                              ? `¥${item.taxAmount.toFixed(2)}`
+                              : "-"}
+                          </td>
+                          <td className="px-4 py-3">
+                            {item.invoiceDate || "-"}
+                          </td>
                           <td className="px-4 py-3">
                             <input
                               type="text"
@@ -426,7 +579,7 @@ export function InventoryManager() {
                                 编辑
                               </Button>
                               <Button
-                                onClick={() => handleDelete(item.id)}
+                                onClick={(e) => handleDelete(item.id, e)}
                                 className="px-3 py-1 text-xs bg-red-500 text-white hover:bg-red-600"
                               >
                                 删除

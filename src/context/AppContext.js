@@ -20,12 +20,20 @@ const initialState = {
   inventoryForm: {
     // 库存表单数据
     materialName: "",
-    specification: "",
     quantity: "",
     purchaseBatch: "",
     sku: "",
+    unitPrice: "", // 单价
+    totalPrice: "", // 总价
+    taxRate: "13", // 税率，默认13%
+    taxAmount: "", // 税额
+    invoiceNumber: "", // 发票号码
+    invoiceDate: "", // 开票日期
   },
   editingInventoryId: null, // 正在编辑的库存项ID
+  // SKU和批次号处理相关状态
+  skuProcessedData: [], // 经过SKU替换和批次号添加的数据
+  isSkuProcessing: false, // 是否正在进行SKU处理
 };
 
 // Action 类型
@@ -54,6 +62,9 @@ const ActionTypes = {
   SET_INVENTORY_FORM: "SET_INVENTORY_FORM",
   RESET_INVENTORY_FORM: "RESET_INVENTORY_FORM",
   SET_EDITING_INVENTORY_ID: "SET_EDITING_INVENTORY_ID",
+  // SKU和批次号处理相关Action类型
+  SET_SKU_PROCESSED_DATA: "SET_SKU_PROCESSED_DATA",
+  SET_SKU_PROCESSING: "SET_SKU_PROCESSING",
 };
 
 // Reducer
@@ -163,16 +174,27 @@ function appReducer(state, action) {
         ...state,
         inventoryForm: {
           materialName: "",
-          specification: "",
           quantity: "",
           purchaseBatch: "",
-          type: "material",
-          status: "in_stock",
+          sku: "",
+          unitPrice: "", // 单价
+          totalPrice: "", // 总价
+          taxRate: "13", // 税率，默认13%
+          taxAmount: "", // 税额
+          invoiceNumber: "", // 发票号码
+          invoiceDate: "", // 开票日期
         },
       };
 
     case ActionTypes.SET_EDITING_INVENTORY_ID:
       return { ...state, editingInventoryId: action.payload };
+
+    // SKU和批次号处理相关处理
+    case ActionTypes.SET_SKU_PROCESSED_DATA:
+      return { ...state, skuProcessedData: action.payload };
+
+    case ActionTypes.SET_SKU_PROCESSING:
+      return { ...state, isSkuProcessing: action.payload };
 
     case ActionTypes.RESET:
       return initialState;
@@ -284,6 +306,15 @@ export function AppProvider({ children }) {
 
     setEditingInventoryId: useCallback((id) => {
       dispatch({ type: ActionTypes.SET_EDITING_INVENTORY_ID, payload: id });
+    }, []),
+
+    // SKU和批次号处理相关actions
+    setSkuProcessedData: useCallback((data) => {
+      dispatch({ type: ActionTypes.SET_SKU_PROCESSED_DATA, payload: data });
+    }, []),
+
+    setSkuProcessing: useCallback((isProcessing) => {
+      dispatch({ type: ActionTypes.SET_SKU_PROCESSING, payload: isProcessing });
     }, []),
 
     reset: useCallback(() => {

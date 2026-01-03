@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useApp } from "@/context/AppContext";
 import FileUpload from "./FileUpload";
 import MultiFileUpload from "./MultiFileUpload";
@@ -8,6 +8,7 @@ import ResultDisplay from "./ResultDisplay";
 import MergeProcessor from "./MergeProcessor";
 import { InventoryManager } from "./InventoryManager";
 import { ErrorModal } from "./ui/Modal";
+import { getInventoryFromStorage } from "@/lib/inventoryStorage";
 
 export function AppContent() {
   const {
@@ -18,8 +19,17 @@ export function AppContent() {
     mergeMode,
     inventoryMode,
     setInventoryMode,
+    setInventoryItems,
   } = useApp();
   const [uploadMode, setUploadMode] = useState("single"); // "single" 或 "multiple"
+
+  // 初始化时从localStorage加载库存数据
+  useEffect(() => {
+    const storedItems = getInventoryFromStorage();
+    if (storedItems.length > 0) {
+      setInventoryItems(storedItems);
+    }
+  }, [setInventoryItems]);
 
   return (
     <div className="space-y-8">

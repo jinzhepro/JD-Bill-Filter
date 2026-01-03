@@ -270,6 +270,85 @@ export function mergeSameSKU(processedData) {
   }));
 }
 
+// 根据仓库SKU替换商品名并添加批次号
+export function processWithSkuAndBatch(processedData, inventoryItems) {
+  if (!processedData || processedData.length === 0) {
+    throw new Error("没有处理后的数据");
+  }
+
+  if (!inventoryItems || inventoryItems.length === 0) {
+    throw new Error("没有库存数据，请先添加库存项");
+  }
+
+  console.log(
+    `开始处理 ${processedData.length} 条订单数据，匹配 ${inventoryItems.length} 条库存数据`
+  );
+
+  // 创建商品编号到库存项的映射
+  const skuMap = {};
+  inventoryItems.forEach((item) => {
+    if (item.sku && item.sku.trim() !== "") {
+      skuMap[item.sku.trim()] = item;
+    }
+  });
+
+  // 处理每条订单数据
+  const enhancedData = processedData.map((orderItem) => {
+    const productNo = orderItem["商品编号"];
+    const originalProductName = orderItem["商品名称"];
+
+    // 查找匹配的库存项（通过商品编号）
+    let matchedInventoryItem = null;
+
+    // 首先尝试通过商品编号精确匹配
+    inventoryItems.forEach((item) => {
+      if (item.sku && item.sku.trim() === productNo.toString().trim()) {
+        matchedInventoryItem = item;
+      }
+    });
+
+    // 如果没有找到，尝试通过物料名称模糊匹配
+    if (!matchedInventoryItem) {
+      inventoryItems.forEach((item) => {
+        if (
+          (item.materialName &&
+            originalProductName &&
+            originalProductName.includes(item.materialName)) ||
+          item.materialName.includes(originalProductName)
+        ) {
+          matchedInventoryItem = item;
+        }
+      });
+    }
+
+    // 创建新的数据项
+    const newItem = { ...orderItem };
+
+    if (matchedInventoryItem) {
+      // 用库存中对应的物料名称替换商品名称
+      newItem["商品名称"] = matchedInventoryItem.materialName;
+      // 添加批次号
+      newItem["批次号"] = matchedInventoryItem.purchaseBatch;
+
+      console.log(
+        `匹配成功: 商品编号 ${productNo}, 原商品名 ${originalProductName} -> 物料名称 ${matchedInventoryItem.materialName}, 批次号 ${matchedInventoryItem.purchaseBatch}`
+      );
+    } else {
+      // 如果没有匹配的库存项，添加空批次号
+      newItem["批次号"] = "";
+      console.log(
+        `未匹配: 商品编号 ${productNo}, 商品名称 ${originalProductName}`
+      );
+    }
+
+    return newItem;
+  });
+
+  console.log(`SKU和批次号处理完成，生成 ${enhancedData.length} 条增强数据`);
+
+  return enhancedData;
+}
+
 // 处理多个文件的数据合并
 export function processMultipleFilesData(fileDataArray) {
   if (!fileDataArray || fileDataArray.length === 0) {

@@ -17,10 +17,15 @@ export function BatchInventoryAdd({ onAddItems, onCancel }) {
     {
       id: generateId(),
       materialName: "",
-      specification: "",
       quantity: "",
       purchaseBatch: "",
       sku: "",
+      unitPrice: "",
+      totalPrice: "",
+      taxRate: "13",
+      taxAmount: "",
+      invoiceNumber: "",
+      invoiceDate: "",
     },
   ]);
   const [errors, setErrors] = useState({});
@@ -33,10 +38,15 @@ export function BatchInventoryAdd({ onAddItems, onCancel }) {
       {
         id: generateId(),
         materialName: "",
-        specification: "",
         quantity: "",
         purchaseBatch: "",
         sku: "",
+        unitPrice: "",
+        totalPrice: "",
+        taxRate: "13",
+        taxAmount: "",
+        invoiceNumber: "",
+        invoiceDate: "",
       },
     ]);
   };
@@ -108,26 +118,41 @@ export function BatchInventoryAdd({ onAddItems, onCancel }) {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
+        <div className="overflow-x-auto max-w-full">
+          <table className="w-full min-w-max border-collapse">
             <thead>
               <tr className="bg-gray-50">
-                <th className="px-3 py-2 text-left font-semibold text-primary-600 border">
+                <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
                   物料名称 *
                 </th>
-                <th className="px-3 py-2 text-left font-semibold text-primary-600 border">
-                  规格
-                </th>
-                <th className="px-3 py-2 text-left font-semibold text-primary-600 border">
+                <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
                   数量 *
                 </th>
-                <th className="px-3 py-2 text-left font-semibold text-primary-600 border">
+                <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
                   采购批号 *
                 </th>
-                <th className="px-3 py-2 text-left font-semibold text-primary-600 border">
+                <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
+                  单价
+                </th>
+                <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
+                  总价
+                </th>
+                <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
+                  税率 (%)
+                </th>
+                <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
+                  税额
+                </th>
+                <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
+                  发票号码
+                </th>
+                <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
+                  开票日期
+                </th>
+                <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
                   商品SKU
                 </th>
-                <th className="px-3 py-2 text-left font-semibold text-primary-600 border">
+                <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
                   操作
                 </th>
               </tr>
@@ -140,14 +165,14 @@ export function BatchInventoryAdd({ onAddItems, onCancel }) {
                     errors[index] ? "bg-red-50" : "hover:bg-gray-50"
                   }`}
                 >
-                  <td className="px-3 py-2 border">
+                  <td className="px-2 py-2 border whitespace-nowrap">
                     <input
                       type="text"
                       value={row.materialName}
                       onChange={(e) =>
                         updateRow(index, "materialName", e.target.value)
                       }
-                      className={`w-full px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-primary-500 ${
+                      className={`w-32 px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm ${
                         errors[index]?.includes("物料名称不能为空")
                           ? "border-red-500"
                           : "border-gray-300"
@@ -160,17 +185,7 @@ export function BatchInventoryAdd({ onAddItems, onCancel }) {
                       </div>
                     )}
                   </td>
-                  <td className="px-3 py-2 border">
-                    <input
-                      type="text"
-                      value={row.specification}
-                      onChange={(e) =>
-                        updateRow(index, "specification", e.target.value)
-                      }
-                      className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
-                    />
-                  </td>
-                  <td className="px-3 py-2 border">
+                  <td className="px-2 py-2 border whitespace-nowrap">
                     <input
                       type="number"
                       value={row.quantity}
@@ -178,7 +193,7 @@ export function BatchInventoryAdd({ onAddItems, onCancel }) {
                         updateRow(index, "quantity", e.target.value)
                       }
                       min="0"
-                      className={`w-full px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-primary-500 ${
+                      className={`w-20 px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm ${
                         errors[index]?.includes("数量必须是非负整数")
                           ? "border-red-500"
                           : "border-gray-300"
@@ -191,14 +206,14 @@ export function BatchInventoryAdd({ onAddItems, onCancel }) {
                       </div>
                     )}
                   </td>
-                  <td className="px-3 py-2 border">
+                  <td className="px-2 py-2 border whitespace-nowrap">
                     <input
                       type="text"
                       value={row.purchaseBatch}
                       onChange={(e) =>
                         updateRow(index, "purchaseBatch", e.target.value)
                       }
-                      className={`w-full px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-primary-500 ${
+                      className={`w-24 px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm ${
                         errors[index]?.includes("采购批号不能为空")
                           ? "border-red-500"
                           : "border-gray-300"
@@ -211,16 +226,126 @@ export function BatchInventoryAdd({ onAddItems, onCancel }) {
                       </div>
                     )}
                   </td>
-                  <td className="px-3 py-2 border">
+                  <td className="px-2 py-2 border whitespace-nowrap">
+                    <input
+                      type="number"
+                      value={row.unitPrice}
+                      onChange={(e) =>
+                        updateRow(index, "unitPrice", e.target.value)
+                      }
+                      min="0"
+                      step="0.01"
+                      className={`w-20 px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm ${
+                        errors[index]?.includes("单价必须是非负数")
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      }`}
+                      placeholder="可选"
+                    />
+                    {errors[index]?.includes("单价必须是非负数") && (
+                      <div className="text-red-500 text-xs mt-1">
+                        单价必须是非负数
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-2 py-2 border whitespace-nowrap">
+                    <input
+                      type="number"
+                      value={row.totalPrice}
+                      onChange={(e) =>
+                        updateRow(index, "totalPrice", e.target.value)
+                      }
+                      min="0"
+                      step="0.01"
+                      className={`w-20 px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm ${
+                        errors[index]?.includes("总价必须是非负数")
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      }`}
+                      placeholder="可选"
+                    />
+                    {errors[index]?.includes("总价必须是非负数") && (
+                      <div className="text-red-500 text-xs mt-1">
+                        总价必须是非负数
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-2 py-2 border whitespace-nowrap">
+                    <input
+                      type="number"
+                      value={row.taxRate}
+                      onChange={(e) =>
+                        updateRow(index, "taxRate", e.target.value)
+                      }
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      className={`w-16 px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm ${
+                        errors[index]?.includes("税率必须是0-100之间的数字")
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      }`}
+                      placeholder="可选"
+                    />
+                    {errors[index]?.includes("税率必须是0-100之间的数字") && (
+                      <div className="text-red-500 text-xs mt-1">
+                        税率必须是0-100之间的数字
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-2 py-2 border whitespace-nowrap">
+                    <input
+                      type="number"
+                      value={row.taxAmount}
+                      onChange={(e) =>
+                        updateRow(index, "taxAmount", e.target.value)
+                      }
+                      min="0"
+                      step="0.01"
+                      className={`w-20 px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm ${
+                        errors[index]?.includes("税额必须是非负数")
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      }`}
+                      placeholder="可选"
+                    />
+                    {errors[index]?.includes("税额必须是非负数") && (
+                      <div className="text-red-500 text-xs mt-1">
+                        税额必须是非负数
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-2 py-2 border whitespace-nowrap">
+                    <input
+                      type="text"
+                      value={row.invoiceNumber}
+                      onChange={(e) =>
+                        updateRow(index, "invoiceNumber", e.target.value)
+                      }
+                      className="w-24 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm"
+                      placeholder="可选"
+                    />
+                  </td>
+                  <td className="px-2 py-2 border whitespace-nowrap">
+                    <input
+                      type="date"
+                      value={row.invoiceDate}
+                      onChange={(e) =>
+                        updateRow(index, "invoiceDate", e.target.value)
+                      }
+                      className="w-28 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm"
+                    />
+                  </td>
+                  <td className="px-2 py-2 border whitespace-nowrap">
                     <input
                       type="text"
                       value={row.sku}
                       onChange={(e) => updateRow(index, "sku", e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      className="w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm"
                       placeholder="可选"
                     />
                   </td>
-                  <td className="px-3 py-2 border">
+                  <td className="px-2 py-2 border whitespace-nowrap">
                     <Button
                       type="button"
                       onClick={() => removeRow(index)}
