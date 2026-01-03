@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { useApp } from "@/context/AppContext";
 import Button from "./ui/Button";
-import { PDFUpload } from "./PDFUpload";
 import { BatchInventoryAdd } from "./BatchInventoryAdd";
 import {
   getInventoryFromStorage,
@@ -41,7 +40,6 @@ export function InventoryManager() {
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [isBatchFormVisible, setIsBatchFormVisible] = useState(false);
   const [formErrors, setFormErrors] = useState([]);
-  const [showPDFUpload, setShowPDFUpload] = useState(false);
 
   // 初始化时从localStorage加载数据
   useEffect(() => {
@@ -227,18 +225,9 @@ export function InventoryManager() {
             >
               批量添加库存项
             </Button>
-            <Button
-              onClick={() => setShowPDFUpload(!showPDFUpload)}
-              className="w-full md:w-auto bg-purple-600 text-white hover:bg-purple-700"
-            >
-              {showPDFUpload ? "隐藏PDF上传" : "上传PDF发票"}
-            </Button>
           </div>
         </div>
       </section>
-
-      {/* PDF上传组件 */}
-      {showPDFUpload && <PDFUpload />}
 
       {/* 添加/编辑表单 */}
       {isFormVisible && (
