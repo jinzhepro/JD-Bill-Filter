@@ -14,11 +14,11 @@ import {
   searchInventoryItems,
   getInventoryStats,
   groupInventoryByBatch,
-  updateItemSku,
   validateMultipleInventoryForms,
   createMultipleInventoryItems,
   clearAllInventoryData,
 } from "@/lib/inventoryStorage";
+import { updateProductNamesBySku } from "@/data/jdSkuMapping";
 
 export function InventoryManager() {
   const {
@@ -172,13 +172,6 @@ export function InventoryManager() {
     setFormErrors([]);
   };
 
-  // 处理SKU实时更新
-  const handleSkuChange = (itemId, newSku) => {
-    const updatedItems = updateItemSku(inventoryItems, itemId, newSku);
-    setInventoryItems(updatedItems);
-    addLog(`已更新商品SKU`, "success");
-  };
-
   // 处理删除
   const handleDelete = (id, event) => {
     // 阻止事件冒泡
@@ -193,6 +186,38 @@ export function InventoryManager() {
     ) {
       deleteInventoryItem(id);
       addLog(`库存项 "${item.materialName}" 已删除`, "warning");
+    }
+  };
+
+  // 立即更新商品名称处理
+  const handleUpdateProductNames = () => {
+    if (inventoryItems.length === 0) {
+      setError("没有库存数据可以更新");
+      return;
+    }
+
+    if (
+      window.confirm(
+        `确定要根据SKU更新所有库存项的商品名称吗？此操作将根据京东SKU映射表自动更新商品名称，无法撤销！`
+      )
+    ) {
+      try {
+        // 使用SKU映射更新商品名称
+        const updatedItems = updateProductNamesBySku(inventoryItems);
+
+        // 更新状态
+        setInventoryItems(updatedItems);
+
+        // 统计更新数量
+        const updatedCount = updatedItems.filter(
+          (item, index) =>
+            item.materialName !== inventoryItems[index].materialName
+        ).length;
+
+        addLog(`成功更新 ${updatedCount} 个库存项的商品名称`, "success");
+      } catch (error) {
+        setError(`更新商品名称失败: ${error.message}`);
+      }
     }
   };
 
@@ -213,13 +238,9 @@ export function InventoryManager() {
   // 获取统计信息
   const stats = getInventoryStats(inventoryItems);
 
-  // 计算总价和总税额
+  // 计算总价
   const totalAmount = inventoryItems.reduce(
     (sum, item) => sum + (item.totalPrice || 0),
-    0
-  );
-  const totalTax = inventoryItems.reduce(
-    (sum, item) => sum + (item.taxAmount || 0),
     0
   );
 
@@ -260,18 +281,12 @@ export function InventoryManager() {
             <div className="text-sm text-gray-600">采购批次数</div>
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mt-4">
           <div className="text-center p-3 bg-green-50 rounded-lg">
             <div className="text-2xl font-bold text-green-600">
               ¥{totalAmount.toFixed(2)}
             </div>
             <div className="text-sm text-gray-600">总金额</div>
-          </div>
-          <div className="text-center p-3 bg-orange-50 rounded-lg">
-            <div className="text-2xl font-bold text-orange-600">
-              ¥{totalTax.toFixed(2)}
-            </div>
-            <div className="text-sm text-gray-600">总税额</div>
           </div>
         </div>
       </section>
@@ -306,6 +321,13 @@ export function InventoryManager() {
               className="w-full md:w-auto bg-purple-600 text-white hover:bg-purple-700"
             >
               表格导入
+            </Button>
+            <Button
+              onClick={handleUpdateProductNames}
+              className="w-full md:w-auto bg-blue-600 text-white hover:bg-blue-700"
+              disabled={inventoryItems.length === 0}
+            >
+              立即更新商品名称
             </Button>
             <Button
               onClick={handleClearDatabase}
@@ -558,54 +580,66 @@ export function InventoryManager() {
                       <h3 className="font-semibold text-gray-800">
                         采购批号: {batch}
                       </h3>
-                      {items.length > 0 && items[0].invoiceNumber && (
-                        <p className="text-sm text-gray-600 mt-1">
-                          发票号码: {items[0].invoiceNumber}
-                        </p>
-                      )}
-                      {items.length > 0 && items[0].invoiceDate && (
-                        <p className="text-sm text-gray-600 mt-1">
-                          开票日期: {items[0].invoiceDate}
-                        </p>
+                      {items.length > 0 && (
+                        <>
+                          {items[0].invoiceNumber && (
+                            <p className="text-sm text-gray-600 mt-1">
+                              发票号码: {items[0].invoiceNumber}
+                            </p>
+                          )}
+                          {items[0].invoiceDate && (
+                            <p className="text-sm text-gray-600 mt-1">
+                              开票日期: {items[0].invoiceDate}
+                            </p>
+                          )}
+                        </>
                       )}
                     </div>
-                    <span className="text-sm text-gray-600">
-                      共 {items.length} 种物品，总计{" "}
-                      {items.reduce((sum, item) => sum + item.quantity, 0)} 件
-                    </span>
+                    <div className="text-right text-sm text-gray-600">
+                      <div>
+                        共 {items.length} 种物品，总计{" "}
+                        {items.reduce((sum, item) => sum + item.quantity, 0)} 件
+                      </div>
+                      <div className="mt-1">
+                        总价: ¥
+                        {items
+                          .reduce(
+                            (sum, item) => sum + (item.totalPrice || 0),
+                            0
+                          )
+                          .toFixed(2)}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 {/* 批号下的物品列表 */}
-                <div className="overflow-x-auto">
+                <div>
                   <table className="w-full border-collapse text-sm">
                     <thead>
                       <tr className="bg-gray-50">
-                        <th className="px-4 py-3 text-left font-semibold text-primary-600">
+                        <th className="px-3 py-3 text-left font-semibold text-primary-600">
                           物料名称
                         </th>
-                        <th className="px-4 py-3 text-left font-semibold text-primary-600">
+                        <th className="px-3 py-3 text-left font-semibold text-primary-600">
                           数量
                         </th>
-                        <th className="px-4 py-3 text-left font-semibold text-primary-600">
+                        <th className="px-3 py-3 text-left font-semibold text-primary-600">
                           单价
                         </th>
-                        <th className="px-4 py-3 text-left font-semibold text-primary-600">
+                        <th className="px-3 py-3 text-left font-semibold text-primary-600">
                           总价
                         </th>
-                        <th className="px-4 py-3 text-left font-semibold text-primary-600">
+                        <th className="px-3 py-3 text-left font-semibold text-primary-600">
                           税率
                         </th>
-                        <th className="px-4 py-3 text-left font-semibold text-primary-600">
-                          税额
-                        </th>
-                        <th className="px-4 py-3 text-left font-semibold text-primary-600">
+                        <th className="px-3 py-3 text-left font-semibold text-primary-600">
                           商品SKU
                         </th>
-                        <th className="px-4 py-3 text-left font-semibold text-primary-600">
+                        <th className="px-3 py-3 text-left font-semibold text-primary-600">
                           仓库
                         </th>
-                        <th className="px-4 py-3 text-left font-semibold text-primary-600">
+                        <th className="px-3 py-3 text-left font-semibold text-primary-600">
                           操作
                         </th>
                       </tr>
@@ -616,49 +650,48 @@ export function InventoryManager() {
                           key={item.id}
                           className="border-b border-gray-200 hover:bg-gray-50"
                         >
-                          <td className="px-4 py-3">{item.materialName}</td>
-                          <td className="px-4 py-3">{item.quantity}</td>
-                          <td className="px-4 py-3">
+                          <td
+                            className="px-3 py-3 truncate"
+                            title={item.materialName}
+                          >
+                            {item.materialName}
+                          </td>
+                          <td className="px-3 py-3 text-center">
+                            {item.quantity}
+                          </td>
+                          <td className="px-3 py-3 text-right">
                             {item.unitPrice
                               ? `¥${item.unitPrice.toFixed(2)}`
                               : "-"}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-3 text-right">
                             {item.totalPrice
                               ? `¥${item.totalPrice.toFixed(2)}`
                               : "-"}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-3 text-center">
                             {item.taxRate ? `${item.taxRate}%` : "-"}
                           </td>
-                          <td className="px-4 py-3">
-                            {item.taxAmount
-                              ? `¥${item.taxAmount.toFixed(2)}`
-                              : "-"}
+                          <td className="px-3 py-3 truncate" title={item.sku}>
+                            {item.sku || "-"}
                           </td>
-                          <td className="px-4 py-3">
-                            <input
-                              type="text"
-                              value={item.sku || ""}
-                              onChange={(e) =>
-                                handleSkuChange(item.id, e.target.value)
-                              }
-                              className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm"
-                              placeholder="输入SKU"
-                            />
+                          <td
+                            className="px-3 py-3 truncate"
+                            title={item.warehouse}
+                          >
+                            {item.warehouse || "-"}
                           </td>
-                          <td className="px-4 py-3">{item.warehouse || "-"}</td>
-                          <td className="px-4 py-3">
-                            <div className="flex gap-2">
+                          <td className="px-3 py-3">
+                            <div className="flex gap-1">
                               <Button
                                 onClick={() => handleEdit(item)}
-                                className="px-3 py-1 text-xs bg-blue-500 text-white hover:bg-blue-600"
+                                className="px-2 py-1 text-xs bg-blue-500 text-white hover:bg-blue-600"
                               >
                                 编辑
                               </Button>
                               <Button
                                 onClick={(e) => handleDelete(item.id, e)}
-                                className="px-3 py-1 text-xs bg-red-500 text-white hover:bg-red-600"
+                                className="px-2 py-1 text-xs bg-red-500 text-white hover:bg-red-600"
                               >
                                 删除
                               </Button>

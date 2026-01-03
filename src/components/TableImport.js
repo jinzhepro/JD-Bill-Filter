@@ -8,6 +8,7 @@ import {
   validateFileSize,
 } from "@/lib/excelHandler";
 import { createMultipleInventoryItems } from "@/lib/inventoryStorage";
+import { updateProductNamesBySku } from "@/data/jdSkuMapping";
 
 export function TableImport({ onImportItems, onCancel }) {
   const [file, setFile] = useState(null);
@@ -242,8 +243,11 @@ export function TableImport({ onImportItems, onCancel }) {
         throw new Error("没有有效的数据可以导入");
       }
 
+      // 使用SKU映射更新商品名称
+      const updatedItems = updateProductNamesBySku(convertedData);
+
       // 创建库存项
-      const newItems = createMultipleInventoryItems(convertedData);
+      const newItems = createMultipleInventoryItems(updatedItems);
 
       setImportProgress(`成功导入 ${newItems.length} 条库存数据`);
 
@@ -348,6 +352,7 @@ export function TableImport({ onImportItems, onCancel }) {
               <div>• 采购订单 → 采购批号</div>
               <div>• 付款日期 → 开票日期</div>
               <div>• SKU → 商品SKU</div>
+              <div>• 仓库 → 仓库</div>
             </div>
           </div>
         </div>
@@ -400,6 +405,9 @@ export function TableImport({ onImportItems, onCancel }) {
                       <th className="px-2 py-1 text-left font-semibold text-primary-600 border">
                         SKU
                       </th>
+                      <th className="px-2 py-1 text-left font-semibold text-primary-600 border">
+                        仓库
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -416,6 +424,9 @@ export function TableImport({ onImportItems, onCancel }) {
                         <td className="px-2 py-1 border">¥{item.totalPrice}</td>
                         <td className="px-2 py-1 border">{item.taxRate}%</td>
                         <td className="px-2 py-1 border">{item.sku}</td>
+                        <td className="px-2 py-1 border">
+                          {item.warehouse || "-"}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

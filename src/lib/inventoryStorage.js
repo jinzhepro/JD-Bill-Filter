@@ -91,28 +91,42 @@ export const updateInventoryItem = (existingItem, formData) => {
   return {
     ...existingItem,
     materialName: formData.materialName || existingItem.materialName,
-    quantity: parseInt(formData.quantity) || existingItem.quantity,
-    purchaseBatch: formData.purchaseBatch || existingItem.purchaseBatch,
-    sku: formData.sku !== undefined ? formData.sku : existingItem.sku,
+    quantity:
+      formData.quantity !== undefined
+        ? parseInt(formData.quantity) || 0
+        : existingItem.quantity,
+    purchaseBatch:
+      formData.purchaseBatch !== undefined
+        ? formData.purchaseBatch || ""
+        : existingItem.purchaseBatch,
+    sku: formData.sku !== undefined ? formData.sku || "" : existingItem.sku,
     unitPrice:
       formData.unitPrice !== undefined
-        ? parseFloat(formData.unitPrice)
+        ? parseFloat(formData.unitPrice) || 0
         : existingItem.unitPrice,
     totalPrice:
       formData.totalPrice !== undefined
-        ? parseFloat(formData.totalPrice)
+        ? parseFloat(formData.totalPrice) || 0
         : existingItem.totalPrice,
     taxRate:
       formData.taxRate !== undefined
-        ? parseFloat(formData.taxRate)
+        ? parseFloat(formData.taxRate) || 0
         : existingItem.taxRate,
     taxAmount:
       formData.taxAmount !== undefined
-        ? parseFloat(formData.taxAmount)
+        ? parseFloat(formData.taxAmount) || 0
         : existingItem.taxAmount,
+    invoiceNumber:
+      formData.invoiceNumber !== undefined
+        ? formData.invoiceNumber || ""
+        : existingItem.invoiceNumber,
+    invoiceDate:
+      formData.invoiceDate !== undefined
+        ? formData.invoiceDate || ""
+        : existingItem.invoiceDate,
     warehouse:
       formData.warehouse !== undefined
-        ? formData.warehouse
+        ? formData.warehouse || ""
         : existingItem.warehouse,
     updatedAt: new Date().toISOString(),
   };
