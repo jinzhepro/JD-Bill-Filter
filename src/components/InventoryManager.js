@@ -6,8 +6,6 @@ import Button from "./ui/Button";
 import { BatchInventoryAdd } from "./BatchInventoryAdd";
 import { TableImport } from "./TableImport";
 import {
-  getInventoryFromStorage,
-  saveInventoryToStorage,
   createInventoryItem,
   updateInventoryItem,
   validateInventoryForm,
@@ -16,15 +14,22 @@ import {
   groupInventoryByBatch,
   validateMultipleInventoryForms,
   createMultipleInventoryItems,
-  clearAllInventoryData,
 } from "@/lib/inventoryStorage";
 import { updateProductNamesBySku } from "@/data/jdSkuMapping";
+import {
+  testConnection,
+  createInventoryTable,
+  pushInventoryToMySQL,
+  getInventoryFromMySQL,
+  clearInventoryInMySQL,
+} from "@/lib/mysqlConnection";
 
 export function InventoryManager() {
   const {
     inventoryItems,
     inventoryForm,
     editingInventoryId,
+    isDbLoading,
     setInventoryItems,
     setInventoryForm,
     resetInventoryForm,
@@ -36,6 +41,7 @@ export function InventoryManager() {
     addLog,
     setError,
     setInventoryMode,
+    loadInventoryFromDB,
   } = useApp();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -43,18 +49,13 @@ export function InventoryManager() {
   const [isBatchFormVisible, setIsBatchFormVisible] = useState(false);
   const [isTableImportVisible, setIsTableImportVisible] = useState(false);
   const [formErrors, setFormErrors] = useState([]);
+  const [isMySqlProcessing, setIsMySqlProcessing] = useState(false);
+  const [mySqlStatus, setMySqlStatus] = useState("");
 
-  // 初始化时从localStorage加载数据
+  // 在组件挂载时从数据库加载库存数据
   useEffect(() => {
-    const storedItems = getInventoryFromStorage();
-    setInventoryItems(storedItems);
-  }, [setInventoryItems]);
-
-  // 保存数据到localStorage
-  useEffect(() => {
-    // 总是保存数据，包括空数组的情况
-    saveInventoryToStorage(inventoryItems);
-  }, [inventoryItems]);
+    // 数据已经在AppContext中加载，这里不需要重复加载
+  }, []);
 
   // 处理表单输入变化
   const handleInputChange = (e) => {
@@ -133,7 +134,7 @@ export function InventoryManager() {
   };
 
   // 清空数据库处理
-  const handleClearDatabase = () => {
+  const handleClearDatabase = async () => {
     if (
       inventoryItems.length === 0 ||
       window.confirm(
@@ -141,8 +142,17 @@ export function InventoryManager() {
       )
     ) {
       try {
-        // 清空localStorage中的数据
-        clearAllInventoryData();
+        // 清空数据库中的数据
+        const { clearInventoryInMySQL } = await import("@/lib/mysqlConnection");
+        const result = await clearInventoryInMySQL();
+
+        if (result.success) {
+          // 清空成功后，重新从数据库加载数据
+          await actions.loadInventoryFromDB();
+          actions.addLog("库存数据已清空", LogType.SUCCESS);
+        } else {
+          actions.addLog(`清空库存数据失败: ${result.message}`, LogType.ERROR);
+        }
         // 清空状态中的数据
         setInventoryItems([]);
         addLog("所有库存数据已清空", "warning");
@@ -171,24 +181,33 @@ export function InventoryManager() {
   };
 
   // 处理删除
-  const handleDelete = (id, event) => {
+  const handleDelete = async (id, event) => {
     // 阻止事件冒泡
     if (event) {
       event.stopPropagation();
     }
+
+    console.log("handleDelete被调用，ID:", id);
 
     const item = inventoryItems.find((item) => item.id === id);
     if (
       item &&
       window.confirm(`确定要删除库存项 "${item.materialName}" 吗？`)
     ) {
-      deleteInventoryItem(id);
-      addLog(`库存项 "${item.materialName}" 已删除`, "warning");
+      try {
+        console.log("开始调用deleteInventoryItem，ID:", id);
+        await deleteInventoryItem(id);
+        console.log("deleteInventoryItem调用完成");
+        addLog(`库存项 "${item.materialName}" 已删除`, "warning");
+      } catch (error) {
+        console.error("删除库存项失败:", error);
+        setError(`删除库存项失败: ${error.message}`);
+      }
     }
   };
 
   // 立即更新商品名称处理
-  const handleUpdateProductNames = () => {
+  const handleUpdateProductNames = async () => {
     if (inventoryItems.length === 0) {
       setError("没有库存数据可以更新");
       return;
@@ -205,6 +224,10 @@ export function InventoryManager() {
 
         // 更新状态
         setInventoryItems(updatedItems);
+
+        // 保存到MySQL数据库
+        const { pushInventoryToMySQL } = await import("@/lib/mysqlConnection");
+        await pushInventoryToMySQL(updatedItems);
 
         // 统计更新数量
         const updatedCount = updatedItems.filter(
@@ -227,6 +250,121 @@ export function InventoryManager() {
     setFormErrors([]);
   };
 
+  // 测试MySQL连接
+  const handleTestMySqlConnection = async () => {
+    setIsMySqlProcessing(true);
+    setMySqlStatus("正在测试MySQL连接...");
+
+    try {
+      const result = await testConnection();
+      if (result.success) {
+        setMySqlStatus("MySQL连接测试成功");
+        addLog(result.message, "success");
+      } else {
+        setMySqlStatus("MySQL连接测试失败");
+        addLog(result.message, "error");
+      }
+    } catch (error) {
+      setMySqlStatus("MySQL连接测试出错");
+      addLog(`MySQL连接测试出错: ${error.message}`, "error");
+    } finally {
+      setIsMySqlProcessing(false);
+    }
+  };
+
+  // 推送数据到MySQL
+  const handlePushToMySQL = async () => {
+    if (inventoryItems.length === 0) {
+      setError("没有库存数据可以推送");
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `确定要将 ${inventoryItems.length} 条库存数据推送到MySQL数据库吗？此操作将会覆盖数据库中的现有数据！`
+      )
+    ) {
+      return;
+    }
+
+    setIsMySqlProcessing(true);
+    setMySqlStatus("正在推送数据到MySQL...");
+
+    try {
+      // 先创建表（如果不存在）
+      const tableResult = await createInventoryTable();
+      if (!tableResult.success) {
+        throw new Error(tableResult.message);
+      }
+
+      // 推送数据
+      const pushResult = await pushInventoryToMySQL(inventoryItems);
+      if (pushResult.success) {
+        setMySqlStatus("数据推送成功");
+        addLog(pushResult.message, "success");
+      } else {
+        throw new Error(pushResult.message);
+      }
+    } catch (error) {
+      setMySqlStatus("数据推送失败");
+      addLog(`数据推送失败: ${error.message}`, "error");
+    } finally {
+      setIsMySqlProcessing(false);
+    }
+  };
+
+  // 从MySQL拉取数据
+  const handlePullFromMySQL = async () => {
+    if (
+      !window.confirm(
+        "确定要从MySQL数据库拉取库存数据吗？此操作将会覆盖当前本地数据！"
+      )
+    ) {
+      return;
+    }
+
+    setIsMySqlProcessing(true);
+    setMySqlStatus("正在从MySQL拉取数据...");
+
+    try {
+      const items = await loadInventoryFromDB();
+      setMySqlStatus("数据拉取成功");
+      addLog(`成功从数据库拉取 ${items.length} 条库存数据`, "success");
+    } catch (error) {
+      setMySqlStatus("数据拉取失败");
+      addLog(`数据拉取失败: ${error.message}`, "error");
+    } finally {
+      setIsMySqlProcessing(false);
+    }
+  };
+
+  // 清空MySQL数据
+  const handleClearMySQL = async () => {
+    if (
+      !window.confirm("确定要清空MySQL数据库中的库存数据吗？此操作无法撤销！")
+    ) {
+      return;
+    }
+
+    setIsMySqlProcessing(true);
+    setMySqlStatus("正在清空MySQL数据...");
+
+    try {
+      const result = await clearInventoryInMySQL();
+      if (result.success) {
+        setMySqlStatus("MySQL数据清空成功");
+        addLog(result.message, "warning");
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error) {
+      setMySqlStatus("MySQL数据清空失败");
+      addLog(`MySQL数据清空失败: ${error.message}`, "error");
+    } finally {
+      setIsMySqlProcessing(false);
+    }
+  };
+
   // 获取过滤后的库存项
   const filteredItems = searchInventoryItems(inventoryItems, searchTerm);
 
@@ -237,10 +375,10 @@ export function InventoryManager() {
   const stats = getInventoryStats(inventoryItems);
 
   // 计算总价
-  const totalAmount = inventoryItems.reduce(
-    (sum, item) => sum + (item.totalPrice || 0),
-    0
-  );
+  const totalAmount = inventoryItems.reduce((sum, item) => {
+    const price = parseFloat(item.totalPrice);
+    return sum + (isNaN(price) ? 0 : price);
+  }, 0);
 
   return (
     <div className="space-y-6">
@@ -323,10 +461,68 @@ export function InventoryManager() {
             <Button
               onClick={handleClearDatabase}
               className="w-full md:w-auto bg-red-600 text-white hover:bg-red-700"
-              disabled={inventoryItems.length === 0}
+              disabled={inventoryItems.length === 0 || isDbLoading}
             >
               清空数据库
             </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* MySQL数据库操作区域 */}
+      <section className="bg-white rounded-xl shadow-lg p-6 animate-fade-in">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">
+          MySQL数据库操作
+        </h2>
+
+        {/* MySQL状态显示 */}
+        {mySqlStatus && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="text-blue-600 text-sm">{mySqlStatus}</div>
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-3">
+          <Button
+            onClick={handleTestMySqlConnection}
+            disabled={isMySqlProcessing}
+            className="bg-blue-600 text-white hover:bg-blue-700"
+          >
+            {isMySqlProcessing ? "测试中..." : "测试MySQL连接"}
+          </Button>
+
+          <Button
+            onClick={handlePushToMySQL}
+            disabled={isMySqlProcessing || inventoryItems.length === 0}
+            className="bg-green-600 text-white hover:bg-green-700"
+          >
+            {isMySqlProcessing ? "推送中..." : "推送数据到MySQL"}
+          </Button>
+
+          <Button
+            onClick={handlePullFromMySQL}
+            disabled={isMySqlProcessing}
+            className="bg-purple-600 text-white hover:bg-purple-700"
+          >
+            {isMySqlProcessing ? "拉取中..." : "从MySQL拉取数据"}
+          </Button>
+
+          <Button
+            onClick={handleClearMySQL}
+            disabled={isMySqlProcessing}
+            className="bg-red-600 text-white hover:bg-red-700"
+          >
+            {isMySqlProcessing ? "清空中..." : "清空MySQL数据"}
+          </Button>
+        </div>
+
+        <div className="mt-4 text-sm text-gray-600">
+          <p className="font-medium mb-2">MySQL数据库连接信息：</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+            <div>• 主机: localhost:3306</div>
+            <div>• 数据库: testdb</div>
+            <div>• 用户: root</div>
+            <div>• 表名: inventory</div>
           </div>
         </div>
       </section>
@@ -525,7 +721,11 @@ export function InventoryManager() {
           库存列表 ({filteredItems.length}) - 按采购批号分组
         </h2>
 
-        {filteredItems.length === 0 ? (
+        {isDbLoading ? (
+          <div className="text-center py-8 text-gray-500">
+            正在从数据库加载库存数据...
+          </div>
+        ) : filteredItems.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             {searchTerm ? "没有找到匹配的库存项" : "暂无库存数据，请添加库存项"}
           </div>
@@ -553,7 +753,8 @@ export function InventoryManager() {
                         总价: ¥
                         {items
                           .reduce(
-                            (sum, item) => sum + (item.totalPrice || 0),
+                            (sum, item) =>
+                              sum + (parseFloat(item.totalPrice) || 0),
                             0
                           )
                           .toFixed(2)}
@@ -610,12 +811,12 @@ export function InventoryManager() {
                           </td>
                           <td className="px-3 py-3 text-right">
                             {item.unitPrice
-                              ? `¥${item.unitPrice.toFixed(2)}`
+                              ? `¥${parseFloat(item.unitPrice).toFixed(2)}`
                               : "-"}
                           </td>
                           <td className="px-3 py-3 text-right">
                             {item.totalPrice
-                              ? `¥${item.totalPrice.toFixed(2)}`
+                              ? `¥${parseFloat(item.totalPrice).toFixed(2)}`
                               : "-"}
                           </td>
                           <td className="px-3 py-3 text-center">

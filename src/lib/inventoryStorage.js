@@ -1,93 +1,44 @@
 "use client";
 
-// localStorage 键名
-const INVENTORY_STORAGE_KEY = "jd_bill_filter_inventory";
+// 通过API调用MySQL操作
 
-/**
- * 生成唯一ID
- * @returns {string} 唯一ID
- */
-export const generateId = () => {
-  return `inv-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-};
-
-/**
- * 从localStorage获取库存数据
- * @returns {Array} 库存物品列表
- */
-export const getInventoryFromStorage = () => {
+// 从MySQL数据库获取库存数据
+export async function getInventoryFromDatabase() {
   try {
-    if (typeof window === "undefined") return [];
-
-    const storedData = localStorage.getItem(INVENTORY_STORAGE_KEY);
-    if (!storedData) return [];
-
-    return JSON.parse(storedData);
+    const { getInventoryFromMySQL } = await import("@/lib/mysqlConnection");
+    const result = await getInventoryFromMySQL();
+    if (result.success) {
+      return result.data;
+    }
+    console.error("从MySQL获取库存数据失败:", result.message);
+    return [];
   } catch (error) {
-    console.error("获取库存数据失败:", error);
+    console.error("从MySQL获取库存数据失败:", error);
     return [];
   }
-};
+}
 
-/**
- * 保存库存数据到localStorage
- * @param {Array} inventoryItems 库存物品列表
- * @returns {boolean} 是否保存成功
- */
-export const saveInventoryToStorage = (inventoryItems) => {
-  try {
-    if (typeof window === "undefined") return false;
-
-    localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(inventoryItems));
-    return true;
-  } catch (error) {
-    console.error("保存库存数据失败:", error);
-    return false;
-  }
-};
-
-/**
- * 创建新的库存项
- * @param {Object} formData 表单数据
- * @returns {Object} 新的库存项
- */
-export const createInventoryItem = (formData) => {
+// 创建库存项
+export function createInventoryItem(formData) {
   const now = new Date().toISOString();
-
   return {
-    id: generateId(),
+    id: `inv-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     materialName: formData.materialName || "",
     quantity: parseInt(formData.quantity) || 0,
     purchaseBatch: formData.purchaseBatch || "",
     sku: formData.sku || "",
-    unitPrice: parseFloat(formData.unitPrice) || 0, // 单价
-    totalPrice: parseFloat(formData.totalPrice) || 0, // 总价
-    taxRate: parseFloat(formData.taxRate) || 0, // 税率
-    taxAmount: parseFloat(formData.taxAmount) || 0, // 税额
-    invoiceNumber: formData.invoiceNumber || "", // 发票号码
-    invoiceDate: formData.invoiceDate || "", // 开票日期
-    warehouse: formData.warehouse || "", // 仓库
+    unitPrice: parseFloat(formData.unitPrice) || 0,
+    totalPrice: parseFloat(formData.totalPrice) || 0,
+    taxRate: parseFloat(formData.taxRate) || 0,
+    taxAmount: parseFloat(formData.taxAmount) || 0,
+    warehouse: formData.warehouse || "",
     createdAt: now,
     updatedAt: now,
   };
-};
+}
 
-/**
- * 批量创建库存项
- * @param {Array} formDataArray 表单数据数组
- * @returns {Array} 新的库存项数组
- */
-export const createMultipleInventoryItems = (formDataArray) => {
-  return formDataArray.map((formData) => createInventoryItem(formData));
-};
-
-/**
- * 更新库存项
- * @param {Object} existingItem 现有库存项
- * @param {Object} formData 表单数据
- * @returns {Object} 更新后的库存项
- */
-export const updateInventoryItem = (existingItem, formData) => {
+// 更新库存项
+export function updateInventoryItem(existingItem, formData) {
   return {
     ...existingItem,
     materialName: formData.materialName || existingItem.materialName,
@@ -116,28 +67,16 @@ export const updateInventoryItem = (existingItem, formData) => {
       formData.taxAmount !== undefined
         ? parseFloat(formData.taxAmount) || 0
         : existingItem.taxAmount,
-    invoiceNumber:
-      formData.invoiceNumber !== undefined
-        ? formData.invoiceNumber || ""
-        : existingItem.invoiceNumber,
-    invoiceDate:
-      formData.invoiceDate !== undefined
-        ? formData.invoiceDate || ""
-        : existingItem.invoiceDate,
     warehouse:
       formData.warehouse !== undefined
         ? formData.warehouse || ""
         : existingItem.warehouse,
     updatedAt: new Date().toISOString(),
   };
-};
+}
 
-/**
- * 验证库存表单数据
- * @param {Object} formData 表单数据
- * @returns {Object} 验证结果 { isValid: boolean, errors: Array }
- */
-export const validateInventoryForm = (formData) => {
+// 验证单个库存表单
+export function validateInventoryForm(formData) {
   const errors = [];
 
   if (!formData.materialName || formData.materialName.trim() === "") {
@@ -193,14 +132,10 @@ export const validateInventoryForm = (formData) => {
     isValid: errors.length === 0,
     errors,
   };
-};
+}
 
-/**
- * 批量验证库存表单数据
- * @param {Array} formDataArray 表单数据数组
- * @returns {Object} 验证结果 { isValid: boolean, errors: Array, itemErrors: Object }
- */
-export const validateMultipleInventoryForms = (formDataArray) => {
+// 验证多个库存表单
+export function validateMultipleInventoryForms(formDataArray) {
   const allErrors = [];
   const itemErrors = {};
   let isValid = true;
@@ -219,25 +154,15 @@ export const validateMultipleInventoryForms = (formDataArray) => {
     errors: allErrors,
     itemErrors,
   };
-};
+}
 
-/**
- * 根据ID查找库存项
- * @param {Array} inventoryItems 库存物品列表
- * @param {string} id 库存项ID
- * @returns {Object|null} 找到的库存项或null
- */
-export const findInventoryItemById = (inventoryItems, id) => {
-  return inventoryItems.find((item) => item.id === id) || null;
-};
+// 创建多个库存项
+export function createMultipleInventoryItems(formDataArray) {
+  return formDataArray.map((formData) => createInventoryItem(formData));
+}
 
-/**
- * 根据物料名称搜索库存项
- * @param {Array} inventoryItems 库存物品列表
- * @param {string} searchTerm 搜索词
- * @returns {Array} 匹配的库存项列表
- */
-export const searchInventoryItems = (inventoryItems, searchTerm) => {
+// 搜索库存项
+export function searchInventoryItems(inventoryItems, searchTerm) {
   if (!searchTerm || searchTerm.trim() === "") {
     return inventoryItems;
   }
@@ -247,19 +172,14 @@ export const searchInventoryItems = (inventoryItems, searchTerm) => {
   return inventoryItems.filter(
     (item) =>
       item.materialName.toLowerCase().includes(term) ||
-      (item.specification && item.specification.toLowerCase().includes(term)) ||
       item.purchaseBatch.toLowerCase().includes(term) ||
       (item.warehouse && item.warehouse.toLowerCase().includes(term)) ||
       (item.sku && item.sku.toLowerCase().includes(term))
   );
-};
+}
 
-/**
- * 根据采购批号分组库存项
- * @param {Array} inventoryItems 库存物品列表
- * @returns {Object} 按采购批号分组的库存项
- */
-export const groupInventoryByBatch = (inventoryItems) => {
+// 按采购批号分组
+export function groupInventoryByBatch(inventoryItems) {
   const grouped = {};
 
   inventoryItems.forEach((item) => {
@@ -276,34 +196,10 @@ export const groupInventoryByBatch = (inventoryItems) => {
   });
 
   return grouped;
-};
+}
 
-/**
- * 实时更新库存项的SKU
- * @param {Array} inventoryItems 库存物品列表
- * @param {string} itemId 库存项ID
- * @param {string} newSku 新的SKU值
- * @returns {Array} 更新后的库存物品列表
- */
-export const updateItemSku = (inventoryItems, itemId, newSku) => {
-  return inventoryItems.map((item) => {
-    if (item.id === itemId) {
-      return {
-        ...item,
-        sku: newSku,
-        updatedAt: new Date().toISOString(),
-      };
-    }
-    return item;
-  });
-};
-
-/**
- * 获取库存统计信息
- * @param {Array} inventoryItems 库存物品列表
- * @returns {Object} 统计信息
- */
-export const getInventoryStats = (inventoryItems) => {
+// 获取库存统计信息
+export function getInventoryStats(inventoryItems) {
   const stats = {
     totalItems: inventoryItems.length,
     totalQuantity: 0,
@@ -316,20 +212,4 @@ export const getInventoryStats = (inventoryItems) => {
   });
 
   return stats;
-};
-
-/**
- * 清空所有库存数据
- * @returns {boolean} 是否清空成功
- */
-export const clearAllInventoryData = () => {
-  try {
-    if (typeof window === "undefined") return false;
-
-    localStorage.removeItem(INVENTORY_STORAGE_KEY);
-    return true;
-  } catch (error) {
-    console.error("清空库存数据失败:", error);
-    return false;
-  }
-};
+}

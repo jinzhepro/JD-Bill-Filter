@@ -1,7 +1,14 @@
 "use client";
 
-import { createContext, useContext, useReducer, useCallback } from "react";
+import {
+  createContext,
+  useContext,
+  useReducer,
+  useCallback,
+  useEffect,
+} from "react";
 import { LogType } from "@/types";
+import { getInventoryFromDatabase } from "@/lib/inventoryStorage";
 
 // 初始状态
 const initialState = {
@@ -33,6 +40,8 @@ const initialState = {
   // SKU和批次号处理相关状态
   skuProcessedData: [], // 经过SKU替换和批次号添加的数据
   isSkuProcessing: false, // 是否正在进行SKU处理
+  // MySQL数据库相关状态
+  isDbLoading: false, // 是否正在从数据库加载数据
 };
 
 // Action 类型
@@ -65,6 +74,9 @@ const ActionTypes = {
   // SKU和批次号处理相关Action类型
   SET_SKU_PROCESSED_DATA: "SET_SKU_PROCESSED_DATA",
   SET_SKU_PROCESSING: "SET_SKU_PROCESSING",
+  // MySQL数据库相关Action类型
+  LOAD_INVENTORY_FROM_DB: "LOAD_INVENTORY_FROM_DB",
+  SET_DB_LOADING: "SET_DB_LOADING",
 };
 
 // Reducer
@@ -198,6 +210,13 @@ function appReducer(state, action) {
     case ActionTypes.SET_SKU_PROCESSING:
       return { ...state, isSkuProcessing: action.payload };
 
+    // MySQL数据库相关处理
+    case ActionTypes.LOAD_INVENTORY_FROM_DB:
+      return { ...state, inventoryItems: action.payload };
+
+    case ActionTypes.SET_DB_LOADING:
+      return { ...state, isDbLoading: action.payload };
+
     case ActionTypes.RESET:
       return initialState;
 
@@ -212,6 +231,24 @@ const AppContext = createContext();
 // Provider 组件
 export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
+
+  // 在组件挂载时从数据库加载库存数据
+  useEffect(() => {
+    const loadInitialData = async () => {
+      dispatch({ type: ActionTypes.SET_DB_LOADING, payload: true });
+      try {
+        const items = await getInventoryFromDatabase();
+        dispatch({ type: ActionTypes.LOAD_INVENTORY_FROM_DB, payload: items });
+      } catch (error) {
+        console.error("初始化加载库存数据失败:", error);
+        // 不设置错误状态，避免在应用启动时显示错误
+      } finally {
+        dispatch({ type: ActionTypes.SET_DB_LOADING, payload: false });
+      }
+    };
+
+    loadInitialData();
+  }, []);
 
   // Actions
   const actions = {
@@ -279,23 +316,85 @@ export function AppProvider({ children }) {
       dispatch({ type: ActionTypes.SET_INVENTORY_ITEMS, payload: items });
     }, []),
 
-    addInventoryItem: useCallback((item) => {
-      dispatch({ type: ActionTypes.ADD_INVENTORY_ITEM, payload: item });
-    }, []),
+    addInventoryItem: useCallback(
+      async (item) => {
+        dispatch({ type: ActionTypes.ADD_INVENTORY_ITEM, payload: item });
+        // 保存到MySQL数据库
+        try {
+          const { pushInventoryToMySQL } = await import(
+            "@/lib/mysqlConnection"
+          );
+          await pushInventoryToMySQL([...state.inventoryItems, item]);
+        } catch (error) {
+          console.error("保存库存项到数据库失败:", error);
+        }
+      },
+      [state.inventoryItems]
+    ),
 
-    addMultipleInventoryItems: useCallback((items) => {
-      dispatch({
-        type: ActionTypes.ADD_MULTIPLE_INVENTORY_ITEMS,
-        payload: items,
-      });
-    }, []),
+    addMultipleInventoryItems: useCallback(
+      async (items) => {
+        dispatch({
+          type: ActionTypes.ADD_MULTIPLE_INVENTORY_ITEMS,
+          payload: items,
+        });
+        // 保存到MySQL数据库
+        try {
+          const { pushInventoryToMySQL } = await import(
+            "@/lib/mysqlConnection"
+          );
+          await pushInventoryToMySQL([...state.inventoryItems, ...items]);
+        } catch (error) {
+          console.error("批量保存库存项到数据库失败:", error);
+        }
+      },
+      [state.inventoryItems]
+    ),
 
-    updateInventoryItem: useCallback((item) => {
-      dispatch({ type: ActionTypes.UPDATE_INVENTORY_ITEM, payload: item });
-    }, []),
+    updateInventoryItem: useCallback(
+      async (item) => {
+        dispatch({ type: ActionTypes.UPDATE_INVENTORY_ITEM, payload: item });
+        // 保存到MySQL数据库
+        try {
+          const { pushInventoryToMySQL } = await import(
+            "@/lib/mysqlConnection"
+          );
+          const updatedItems = state.inventoryItems.map((i) =>
+            i.id === item.id ? item : i
+          );
+          await pushInventoryToMySQL(updatedItems);
+        } catch (error) {
+          console.error("更新库存项到数据库失败:", error);
+        }
+      },
+      [state.inventoryItems]
+    ),
 
-    deleteInventoryItem: useCallback((id) => {
-      dispatch({ type: ActionTypes.DELETE_INVENTORY_ITEM, payload: id });
+    deleteInventoryItem: useCallback(async (id) => {
+      // 先从数据库删除
+      try {
+        const { deleteInventoryFromMySQL } = await import(
+          "@/lib/mysqlConnection"
+        );
+        const result = await deleteInventoryFromMySQL(id);
+
+        if (result.success) {
+          // 数据库删除成功后，更新本地状态
+          dispatch({ type: ActionTypes.DELETE_INVENTORY_ITEM, payload: id });
+        } else {
+          console.error("删除库存项从数据库失败:", result.message);
+          dispatch({
+            type: ActionTypes.SET_ERROR,
+            payload: `删除库存项失败: ${result.message}`,
+          });
+        }
+      } catch (error) {
+        console.error("删除库存项从数据库失败:", error);
+        dispatch({
+          type: ActionTypes.SET_ERROR,
+          payload: `删除库存项失败: ${error.message}`,
+        });
+      }
     }, []),
 
     setInventoryForm: useCallback((formData) => {
@@ -310,8 +409,33 @@ export function AppProvider({ children }) {
       dispatch({ type: ActionTypes.SET_EDITING_INVENTORY_ID, payload: id });
     }, []),
 
-    clearInventoryData: useCallback(() => {
-      dispatch({ type: ActionTypes.CLEAR_INVENTORY_DATA });
+    clearInventoryData: useCallback(async () => {
+      // 先清空MySQL数据库
+      try {
+        const { clearInventoryInMySQL } = await import("@/lib/mysqlConnection");
+        const result = await clearInventoryInMySQL();
+
+        if (result.success) {
+          // 清空成功后，重新从数据库加载数据
+          const items = await getInventoryFromDatabase();
+          dispatch({
+            type: ActionTypes.LOAD_INVENTORY_FROM_DB,
+            payload: items,
+          });
+        } else {
+          console.error("清空库存数据失败:", result.message);
+          dispatch({
+            type: ActionTypes.SET_ERROR,
+            payload: `清空库存数据失败: ${result.message}`,
+          });
+        }
+      } catch (error) {
+        console.error("清空库存数据到数据库失败:", error);
+        dispatch({
+          type: ActionTypes.SET_ERROR,
+          payload: `清空库存数据失败: ${error.message}`,
+        });
+      }
     }, []),
 
     // SKU和批次号处理相关actions
@@ -321,6 +445,29 @@ export function AppProvider({ children }) {
 
     setSkuProcessing: useCallback((isProcessing) => {
       dispatch({ type: ActionTypes.SET_SKU_PROCESSING, payload: isProcessing });
+    }, []),
+
+    // MySQL数据库相关actions
+    loadInventoryFromDB: useCallback(async () => {
+      dispatch({ type: ActionTypes.SET_DB_LOADING, payload: true });
+      try {
+        const items = await getInventoryFromDatabase();
+        dispatch({ type: ActionTypes.LOAD_INVENTORY_FROM_DB, payload: items });
+        return items;
+      } catch (error) {
+        console.error("从数据库加载库存数据失败:", error);
+        dispatch({
+          type: ActionTypes.SET_ERROR,
+          payload: "从数据库加载库存数据失败",
+        });
+        return [];
+      } finally {
+        dispatch({ type: ActionTypes.SET_DB_LOADING, payload: false });
+      }
+    }, []),
+
+    setDbLoading: useCallback((isLoading) => {
+      dispatch({ type: ActionTypes.SET_DB_LOADING, payload: isLoading });
     }, []),
 
     reset: useCallback(() => {
