@@ -14,6 +14,18 @@ const initialState = {
   mergeMode: false, // 新增：是否处于合并模式
   mergedData: [], // 新增：合并后的数据
   fileDataArray: [], // 新增：存储多个文件的数据数组
+  // 库存管理相关状态
+  inventoryMode: false, // 是否处于库存管理模式
+  inventoryItems: [], // 库存物品列表
+  inventoryForm: {
+    // 库存表单数据
+    materialName: "",
+    specification: "",
+    quantity: "",
+    purchaseBatch: "",
+    sku: "",
+  },
+  editingInventoryId: null, // 正在编辑的库存项ID
 };
 
 // Action 类型
@@ -32,6 +44,16 @@ const ActionTypes = {
   SET_MERGE_MODE: "SET_MERGE_MODE", // 新增：设置合并模式
   SET_MERGED_DATA: "SET_MERGED_DATA", // 新增：设置合并后的数据
   SET_FILE_DATA_ARRAY: "SET_FILE_DATA_ARRAY", // 新增：设置文件数据数组
+  // 库存管理相关Action类型
+  SET_INVENTORY_MODE: "SET_INVENTORY_MODE",
+  SET_INVENTORY_ITEMS: "SET_INVENTORY_ITEMS",
+  ADD_INVENTORY_ITEM: "ADD_INVENTORY_ITEM",
+  ADD_MULTIPLE_INVENTORY_ITEMS: "ADD_MULTIPLE_INVENTORY_ITEMS",
+  UPDATE_INVENTORY_ITEM: "UPDATE_INVENTORY_ITEM",
+  DELETE_INVENTORY_ITEM: "DELETE_INVENTORY_ITEM",
+  SET_INVENTORY_FORM: "SET_INVENTORY_FORM",
+  RESET_INVENTORY_FORM: "RESET_INVENTORY_FORM",
+  SET_EDITING_INVENTORY_ID: "SET_EDITING_INVENTORY_ID",
 };
 
 // Reducer
@@ -94,6 +116,63 @@ function appReducer(state, action) {
 
     case ActionTypes.SET_FILE_DATA_ARRAY:
       return { ...state, fileDataArray: action.payload };
+
+    // 库存管理相关处理
+    case ActionTypes.SET_INVENTORY_MODE:
+      return { ...state, inventoryMode: action.payload };
+
+    case ActionTypes.SET_INVENTORY_ITEMS:
+      return { ...state, inventoryItems: action.payload };
+
+    case ActionTypes.ADD_INVENTORY_ITEM:
+      return {
+        ...state,
+        inventoryItems: [...state.inventoryItems, action.payload],
+      };
+
+    case ActionTypes.ADD_MULTIPLE_INVENTORY_ITEMS:
+      return {
+        ...state,
+        inventoryItems: [...state.inventoryItems, ...action.payload],
+      };
+
+    case ActionTypes.UPDATE_INVENTORY_ITEM:
+      return {
+        ...state,
+        inventoryItems: state.inventoryItems.map((item) =>
+          item.id === action.payload.id ? action.payload : item
+        ),
+      };
+
+    case ActionTypes.DELETE_INVENTORY_ITEM:
+      return {
+        ...state,
+        inventoryItems: state.inventoryItems.filter(
+          (item) => item.id !== action.payload
+        ),
+      };
+
+    case ActionTypes.SET_INVENTORY_FORM:
+      return {
+        ...state,
+        inventoryForm: { ...state.inventoryForm, ...action.payload },
+      };
+
+    case ActionTypes.RESET_INVENTORY_FORM:
+      return {
+        ...state,
+        inventoryForm: {
+          materialName: "",
+          specification: "",
+          quantity: "",
+          purchaseBatch: "",
+          type: "material",
+          status: "in_stock",
+        },
+      };
+
+    case ActionTypes.SET_EDITING_INVENTORY_ID:
+      return { ...state, editingInventoryId: action.payload };
 
     case ActionTypes.RESET:
       return initialState;
@@ -162,6 +241,49 @@ export function AppProvider({ children }) {
 
     setFileDataArray: useCallback((data) => {
       dispatch({ type: ActionTypes.SET_FILE_DATA_ARRAY, payload: data });
+    }, []),
+
+    // 库存管理相关actions
+    setInventoryMode: useCallback((inventoryMode) => {
+      dispatch({
+        type: ActionTypes.SET_INVENTORY_MODE,
+        payload: inventoryMode,
+      });
+    }, []),
+
+    setInventoryItems: useCallback((items) => {
+      dispatch({ type: ActionTypes.SET_INVENTORY_ITEMS, payload: items });
+    }, []),
+
+    addInventoryItem: useCallback((item) => {
+      dispatch({ type: ActionTypes.ADD_INVENTORY_ITEM, payload: item });
+    }, []),
+
+    addMultipleInventoryItems: useCallback((items) => {
+      dispatch({
+        type: ActionTypes.ADD_MULTIPLE_INVENTORY_ITEMS,
+        payload: items,
+      });
+    }, []),
+
+    updateInventoryItem: useCallback((item) => {
+      dispatch({ type: ActionTypes.UPDATE_INVENTORY_ITEM, payload: item });
+    }, []),
+
+    deleteInventoryItem: useCallback((id) => {
+      dispatch({ type: ActionTypes.DELETE_INVENTORY_ITEM, payload: id });
+    }, []),
+
+    setInventoryForm: useCallback((formData) => {
+      dispatch({ type: ActionTypes.SET_INVENTORY_FORM, payload: formData });
+    }, []),
+
+    resetInventoryForm: useCallback(() => {
+      dispatch({ type: ActionTypes.RESET_INVENTORY_FORM });
+    }, []),
+
+    setEditingInventoryId: useCallback((id) => {
+      dispatch({ type: ActionTypes.SET_EDITING_INVENTORY_ID, payload: id });
     }, []),
 
     reset: useCallback(() => {
