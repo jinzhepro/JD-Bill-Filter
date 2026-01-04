@@ -22,12 +22,12 @@ export default function MergeProcessor() {
     clearError,
     setProcessing,
     reset,
-    inventoryItems,
-    setSkuProcessedData,
-    skuProcessedData,
   } = useApp();
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSkuProcessing, setIsSkuProcessing] = useState(false);
+  const [skuProcessedData, setSkuProcessedData] = useState([]);
+  const [hasFailedReplacements, setHasFailedReplacements] = useState(false);
 
   // 处理多文件合并
   const handleMergeProcess = useCallback(async () => {
@@ -56,28 +56,6 @@ export default function MergeProcessor() {
         `多文件合并完成，生成 ${mergedResult.length} 条合并记录`,
         "success"
       );
-
-      // 自动应用SKU映射和批次号替换
-      if (inventoryItems && inventoryItems.length > 0) {
-        try {
-          addLog("开始自动应用物料名称替换和批次号...", "info");
-          const enhancedData = processWithSkuAndBatch(
-            mergedResult,
-            inventoryItems
-          );
-          setSkuProcessedData(enhancedData);
-          addLog(
-            `物料名称替换和批次号处理完成，生成 ${enhancedData.length} 条增强数据`,
-            "success"
-          );
-        } catch (error) {
-          console.error("自动SKU处理失败:", error);
-          addLog(`自动物料名称替换处理失败: ${error.message}`, "error");
-          // 不阻止流程，继续执行
-        }
-      } else {
-        addLog("没有库存数据，跳过物料名称替换和批次号处理", "info");
-      }
 
       // 计算统计信息
       const totalQuantity = mergedResult.reduce(
@@ -110,9 +88,67 @@ export default function MergeProcessor() {
     setError,
     clearError,
     setProcessing,
-    inventoryItems,
-    setSkuProcessedData,
   ]);
+
+  // 物料名称替换处理
+  const handleSkuProcessing = useCallback(async () => {
+    if (!mergedData || mergedData.length === 0) {
+      setError("没有可处理的合并数据");
+      return;
+    }
+
+    try {
+      setIsSkuProcessing(true);
+      addLog("正在从数据库加载库存数据...", "info");
+
+      // 从数据库获取最新的库存数据
+      const { getInventoryFromDatabase } = await import(
+        "@/lib/inventoryStorage"
+      );
+      const dbInventoryItems = await getInventoryFromDatabase();
+
+      if (!dbInventoryItems || dbInventoryItems.length === 0) {
+        setError("数据库中没有库存数据，请先添加库存项");
+        return;
+      }
+
+      addLog(`从数据库加载了 ${dbInventoryItems.length} 条库存数据`, "info");
+      addLog("开始物料名称替换和批次号添加处理...", "info");
+
+      const result = processWithSkuAndBatch(mergedData, dbInventoryItems);
+      const enhancedData = result.data;
+      const stats = result.stats;
+
+      setSkuProcessedData(enhancedData);
+      // 直接用物料名称替换后的数据替换mergedData
+      setMergedData(enhancedData);
+
+      // 设置是否有失败的替换
+      setHasFailedReplacements(stats.failed > 0);
+
+      addLog(
+        `物料名称替换和批次号处理完成，生成 ${enhancedData.length} 条增强数据`,
+        "success"
+      );
+
+      // 显示替换统计信息
+      addLog(
+        `替换统计: 成功 ${stats.success} 条，失败 ${stats.failed} 条`,
+        stats.failed > 0 ? "warning" : "success"
+      );
+
+      if (stats.failed > 0) {
+        addLog(`未匹配的SKU: ${stats.failedSkus.join(", ")}`, "warning");
+        addLog("注意：由于存在替换失败的记录，下载功能已被禁用", "error");
+      }
+    } catch (error) {
+      console.error("SKU处理失败:", error);
+      setError(`物料名称替换处理失败: ${error.message}`);
+      addLog(`物料名称替换处理失败: ${error.message}`, "error");
+    } finally {
+      setIsSkuProcessing(false);
+    }
+  }, [mergedData, setMergedData, addLog, setError]);
 
   // 下载合并结果
   const handleDownloadMerged = useCallback(() => {
@@ -129,22 +165,6 @@ export default function MergeProcessor() {
       setError(`下载失败: ${error.message}`);
     }
   }, [mergedData, addLog, setError]);
-
-  // 下载SKU处理结果
-  const handleDownloadSkuExcel = useCallback(() => {
-    if (!skuProcessedData || skuProcessedData.length === 0) return;
-
-    try {
-      const fileName = `物料名称替换合并结果_${new Date()
-        .toISOString()
-        .slice(0, 10)}.xlsx`;
-      downloadExcel(skuProcessedData, fileName);
-      addLog(`物料名称替换合并结果已下载: ${fileName}`, "success");
-    } catch (error) {
-      console.error("下载物料名称替换合并结果失败:", error);
-      setError(`下载失败: ${error.message}`);
-    }
-  }, [skuProcessedData, addLog, setError]);
 
   // 重置合并模式
   const handleResetMerge = useCallback(() => {
@@ -239,33 +259,96 @@ export default function MergeProcessor() {
                           .toFixed(2)}
                       </span>
                     </div>
-                    {skuProcessedData && skuProcessedData.length > 0 && (
-                      <div className="col-span-full mt-2 pt-2 border-t border-green-200">
-                        <span className="text-green-700">SKU处理状态:</span>
-                        <span className="ml-2 font-medium text-green-900">
-                          已完成物料名称替换和批次号添加 (
-                          {skuProcessedData.length} 条记录)
-                        </span>
-                      </div>
-                    )}
                   </div>
+                </div>
+              )}
+
+              {/* 物料名称替换统计信息 */}
+              {skuProcessedData && skuProcessedData.length > 0 && (
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                  <h4 className="text-sm font-medium text-blue-900 mb-2">
+                    物料名称替换统计
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-blue-700">替换成功:</span>
+                      <span className="ml-2 font-medium text-blue-900">
+                        {
+                          skuProcessedData.filter(
+                            (item) =>
+                              item["批次号"] && item["批次号"].trim() !== ""
+                          ).length
+                        }{" "}
+                        条
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-blue-700">替换失败:</span>
+                      <span className="ml-2 font-medium text-blue-900">
+                        {
+                          skuProcessedData.filter(
+                            (item) =>
+                              !item["批次号"] || item["批次号"].trim() === ""
+                          ).length
+                        }{" "}
+                        条
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 显示失败的SKU列表 */}
+                  {skuProcessedData.filter(
+                    (item) => !item["批次号"] || item["批次号"].trim() === ""
+                  ).length > 0 && (
+                    <div className="mt-3">
+                      <span className="text-blue-700 text-sm">
+                        未匹配的SKU:
+                      </span>
+                      <div className="mt-1 text-xs text-blue-600 bg-blue-100 p-2 rounded max-h-20 overflow-y-auto">
+                        {skuProcessedData
+                          .filter(
+                            (item) =>
+                              !item["批次号"] || item["批次号"].trim() === ""
+                          )
+                          .map((item) => item["商品编号"])
+                          .join(", ")}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* 操作按钮 */}
               <div className="flex justify-center gap-4">
                 {mergedData && mergedData.length > 0 && (
-                  <Button variant="success" onClick={handleDownloadMerged}>
-                    下载原始合并结果
+                  <Button
+                    variant="info"
+                    onClick={handleSkuProcessing}
+                    disabled={isSkuProcessing}
+                    className="bg-purple-600 hover:bg-purple-700 text-white"
+                  >
+                    {isSkuProcessing ? "处理中..." : "物料名称替换"}
                   </Button>
                 )}
                 {skuProcessedData && skuProcessedData.length > 0 && (
                   <Button
                     variant="success"
-                    onClick={handleDownloadSkuExcel}
-                    className="bg-green-600 hover:bg-green-700 text-white"
+                    onClick={handleDownloadMerged}
+                    disabled={hasFailedReplacements}
+                    className={`${
+                      hasFailedReplacements
+                        ? "bg-gray-400 cursor-not-allowed"
+                        : "bg-green-600 hover:bg-green-700"
+                    } text-white`}
+                    title={
+                      hasFailedReplacements
+                        ? "存在替换失败的记录，无法下载"
+                        : "下载Excel结果"
+                    }
                   >
-                    下载物料名称替换结果
+                    {hasFailedReplacements
+                      ? "存在替换失败，无法下载"
+                      : "下载Excel结果"}
                   </Button>
                 )}
                 <Button variant="primary" onClick={handleMergeProcess}>
@@ -286,16 +369,10 @@ export default function MergeProcessor() {
           <div className="flex justify-between items-center mb-6">
             <div>
               <h3 className="text-xl font-semibold text-gray-800 mb-2">
-                合并结果预览
+                合并结果
               </h3>
               <p className="text-gray-600">
-                显示前 20 条合并记录（共{" "}
-                {(skuProcessedData || mergedData).length} 条）
-                {skuProcessedData && skuProcessedData.length > 0 && (
-                  <span className="text-green-600 ml-2">
-                    （已应用物料名称替换和批次号）
-                  </span>
-                )}
+                显示全部 {mergedData.length} 条合并记录
               </p>
             </div>
           </div>
@@ -305,38 +382,29 @@ export default function MergeProcessor() {
             <table className="preview-table">
               <thead>
                 <tr>
-                  {(skuProcessedData || mergedData).length > 0 &&
-                    Object.keys((skuProcessedData || mergedData)[0]).map(
-                      (header, index) => <th key={index}>{header}</th>
-                    )}
+                  {mergedData.length > 0 &&
+                    Object.keys(mergedData[0]).map((header, index) => (
+                      <th key={index}>{header}</th>
+                    ))}
                 </tr>
               </thead>
               <tbody>
-                {(skuProcessedData || mergedData)
-                  .slice(0, 20)
-                  .map((row, rowIndex) => (
-                    <tr key={rowIndex}>
-                      {Object.entries(row).map(([key, value]) => (
-                        <td key={key}>
-                          {key === "单价" || key === "总价"
-                            ? `¥${parseFloat(value).toFixed(2)}`
-                            : key === "批次号"
-                            ? value || "未匹配"
-                            : value}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
+                {mergedData.map((row, rowIndex) => (
+                  <tr key={rowIndex}>
+                    {Object.entries(row).map(([key, value]) => (
+                      <td key={key}>
+                        {key === "单价" || key === "总价"
+                          ? `¥${parseFloat(value).toFixed(2)}`
+                          : key === "批次号"
+                          ? value || "未匹配"
+                          : value}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-
-          {(skuProcessedData || mergedData).length > 20 && (
-            <div className="mt-4 text-center text-sm text-gray-500">
-              还有 {(skuProcessedData || mergedData).length - 20}{" "}
-              条记录未显示，请下载完整结果查看
-            </div>
-          )}
         </section>
       )}
     </div>

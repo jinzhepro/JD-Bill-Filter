@@ -8,11 +8,7 @@ import {
   readFile,
   downloadExcel,
 } from "@/lib/excelHandler";
-import {
-  validateDataStructure,
-  processOrderData,
-  processWithSkuAndBatch,
-} from "@/lib/dataProcessor";
+import { validateDataStructure, processOrderData } from "@/lib/dataProcessor";
 import Button from "./ui/Button";
 
 export default function FileUpload() {
@@ -24,8 +20,6 @@ export default function FileUpload() {
     setError,
     clearError,
     setProcessing,
-    inventoryItems,
-    setSkuProcessedData,
   } = useApp();
 
   const [isDragOver, setIsDragOver] = useState(false);
@@ -69,29 +63,6 @@ export default function FileUpload() {
         const processedData = processOrderData(data);
         setProcessedData(processedData);
         addLog(`成功处理 ${processedData.length} 条订单记录`, "success");
-
-        // 自动应用SKU映射和批次号替换
-        if (inventoryItems && inventoryItems.length > 0) {
-          try {
-            addLog("开始自动应用物料名称替换和批次号...", "info");
-            const enhancedData = processWithSkuAndBatch(
-              processedData,
-              inventoryItems
-            );
-            setSkuProcessedData(enhancedData);
-            addLog(
-              `物料名称替换和批次号处理完成，生成 ${enhancedData.length} 条增强数据`,
-              "success"
-            );
-          } catch (error) {
-            console.error("自动SKU处理失败:", error);
-            addLog(`自动物料名称替换处理失败: ${error.message}`, "error");
-            // 不阻止流程，继续执行
-          }
-        } else {
-          addLog("没有库存数据，跳过物料名称替换和批次号处理", "info");
-        }
-
         addLog("文件上传完成", "success");
       } catch (error) {
         console.error("文件处理失败:", error);
@@ -101,16 +72,7 @@ export default function FileUpload() {
         setProcessing(false);
       }
     },
-    [
-      setFile,
-      setOriginalData,
-      addLog,
-      setError,
-      clearError,
-      setProcessing,
-      inventoryItems,
-      setSkuProcessedData,
-    ]
+    [setFile, setOriginalData, addLog, setError, clearError, setProcessing]
   );
 
   const handleFileInputChange = useCallback(

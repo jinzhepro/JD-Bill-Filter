@@ -292,6 +292,10 @@ export function processWithSkuAndBatch(processedData, inventoryItems) {
     }
   });
 
+  // 统计信息
+  let successCount = 0;
+  let failedSkus = [];
+
   // 处理每条订单数据
   const enhancedData = processedData.map((orderItem) => {
     const productNo = orderItem["商品编号"];
@@ -330,12 +334,14 @@ export function processWithSkuAndBatch(processedData, inventoryItems) {
       // 添加批次号
       newItem["批次号"] = matchedInventoryItem.purchaseBatch;
 
+      successCount++;
       console.log(
         `匹配成功: 商品编号 ${productNo}, 原商品名 ${originalProductName} -> 物料名称 ${matchedInventoryItem.materialName}, 批次号 ${matchedInventoryItem.purchaseBatch}`
       );
     } else {
       // 如果没有匹配的库存项，添加空批次号
       newItem["批次号"] = "";
+      failedSkus.push(productNo);
       console.log(
         `未匹配: 商品编号 ${productNo}, 商品名称 ${originalProductName}`
       );
@@ -346,7 +352,16 @@ export function processWithSkuAndBatch(processedData, inventoryItems) {
 
   console.log(`SKU和批次号处理完成，生成 ${enhancedData.length} 条增强数据`);
 
-  return enhancedData;
+  // 返回处理后的数据和统计信息
+  return {
+    data: enhancedData,
+    stats: {
+      total: processedData.length,
+      success: successCount,
+      failed: failedSkus.length,
+      failedSkus: failedSkus,
+    },
+  };
 }
 
 // 处理多个文件的数据合并

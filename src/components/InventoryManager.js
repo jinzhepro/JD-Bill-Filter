@@ -459,6 +459,13 @@ export function InventoryManager() {
               表格导入
             </Button>
             <Button
+              onClick={handleUpdateProductNames}
+              className="w-full md:w-auto bg-blue-600 text-white hover:bg-blue-700"
+              disabled={inventoryItems.length === 0}
+            >
+              立即更新商品名称
+            </Button>
+            <Button
               onClick={handleClearDatabase}
               className="w-full md:w-auto bg-red-600 text-white hover:bg-red-700"
               disabled={inventoryItems.length === 0 || isDbLoading}

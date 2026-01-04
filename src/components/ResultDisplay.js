@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useApp } from "@/context/AppContext";
 import { downloadExcel } from "@/lib/excelHandler";
 import { processWithSkuAndBatch } from "@/lib/dataProcessor";
@@ -17,9 +17,12 @@ export default function ResultDisplay() {
     isSkuProcessing,
     setSkuProcessedData,
     setSkuProcessing,
+    setProcessedData,
     addLog,
     setError,
   } = useApp();
+
+  const [hasFailedReplacements, setHasFailedReplacements] = useState(false);
 
   if (!originalData || originalData.length === 0) {
     return null;
@@ -81,25 +84,50 @@ export default function ResultDisplay() {
       return;
     }
 
-    if (!inventoryItems || inventoryItems.length === 0) {
-      setError("没有库存数据，请先添加库存项");
-      return;
-    }
-
     try {
       setSkuProcessing(true);
+      addLog("正在从数据库加载库存数据...", "info");
+
+      // 从数据库获取最新的库存数据
+      const { getInventoryFromDatabase } = await import(
+        "@/lib/inventoryStorage"
+      );
+      const dbInventoryItems = await getInventoryFromDatabase();
+
+      if (!dbInventoryItems || dbInventoryItems.length === 0) {
+        setError("数据库中没有库存数据，请先添加库存项");
+        return;
+      }
+
+      addLog(`从数据库加载了 ${dbInventoryItems.length} 条库存数据`, "info");
       addLog("开始物料名称替换和批次号添加处理...", "info");
 
-      const enhancedData = processWithSkuAndBatch(
-        processedData,
-        inventoryItems
-      );
+      const result = processWithSkuAndBatch(processedData, dbInventoryItems);
+      const enhancedData = result.data;
+      const stats = result.stats;
+
       setSkuProcessedData(enhancedData);
+      // 直接用物料名称替换后的数据替换processedData
+      setProcessedData(enhancedData);
+
+      // 设置是否有失败的替换
+      setHasFailedReplacements(stats.failed > 0);
 
       addLog(
         `物料名称替换和批次号处理完成，生成 ${enhancedData.length} 条增强数据`,
         "success"
       );
+
+      // 显示替换统计信息
+      addLog(
+        `替换统计: 成功 ${stats.success} 条，失败 ${stats.failed} 条`,
+        stats.failed > 0 ? "warning" : "success"
+      );
+
+      if (stats.failed > 0) {
+        addLog(`未匹配的SKU: ${stats.failedSkus.join(", ")}`, "warning");
+        addLog("注意：由于存在替换失败的记录，下载功能已被禁用", "error");
+      }
     } catch (error) {
       console.error("SKU处理失败:", error);
       setError(`物料名称替换处理失败: ${error.message}`);
@@ -148,14 +176,14 @@ export default function ResultDisplay() {
               <div>
                 <span className="text-green-700">订单数量:</span>
                 <span className="ml-2 font-medium text-green-900">
-                  {(skuProcessedData || processedData).length}
+                  {processedData.length}
                 </span>
               </div>
               <div>
                 <span className="text-green-700">商品总数:</span>
                 <span className="ml-2 font-medium text-green-900">
-                  {(skuProcessedData || processedData).reduce(
-                    (sum, item) => sum + parseFloat(item.商品数量 || 0),
+                  {processedData.reduce(
+                    (sum, item) => sum + parseFloat(item.商品数量),
                     0
                   )}
                 </span>
@@ -164,12 +192,65 @@ export default function ResultDisplay() {
                 <span className="text-green-700">总金额:</span>
                 <span className="ml-2 font-medium text-green-900">
                   ¥
-                  {(skuProcessedData || processedData)
-                    .reduce((sum, item) => sum + parseFloat(item.总价 || 0), 0)
+                  {processedData
+                    .reduce((sum, item) => sum + parseFloat(item.总价), 0)
                     .toFixed(2)}
                 </span>
               </div>
             </div>
+
+            {/* 物料名称替换统计信息 */}
+            {skuProcessedData && skuProcessedData.length > 0 && (
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <h4 className="text-sm font-medium text-blue-900 mb-2">
+                  物料名称替换统计
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-blue-700">替换成功:</span>
+                    <span className="ml-2 font-medium text-blue-900">
+                      {
+                        skuProcessedData.filter(
+                          (item) =>
+                            item["批次号"] && item["批次号"].trim() !== ""
+                        ).length
+                      }{" "}
+                      条
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-blue-700">替换失败:</span>
+                    <span className="ml-2 font-medium text-blue-900">
+                      {
+                        skuProcessedData.filter(
+                          (item) =>
+                            !item["批次号"] || item["批次号"].trim() === ""
+                        ).length
+                      }{" "}
+                      条
+                    </span>
+                  </div>
+                </div>
+
+                {/* 显示失败的SKU列表 */}
+                {skuProcessedData.filter(
+                  (item) => !item["批次号"] || item["批次号"].trim() === ""
+                ).length > 0 && (
+                  <div className="mt-3">
+                    <span className="text-blue-700 text-sm">未匹配的SKU:</span>
+                    <div className="mt-1 text-xs text-blue-600 bg-blue-100 p-2 rounded max-h-20 overflow-y-auto">
+                      {skuProcessedData
+                        .filter(
+                          (item) =>
+                            !item["批次号"] || item["批次号"].trim() === ""
+                        )
+                        .map((item) => item["商品编号"])
+                        .join(", ")}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex justify-between items-center mb-6">
@@ -178,36 +259,39 @@ export default function ResultDisplay() {
                 订单处理结果
               </h2>
               <p className="text-gray-600">
-                已处理 {(skuProcessedData || processedData).length} 条订单记录
-                {skuProcessedData && skuProcessedData.length > 0 && (
-                  <span className="text-green-600 ml-2">
-                    （已应用物料名称替换和批次号）
-                  </span>
-                )}
+                已处理 {processedData.length} 条订单记录
               </p>
             </div>
             <div className="flex gap-3 flex-wrap">
+              <Button
+                variant="info"
+                onClick={handleSkuProcessing}
+                disabled={isSkuProcessing}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                {isSkuProcessing ? "处理中..." : "物料名称替换"}
+              </Button>
               {skuProcessedData && skuProcessedData.length > 0 && (
                 <Button
                   variant="success"
                   onClick={handleDownloadSkuExcel}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  disabled={hasFailedReplacements}
+                  className={`${
+                    hasFailedReplacements
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-green-600 hover:bg-green-700"
+                  } text-white`}
+                  title={
+                    hasFailedReplacements
+                      ? "存在替换失败的记录，无法下载"
+                      : "下载Excel结果"
+                  }
                 >
-                  下载处理结果
+                  {hasFailedReplacements
+                    ? "存在替换失败，无法下载"
+                    : "下载Excel结果"}
                 </Button>
               )}
-              {!skuProcessedData &&
-                inventoryItems &&
-                inventoryItems.length > 0 && (
-                  <Button
-                    variant="info"
-                    onClick={handleSkuProcessing}
-                    disabled={isSkuProcessing}
-                    className="bg-purple-600 hover:bg-purple-700 text-white"
-                  >
-                    {isSkuProcessing ? "处理中..." : "应用物料名称替换"}
-                  </Button>
-                )}
               <Button variant="danger" onClick={handleReset}>
                 重新上传
               </Button>
@@ -219,21 +303,19 @@ export default function ResultDisplay() {
             <table className="preview-table">
               <thead>
                 <tr>
-                  {(skuProcessedData || processedData).length > 0 &&
-                    Object.keys((skuProcessedData || processedData)[0]).map(
-                      (header, index) => <th key={index}>{header}</th>
-                    )}
+                  {processedData.length > 0 &&
+                    Object.keys(processedData[0]).map((header, index) => (
+                      <th key={index}>{header}</th>
+                    ))}
                 </tr>
               </thead>
               <tbody>
-                {(skuProcessedData || processedData).map((row, rowIndex) => (
+                {processedData.map((row, rowIndex) => (
                   <tr key={rowIndex}>
                     {Object.entries(row).map(([key, value]) => (
                       <td key={key}>
                         {key === "单价" || key === "总价"
                           ? `¥${parseFloat(value).toFixed(2)}`
-                          : key === "批次号"
-                          ? value || "未匹配"
                           : value}
                       </td>
                     ))}
