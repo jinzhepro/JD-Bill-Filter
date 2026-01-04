@@ -149,3 +149,81 @@ export async function clearInventoryInMySQL() {
     };
   }
 }
+
+// 保存库存扣减记录到MySQL
+export async function saveDeductionRecords(deductionRecords) {
+  if (!deductionRecords || deductionRecords.length === 0) {
+    return { success: false, message: "没有扣减记录需要保存" };
+  }
+
+  try {
+    const response = await fetch("/api/mysql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "saveDeductionRecords",
+        data: deductionRecords,
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("保存库存扣减记录失败:", error);
+    return {
+      success: false,
+      message: `保存库存扣减记录失败: ${error.message}`,
+    };
+  }
+}
+
+// 获取库存扣减记录
+export async function getDeductionRecords() {
+  try {
+    const response = await fetch("/api/mysql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "getDeductionRecords",
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("获取库存扣减记录失败:", error);
+    return {
+      success: false,
+      message: `获取库存扣减记录失败: ${error.message}`,
+    };
+  }
+}
+
+export async function rollbackDeductionRecords(timestamp) {
+  try {
+    const response = await fetch("/api/mysql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "rollbackDeductionRecords",
+        data: timestamp,
+      }),
+    });
+
+    const result = await response.json();
+    console.log("撤回库存扣减记录结果:", result);
+    return result;
+  } catch (error) {
+    console.error("撤回库存扣减记录失败:", error);
+    return {
+      success: false,
+      message: `撤回库存扣减记录失败: ${error.message}`,
+    };
+  }
+}

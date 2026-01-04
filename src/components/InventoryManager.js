@@ -5,6 +5,7 @@ import { useInventory } from "@/context/InventoryContext";
 import Button from "./ui/Button";
 import { BatchInventoryAdd } from "./BatchInventoryAdd";
 import { TableImport } from "./TableImport";
+import { DeductionRecords } from "./DeductionRecords";
 import {
   createInventoryItem,
   updateInventoryItem,
@@ -47,6 +48,8 @@ export function InventoryManager() {
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [isBatchFormVisible, setIsBatchFormVisible] = useState(false);
   const [isTableImportVisible, setIsTableImportVisible] = useState(false);
+  const [isDeductionRecordsVisible, setIsDeductionRecordsVisible] =
+    useState(false);
   const [formErrors, setFormErrors] = useState([]);
   const [isMySqlProcessing, setIsMySqlProcessing] = useState(false);
   const [mySqlStatus, setMySqlStatus] = useState("");
@@ -453,6 +456,12 @@ export function InventoryManager() {
               立即更新商品名称
             </Button>
             <Button
+              onClick={() => setIsDeductionRecordsVisible(true)}
+              className="w-full md:w-auto bg-orange-600 text-white hover:bg-orange-700"
+            >
+              查看扣减记录
+            </Button>
+            <Button
               onClick={handleClearDatabase}
               className="w-full md:w-auto bg-red-600 text-white hover:bg-red-700"
               disabled={inventoryItems.length === 0 || isDbLoading}
@@ -707,6 +716,11 @@ export function InventoryManager() {
           onImportItems={handleTableImport}
           onCancel={handleTableImportCancel}
         />
+      )}
+
+      {/* 库存扣减记录 */}
+      {isDeductionRecordsVisible && (
+        <DeductionRecords onClose={() => setIsDeductionRecordsVisible(false)} />
       )}
 
       {/* 库存列表 - 按采购批号分组 */}

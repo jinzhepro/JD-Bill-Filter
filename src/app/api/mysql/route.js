@@ -62,6 +62,41 @@ async function createInventoryTable() {
   }
 }
 
+// 创建库存扣减记录表（如果不存在）
+async function createDeductionTable() {
+  try {
+    const connection = await pool.getConnection();
+
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS inventory_deduction_records (
+        id VARCHAR(255) PRIMARY KEY,
+        sku VARCHAR(255) NOT NULL COMMENT '商品SKU',
+        material_name VARCHAR(500) NOT NULL COMMENT '物料名称',
+        purchase_batch VARCHAR(255) NOT NULL COMMENT '采购批号',
+        original_quantity INT NOT NULL COMMENT '原始库存数量',
+        deducted_quantity INT NOT NULL COMMENT '扣减数量',
+        remaining_quantity INT NOT NULL COMMENT '剩余库存数量',
+        order_count INT NOT NULL COMMENT '订单数量',
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '扣减时间',
+        INDEX idx_sku (sku),
+        INDEX idx_timestamp (timestamp),
+        INDEX idx_purchase_batch (purchase_batch)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='库存扣减记录表';
+    `;
+
+    await connection.execute(createTableSQL);
+    connection.release();
+
+    return { success: true, message: "库存扣减记录表创建成功或已存在" };
+  } catch (error) {
+    console.error("创建库存扣减记录表失败:", error);
+    return {
+      success: false,
+      message: `创建库存扣减记录表失败: ${error.message}`,
+    };
+  }
+}
+
 // 推送库存数据到MySQL
 async function pushInventoryToMySQL(inventoryItems) {
   if (!inventoryItems || inventoryItems.length === 0) {
@@ -250,6 +285,173 @@ async function deleteInventoryFromMySQL(id) {
   }
 }
 
+// 保存库存扣减记录到MySQL
+async function saveDeductionRecords(deductionRecords) {
+  if (!deductionRecords || deductionRecords.length === 0) {
+    return { success: false, message: "没有扣减记录需要保存" };
+  }
+
+  try {
+    // 先确保扣减记录表已创建
+    await createDeductionTable();
+
+    const connection = await pool.getConnection();
+
+    // 开始事务
+    await connection.beginTransaction();
+
+    try {
+      // 准备插入语句
+      const insertSQL = `
+        INSERT INTO inventory_deduction_records (
+          id, sku, material_name, purchase_batch, 
+          original_quantity, deducted_quantity, remaining_quantity, order_count, timestamp
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+
+      // 批量插入数据
+      for (const record of deductionRecords) {
+        await connection.execute(insertSQL, [
+          record.id,
+          record.sku,
+          record.materialName,
+          record.purchaseBatch,
+          record.originalQuantity,
+          record.deductedQuantity,
+          record.remainingQuantity,
+          record.orderCount,
+          record.timestamp,
+        ]);
+      }
+
+      // 提交事务
+      await connection.commit();
+      connection.release();
+
+      return {
+        success: true,
+        message: `成功保存 ${deductionRecords.length} 条库存扣减记录`,
+      };
+    } catch (error) {
+      // 回滚事务
+      await connection.rollback();
+      connection.release();
+      throw error;
+    }
+  } catch (error) {
+    console.error("保存库存扣减记录失败:", error);
+    return {
+      success: false,
+      message: `保存库存扣减记录失败: ${error.message}`,
+    };
+  }
+}
+
+// 获取库存扣减记录
+async function getDeductionRecords() {
+  try {
+    const connection = await pool.getConnection();
+
+    const [rows] = await connection.execute(`
+      SELECT 
+        id, sku, material_name, purchase_batch,
+        original_quantity, deducted_quantity, remaining_quantity, order_count, timestamp
+      FROM inventory_deduction_records 
+      ORDER BY timestamp DESC
+    `);
+
+    connection.release();
+
+    // 转换字段名为前端使用的格式
+    const records = rows.map((row) => ({
+      id: row.id,
+      sku: row.sku,
+      materialName: row.material_name,
+      purchaseBatch: row.purchase_batch,
+      originalQuantity: row.original_quantity,
+      deductedQuantity: row.deducted_quantity,
+      remainingQuantity: row.remaining_quantity,
+      orderCount: row.order_count,
+      timestamp: row.timestamp,
+    }));
+
+    return {
+      success: true,
+      data: records,
+      message: `获取了 ${records.length} 条库存扣减记录`,
+    };
+  } catch (error) {
+    console.error("获取库存扣减记录失败:", error);
+    return {
+      success: false,
+      message: `获取库存扣减记录失败: ${error.message}`,
+    };
+  }
+}
+
+// 撤回库存扣减记录
+async function rollbackDeductionRecords(timestamp) {
+  if (!timestamp) {
+    return { success: false, message: "缺少时间戳参数" };
+  }
+
+  try {
+    const connection = await pool.getConnection();
+
+    // 开始事务
+    await connection.beginTransaction();
+
+    try {
+      // 查询该时间戳的所有扣减记录
+      const [records] = await connection.execute(
+        "SELECT * FROM inventory_deduction_records WHERE timestamp = ?",
+        [timestamp]
+      );
+
+      if (records.length === 0) {
+        await connection.rollback();
+        connection.release();
+        return { success: false, message: "未找到该时间戳的扣减记录" };
+      }
+
+      // 恢复库存数量
+      for (const record of records) {
+        await connection.execute(
+          "UPDATE inventory SET quantity = quantity + ? WHERE sku = ?",
+          [record.deducted_quantity, record.sku]
+        );
+      }
+
+      // 删除扣减记录
+      await connection.execute(
+        "DELETE FROM inventory_deduction_records WHERE timestamp = ?",
+        [timestamp]
+      );
+
+      // 提交事务
+      await connection.commit();
+      connection.release();
+
+      return {
+        success: true,
+        message: `成功撤回 ${records.length} 条扣减记录，恢复库存数量`,
+        recordsCount: records.length,
+      };
+    } catch (error) {
+      // 回滚事务
+      await connection.rollback();
+      connection.release();
+      throw error;
+    }
+  } catch (error) {
+    console.error("撤回库存扣减记录失败:", error);
+    return {
+      success: false,
+      message: `撤回库存扣减记录失败: ${error.message}`,
+    };
+  }
+}
+
 // API路由处理函数
 export async function POST(request) {
   try {
@@ -269,6 +471,10 @@ export async function POST(request) {
         result = await createInventoryTable();
         break;
 
+      case "createDeductionTable":
+        result = await createDeductionTable();
+        break;
+
       case "pushData":
         result = await pushInventoryToMySQL(data);
         break;
@@ -279,6 +485,18 @@ export async function POST(request) {
 
       case "clearData":
         result = await clearInventoryInMySQL();
+        break;
+
+      case "saveDeductionRecords":
+        result = await saveDeductionRecords(data);
+        break;
+
+      case "getDeductionRecords":
+        result = await getDeductionRecords();
+        break;
+
+      case "rollbackDeductionRecords":
+        result = await rollbackDeductionRecords(data);
         break;
 
       default:

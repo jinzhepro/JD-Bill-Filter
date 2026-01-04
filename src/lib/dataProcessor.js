@@ -388,3 +388,136 @@ export function processMultipleFilesData(fileDataArray) {
 
   return processedData;
 }
+
+// 扣减库存并创建记录
+export async function deductInventory(enhancedData, inventoryItems) {
+  if (!enhancedData || enhancedData.length === 0) {
+    throw new Error("没有增强数据可以处理");
+  }
+
+  if (!inventoryItems || inventoryItems.length === 0) {
+    throw new Error("没有库存数据");
+  }
+
+  console.log(`开始扣减库存，处理 ${enhancedData.length} 条订单数据`);
+
+  // 创建商品编号到库存项的映射
+  const skuMap = {};
+  inventoryItems.forEach((item) => {
+    if (item.sku && item.sku.trim() !== "") {
+      skuMap[item.sku.trim()] = item;
+    }
+  });
+
+  // 库存扣减记录
+  const deductionRecords = [];
+  let totalDeducted = 0;
+  let deductionErrors = [];
+
+  // 按商品编号分组，统计每个SKU的总扣减数量
+  const skuDeductionMap = {};
+  enhancedData.forEach((item) => {
+    const productNo = item["商品编号"];
+    const quantity = parseInt(item["商品数量"]) || 0;
+
+    if (skuMap[productNo.toString().trim()]) {
+      if (!skuDeductionMap[productNo]) {
+        skuDeductionMap[productNo] = 0;
+      }
+      skuDeductionMap[productNo] += quantity;
+    }
+  });
+
+  // 处理每个SKU的库存扣减
+  for (const [sku, deductionQuantity] of Object.entries(skuDeductionMap)) {
+    const inventoryItem = skuMap[sku];
+
+    if (!inventoryItem) {
+      deductionErrors.push(`SKU ${sku} 未找到对应的库存项`);
+      continue;
+    }
+
+    const currentQuantity = parseInt(inventoryItem.quantity) || 0;
+
+    if (currentQuantity < deductionQuantity) {
+      deductionErrors.push(
+        `SKU ${sku} 库存不足：当前库存 ${currentQuantity}，需要扣减 ${deductionQuantity}`
+      );
+      continue;
+    }
+
+    // 创建扣减记录
+    const deductionRecord = {
+      id: `deduction-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      sku: sku,
+      materialName: inventoryItem.materialName,
+      purchaseBatch: inventoryItem.purchaseBatch,
+      originalQuantity: currentQuantity,
+      deductedQuantity: deductionQuantity,
+      remainingQuantity: currentQuantity - deductionQuantity,
+      timestamp: new Date().toISOString().slice(0, 19).replace("T", " "),
+      orderCount: enhancedData.filter((item) => item["商品编号"] === sku)
+        .length,
+    };
+
+    deductionRecords.push(deductionRecord);
+    totalDeducted += deductionQuantity;
+
+    console.log(
+      `库存扣减: SKU ${sku}, 物料名称 ${
+        inventoryItem.materialName
+      }, 原库存 ${currentQuantity}, 扣减 ${deductionQuantity}, 剩余 ${
+        currentQuantity - deductionQuantity
+      }`
+    );
+  }
+
+  // 更新库存数据
+  const updatedInventoryItems = inventoryItems.map((item) => {
+    const sku = item.sku?.trim();
+    if (skuDeductionMap[sku]) {
+      const deductionQuantity = skuDeductionMap[sku];
+      const currentQuantity = parseInt(item.quantity) || 0;
+      const newQuantity = Math.max(0, currentQuantity - deductionQuantity);
+
+      return {
+        ...item,
+        quantity: newQuantity,
+        updatedAt: new Date().toISOString().slice(0, 19).replace("T", " "),
+      };
+    }
+    return item;
+  });
+
+  // 保存更新后的库存到数据库
+  try {
+    const { pushInventoryToMySQL } = await import("@/lib/mysqlConnection");
+    await pushInventoryToMySQL(updatedInventoryItems);
+    console.log("库存数据已更新到数据库");
+  } catch (error) {
+    console.error("更新库存数据到数据库失败:", error);
+    deductionErrors.push(`更新数据库失败: ${error.message}`);
+  }
+
+  // 保存扣减记录到数据库
+  try {
+    const { saveDeductionRecords } = await import("@/lib/mysqlConnection");
+    await saveDeductionRecords(deductionRecords);
+    console.log("库存扣减记录已保存到数据库");
+  } catch (error) {
+    console.error("保存库存扣减记录失败:", error);
+    deductionErrors.push(`保存扣减记录失败: ${error.message}`);
+  }
+
+  console.log(
+    `库存扣减完成：共扣减 ${totalDeducted} 件商品，创建 ${deductionRecords.length} 条记录`
+  );
+
+  return {
+    success: deductionErrors.length === 0,
+    totalDeducted,
+    deductionRecords,
+    updatedInventoryItems,
+    errors: deductionErrors,
+  };
+}
