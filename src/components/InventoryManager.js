@@ -23,6 +23,8 @@ import {
   pushInventoryToMySQL,
   getInventoryFromMySQL,
   clearInventoryInMySQL,
+  getInventoryBatches,
+  deleteBatch,
 } from "@/lib/mysqlConnection";
 
 export function InventoryManager() {
@@ -416,6 +418,67 @@ export function InventoryManager() {
     }
   };
 
+  // 复制批次列数据
+  const handleCopyBatchColumn = async (columnName, batchName, event) => {
+    // 阻止事件冒泡
+    if (event) {
+      event.stopPropagation();
+    }
+
+    try {
+      // 获取当前批次的数据
+      const batchItems = groupedItems[batchName] || [];
+      let columnData = [];
+
+      // 根据列名提取数据
+      switch (columnName) {
+        case "materialName":
+          columnData = batchItems.map((item) => item.materialName || "");
+          break;
+        case "quantity":
+          columnData = batchItems.map((item) => item.quantity.toString());
+          break;
+        case "unitPrice":
+          columnData = batchItems.map((item) =>
+            item.unitPrice ? parseFloat(item.unitPrice).toFixed(2) : ""
+          );
+          break;
+        case "totalPrice":
+          columnData = batchItems.map((item) =>
+            item.totalPrice ? parseFloat(item.totalPrice).toFixed(2) : ""
+          );
+          break;
+        case "taxRate":
+          columnData = batchItems.map((item) =>
+            item.taxRate ? `${item.taxRate}%` : ""
+          );
+          break;
+        case "sku":
+          columnData = batchItems.map((item) => item.sku || "");
+          break;
+        case "warehouse":
+          columnData = batchItems.map((item) => item.warehouse || "");
+          break;
+        case "purchaseBatch":
+          columnData = batchItems.map((item) => item.purchaseBatch || "");
+          break;
+        default:
+          columnData = batchItems.map((item) => item[columnName] || "");
+      }
+
+      // 将数据格式化为列形式（每行一个值）
+      const columnText = columnData.join("\n");
+
+      await navigator.clipboard.writeText(columnText);
+      toast.success(
+        `已复制批次 "${batchName}" 的 ${columnName} 列数据 (${columnData.length} 行)`
+      );
+    } catch (error) {
+      console.error("复制批次列数据失败:", error);
+      toast.error(`复制批次列数据失败: ${error.message}`);
+    }
+  };
+
   // 获取过滤后的库存项
   const filteredItems = searchInventoryItems(inventoryItems, searchTerm);
 
@@ -430,6 +493,33 @@ export function InventoryManager() {
     const price = parseFloat(item.totalPrice);
     return sum + (isNaN(price) ? 0 : price);
   }, 0);
+
+  // 删除批次处理
+  const handleDeleteBatch = async (batchName) => {
+    if (!batchName) {
+      setError("缺少批次名称");
+      return;
+    }
+
+    if (
+      window.confirm(
+        `确定要删除批次 "${batchName}" 吗？此操作将删除该批次下的所有库存项，且无法恢复！`
+      )
+    ) {
+      try {
+        const result = await deleteBatch(batchName);
+        if (result.success) {
+          addLog(`批次 "${batchName}" 已删除`, "warning");
+          // 重新加载数据
+          await loadInventoryFromDB();
+        } else {
+          throw new Error(result.message);
+        }
+      } catch (error) {
+        setError(`删除批次失败: ${error.message}`);
+      }
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -797,10 +887,17 @@ export function InventoryManager() {
                 {/* 批号标题 */}
                 <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
                   <div className="flex justify-between items-center">
-                    <div>
+                    <div className="flex items-center gap-3">
                       <h3 className="font-semibold text-gray-800">
                         采购批号: {batch}
                       </h3>
+                      <Button
+                        onClick={() => handleDeleteBatch(batch)}
+                        className="px-2 py-1 text-xs bg-red-500 text-white hover:bg-red-600"
+                        title="删除整个批次"
+                      >
+                        删除批次
+                      </Button>
                     </div>
                     <div className="text-right text-sm text-gray-600">
                       <div>
@@ -826,26 +923,77 @@ export function InventoryManager() {
                   <table className="w-full border-collapse text-sm">
                     <thead>
                       <tr className="bg-gray-50">
-                        <th className="px-3 py-3 text-left font-semibold text-primary-600">
-                          物料名称
+                        <th
+                          className="px-3 py-3 text-left font-semibold text-primary-600 cursor-pointer hover:bg-blue-50"
+                          onClick={(e) =>
+                            handleCopyBatchColumn("materialName", batch, e)
+                          }
+                          title={`点击复制批次 "${batch}" 的物料名称列数据`}
+                        >
+                          物料名称 📋
                         </th>
-                        <th className="px-3 py-3 text-left font-semibold text-primary-600">
-                          数量
+                        <th
+                          className="px-3 py-3 text-left font-semibold text-primary-600 cursor-pointer hover:bg-blue-50"
+                          onClick={(e) =>
+                            handleCopyBatchColumn("quantity", batch, e)
+                          }
+                          title={`点击复制批次 "${batch}" 的数量列数据`}
+                        >
+                          数量 📋
                         </th>
-                        <th className="px-3 py-3 text-left font-semibold text-primary-600">
-                          单价
+                        <th
+                          className="px-3 py-3 text-left font-semibold text-primary-600 cursor-pointer hover:bg-blue-50"
+                          onClick={(e) =>
+                            handleCopyBatchColumn("unitPrice", batch, e)
+                          }
+                          title={`点击复制批次 "${batch}" 的单价列数据`}
+                        >
+                          单价 📋
                         </th>
-                        <th className="px-3 py-3 text-left font-semibold text-primary-600">
-                          总价
+                        <th
+                          className="px-3 py-3 text-left font-semibold text-primary-600 cursor-pointer hover:bg-blue-50"
+                          onClick={(e) =>
+                            handleCopyBatchColumn("totalPrice", batch, e)
+                          }
+                          title={`点击复制批次 "${batch}" 的总价列数据`}
+                        >
+                          总价 📋
                         </th>
-                        <th className="px-3 py-3 text-left font-semibold text-primary-600">
-                          税率
+                        <th
+                          className="px-3 py-3 text-left font-semibold text-primary-600 cursor-pointer hover:bg-blue-50"
+                          onClick={(e) =>
+                            handleCopyBatchColumn("taxRate", batch, e)
+                          }
+                          title={`点击复制批次 "${batch}" 的税率列数据`}
+                        >
+                          税率 📋
                         </th>
-                        <th className="px-3 py-3 text-left font-semibold text-primary-600">
-                          商品SKU
+                        <th
+                          className="px-3 py-3 text-left font-semibold text-primary-600 cursor-pointer hover:bg-blue-50"
+                          onClick={(e) =>
+                            handleCopyBatchColumn("sku", batch, e)
+                          }
+                          title={`点击复制批次 "${batch}" 的SKU列数据`}
+                        >
+                          商品SKU 📋
                         </th>
-                        <th className="px-3 py-3 text-left font-semibold text-primary-600">
-                          仓库
+                        <th
+                          className="px-3 py-3 text-left font-semibold text-primary-600 cursor-pointer hover:bg-blue-50"
+                          onClick={(e) =>
+                            handleCopyBatchColumn("warehouse", batch, e)
+                          }
+                          title={`点击复制批次 "${batch}" 的仓库列数据`}
+                        >
+                          仓库 📋
+                        </th>
+                        <th
+                          className="px-3 py-3 text-left font-semibold text-primary-600 cursor-pointer hover:bg-blue-50"
+                          onClick={(e) =>
+                            handleCopyBatchColumn("purchaseBatch", batch, e)
+                          }
+                          title={`点击复制批次 "${batch}" 的采购批号列数据`}
+                        >
+                          采购批号 📋
                         </th>
                         <th className="px-3 py-3 text-left font-semibold text-primary-600">
                           操作
@@ -862,20 +1010,9 @@ export function InventoryManager() {
                             className="px-3 py-3 truncate"
                             title={item.materialName}
                           >
-                            <div className="flex items-center gap-2">
-                              <span className="flex-1 truncate">
-                                {item.materialName}
-                              </span>
-                              <Button
-                                onClick={(e) =>
-                                  handleCopyMaterialName(item.materialName, e)
-                                }
-                                className="px-2 py-1 text-xs bg-gray-500 text-white hover:bg-gray-600 flex-shrink-0"
-                                title="复制物料名称"
-                              >
-                                复制
-                              </Button>
-                            </div>
+                            <span className="flex-1 truncate">
+                              {item.materialName}
+                            </span>
                           </td>
                           <td className="px-3 py-3 text-center">
                             {item.quantity}
@@ -901,6 +1038,12 @@ export function InventoryManager() {
                             title={item.warehouse}
                           >
                             {item.warehouse || "-"}
+                          </td>
+                          <td
+                            className="px-3 py-3 truncate"
+                            title={item.purchaseBatch}
+                          >
+                            {item.purchaseBatch || "-"}
                           </td>
                           <td className="px-3 py-3">
                             <div className="flex gap-1">

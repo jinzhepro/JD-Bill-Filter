@@ -373,3 +373,52 @@ export async function clearProductsInMySQL() {
     };
   }
 }
+
+// 获取库存批次信息
+export async function getInventoryBatches() {
+  try {
+    const response = await fetch("/api/mysql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "getInventoryBatches",
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("获取库存批次信息失败:", error);
+    return {
+      success: false,
+      message: `获取库存批次信息失败: ${error.message}`,
+    };
+  }
+}
+
+// 删除库存批次
+export async function deleteBatch(batchName) {
+  try {
+    const response = await fetch("/api/mysql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "deleteBatch",
+        data: batchName,
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("删除库存批次失败:", error);
+    return {
+      success: false,
+      message: `删除库存批次失败: ${error.message}`,
+    };
+  }
+}

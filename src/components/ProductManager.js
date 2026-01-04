@@ -251,6 +251,51 @@ export function ProductManager() {
     }
   };
 
+  // 复制整列数据
+  const handleCopyColumn = async (columnName, event) => {
+    // 阻止事件冒泡
+    if (event) {
+      event.stopPropagation();
+    }
+
+    try {
+      let columnData = [];
+
+      // 根据列名提取数据
+      switch (columnName) {
+        case "sku":
+          columnData = filteredProducts.map((product) => product.sku || "");
+          break;
+        case "productName":
+          columnData = filteredProducts.map(
+            (product) => product.productName || ""
+          );
+          break;
+        case "brand":
+          columnData = filteredProducts.map((product) => product.brand || "");
+          break;
+        case "warehouse":
+          columnData = filteredProducts.map(
+            (product) => product.warehouse || ""
+          );
+          break;
+        default:
+          columnData = filteredProducts.map(
+            (product) => product[columnName] || ""
+          );
+      }
+
+      // 将数据格式化为列形式（每行一个值）
+      const columnText = columnData.join("\n");
+
+      await navigator.clipboard.writeText(columnText);
+      toast.success(`已复制 ${columnName} 列数据 (${columnData.length} 行)`);
+    } catch (error) {
+      console.error("复制列数据失败:", error);
+      toast.error(`复制列数据失败: ${error.message}`);
+    }
+  };
+
   // 处理取消
   const handleCancel = () => {
     resetProductForm();
@@ -666,17 +711,33 @@ export function ProductManager() {
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="px-3 py-3 text-left font-semibold text-primary-600">
-                    京东SKU
+                  <th
+                    className="px-3 py-3 text-left font-semibold text-primary-600 cursor-pointer hover:bg-blue-50"
+                    onClick={(e) => handleCopyColumn("sku", e)}
+                    title="点击复制整列数据"
+                  >
+                    京东SKU 📋
                   </th>
-                  <th className="px-3 py-3 text-left font-semibold text-primary-600">
-                    商品名称
+                  <th
+                    className="px-3 py-3 text-left font-semibold text-primary-600 cursor-pointer hover:bg-blue-50"
+                    onClick={(e) => handleCopyColumn("productName", e)}
+                    title="点击复制整列数据"
+                  >
+                    商品名称 📋
                   </th>
-                  <th className="px-3 py-3 text-left font-semibold text-primary-600">
-                    品牌
+                  <th
+                    className="px-3 py-3 text-left font-semibold text-primary-600 cursor-pointer hover:bg-blue-50"
+                    onClick={(e) => handleCopyColumn("brand", e)}
+                    title="点击复制整列数据"
+                  >
+                    品牌 📋
                   </th>
-                  <th className="px-3 py-3 text-left font-semibold text-primary-600">
-                    仓库
+                  <th
+                    className="px-3 py-3 text-left font-semibold text-primary-600 cursor-pointer hover:bg-blue-50"
+                    onClick={(e) => handleCopyColumn("warehouse", e)}
+                    title="点击复制整列数据"
+                  >
+                    仓库 📋
                   </th>
                   <th className="px-3 py-3 text-left font-semibold text-primary-600">
                     操作

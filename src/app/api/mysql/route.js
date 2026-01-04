@@ -53,9 +53,26 @@ async function createInventoryTable() {
     `;
 
     await connection.execute(createTableSQL);
+
+    // 创建库存分组表
+    const createBatchTableSQL = `
+      CREATE TABLE IF NOT EXISTS inventory_batches (
+        id VARCHAR(255) PRIMARY KEY,
+        batch_name VARCHAR(255) NOT NULL UNIQUE COMMENT '采购批号',
+        description TEXT DEFAULT '' COMMENT '批次描述',
+        total_items INT DEFAULT 0 COMMENT '总品种数',
+        total_quantity INT DEFAULT 0 COMMENT '总数量',
+        total_amount DECIMAL(12, 2) DEFAULT 0.00 COMMENT '总金额',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+        INDEX idx_batch_name (batch_name)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='库存批次表';
+    `;
+
+    await connection.execute(createBatchTableSQL);
     connection.release();
 
-    return { success: true, message: "库存表创建成功或已存在" };
+    return { success: true, message: "库存表和批次表创建成功或已存在" };
   } catch (error) {
     console.error("创建库存表失败:", error);
     return { success: false, message: `创建库存表失败: ${error.message}` };
@@ -110,10 +127,20 @@ async function pushInventoryToMySQL(inventoryItems) {
     await connection.beginTransaction();
 
     try {
+      // 收集所有批次名称
+      const batchNames = [
+        ...new Set(inventoryItems.map((item) => item.purchaseBatch)),
+      ];
+
+      // 确保所有批次都存在
+      for (const batchName of batchNames) {
+        await createOrUpdateBatch(batchName);
+      }
+
       // 准备插入语句
       const insertSQL = `
         INSERT INTO inventory (
-          id, material_name, quantity, purchase_batch, sku, 
+          id, material_name, quantity, purchase_batch, sku,
           unit_price, total_price, tax_rate, tax_amount, warehouse
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
@@ -144,6 +171,11 @@ async function pushInventoryToMySQL(inventoryItems) {
         ]);
       }
 
+      // 更新所有批次的统计信息
+      for (const batchName of batchNames) {
+        await updateBatchStats(batchName);
+      }
+
       // 提交事务
       await connection.commit();
       connection.release();
@@ -164,6 +196,161 @@ async function pushInventoryToMySQL(inventoryItems) {
       success: false,
       message: `推送库存数据到MySQL失败: ${error.message}`,
     };
+  }
+}
+
+// 创建或更新库存批次
+async function createOrUpdateBatch(batchName, description = "") {
+  try {
+    const connection = await pool.getConnection();
+
+    // 检查批次是否存在
+    const [existingBatch] = await connection.execute(
+      "SELECT * FROM inventory_batches WHERE batch_name = ?",
+      [batchName]
+    );
+
+    if (existingBatch.length > 0) {
+      // 更新现有批次
+      await connection.execute(
+        "UPDATE inventory_batches SET description = ?, updated_at = CURRENT_TIMESTAMP WHERE batch_name = ?",
+        [description, batchName]
+      );
+    } else {
+      // 创建新批次
+      const batchId = `batch-${Date.now()}-${Math.random()
+        .toString(36)
+        .substr(2, 9)}`;
+      await connection.execute(
+        "INSERT INTO inventory_batches (id, batch_name, description) VALUES (?, ?, ?)",
+        [batchId, batchName, description]
+      );
+    }
+
+    connection.release();
+    return { success: true, message: "批次创建或更新成功" };
+  } catch (error) {
+    console.error("创建或更新批次失败:", error);
+    return { success: false, message: `创建或更新批次失败: ${error.message}` };
+  }
+}
+
+// 更新批次统计信息
+async function updateBatchStats(batchName) {
+  try {
+    const connection = await pool.getConnection();
+
+    // 计算批次统计信息
+    const [stats] = await connection.execute(
+      `
+      SELECT
+        COUNT(*) as total_items,
+        SUM(quantity) as total_quantity,
+        SUM(total_price) as total_amount
+      FROM inventory
+      WHERE purchase_batch = ?
+    `,
+      [batchName]
+    );
+
+    const { total_items, total_quantity, total_amount } = stats[0];
+
+    // 更新批次表
+    await connection.execute(
+      `
+      UPDATE inventory_batches
+      SET total_items = ?, total_quantity = ?, total_amount = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE batch_name = ?
+    `,
+      [total_items || 0, total_quantity || 0, total_amount || 0, batchName]
+    );
+
+    connection.release();
+    return { success: true, message: "批次统计信息更新成功" };
+  } catch (error) {
+    console.error("更新批次统计信息失败:", error);
+    return {
+      success: false,
+      message: `更新批次统计信息失败: ${error.message}`,
+    };
+  }
+}
+
+// 获取所有批次信息
+async function getInventoryBatches() {
+  try {
+    const connection = await pool.getConnection();
+
+    const [rows] = await connection.execute(`
+      SELECT
+        id, batch_name, description, total_items, total_quantity, total_amount,
+        created_at, updated_at
+      FROM inventory_batches
+      ORDER BY created_at DESC
+    `);
+
+    connection.release();
+
+    return {
+      success: true,
+      data: rows.map((row) => ({
+        id: row.id,
+        batchName: row.batch_name,
+        description: row.description,
+        totalItems: row.total_items,
+        totalQuantity: row.total_quantity,
+        totalAmount: row.total_amount,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      })),
+      message: `获取了 ${rows.length} 个批次信息`,
+    };
+  } catch (error) {
+    console.error("获取批次信息失败:", error);
+    return {
+      success: false,
+      message: `获取批次信息失败: ${error.message}`,
+    };
+  }
+}
+
+// 删除批次
+async function deleteBatch(batchName) {
+  try {
+    const connection = await pool.getConnection();
+
+    // 开始事务
+    await connection.beginTransaction();
+
+    try {
+      // 删除批次下的所有库存项
+      await connection.execute(
+        "DELETE FROM inventory WHERE purchase_batch = ?",
+        [batchName]
+      );
+
+      // 删除批次记录
+      const [result] = await connection.execute(
+        "DELETE FROM inventory_batches WHERE batch_name = ?",
+        [batchName]
+      );
+
+      await connection.commit();
+      connection.release();
+
+      if (result.affectedRows > 0) {
+        return { success: true, message: "批次删除成功" };
+      } else {
+        return { success: false, message: "未找到要删除的批次" };
+      }
+    } catch (error) {
+      await connection.rollback();
+      connection.release();
+      throw error;
+    }
+  } catch (error) {
+    console.error("删除批次失败:", error);
+    return { success: false, message: `删除批次失败: ${error.message}` };
   }
 }
 
@@ -248,18 +435,31 @@ async function deleteInventoryFromMySQL(id) {
     const connection = await pool.getConnection();
     console.log("获取数据库连接成功");
 
-    // 先查询一下是否存在这个ID的记录
-    const [checkRows] = await connection.execute(
-      "SELECT id FROM inventory WHERE id = ?",
+    // 先查询库存项的批次信息
+    const [itemRows] = await connection.execute(
+      "SELECT purchase_batch FROM inventory WHERE id = ?",
       [id]
     );
-    console.log("查询结果:", checkRows);
 
+    if (itemRows.length === 0) {
+      connection.release();
+      return { success: false, message: "未找到要删除的库存项" };
+    }
+
+    const batchName = itemRows[0].purchase_batch;
+
+    // 删除库存项
     const [result] = await connection.execute(
       "DELETE FROM inventory WHERE id = ?",
       [id]
     );
     console.log("删除操作结果:", result);
+
+    if (result.affectedRows > 0) {
+      // 更新批次统计信息
+      await updateBatchStats(batchName);
+      console.log("批次统计信息已更新");
+    }
 
     connection.release();
 
@@ -801,6 +1001,14 @@ export async function POST(request) {
 
       case "clearProducts":
         result = await clearProductsInMySQL();
+        break;
+
+      case "getInventoryBatches":
+        result = await getInventoryBatches();
+        break;
+
+      case "deleteBatch":
+        result = await deleteBatch(data);
         break;
 
       default:
