@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useReducer, useCallback } from "react";
+import { toast } from "@/hooks/use-toast";
 
 // 初始状态
 const initialState = {
@@ -69,15 +70,31 @@ const SupplierContext = createContext();
 export function SupplierProvider({ children }) {
   const [state, dispatch] = useReducer(supplierReducer, initialState);
 
-  // 从本地存储加载供应商数据
-  const loadSuppliers = useCallback(() => {
+  // 从数据库加载供应商数据
+  const loadSuppliers = useCallback(async () => {
     try {
       dispatch({ type: ActionTypes.SET_LOADING, payload: true });
 
-      const storedSuppliers = localStorage.getItem("suppliers");
-      if (storedSuppliers) {
-        const suppliers = JSON.parse(storedSuppliers);
-        dispatch({ type: ActionTypes.SET_SUPPLIERS, payload: suppliers });
+      const response = await fetch("/api/mysql", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ action: "getSuppliers" }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        dispatch({
+          type: ActionTypes.SET_SUPPLIERS,
+          payload: result.data || [],
+        });
+      } else {
+        dispatch({
+          type: ActionTypes.SET_ERROR,
+          payload: result.message || "加载供应商数据失败",
+        });
       }
     } catch (error) {
       console.error("加载供应商数据失败:", error);
@@ -90,25 +107,49 @@ export function SupplierProvider({ children }) {
     }
   }, []);
 
-  // 保存供应商数据到本地存储
-  const saveSuppliers = useCallback((suppliers) => {
+  // 保存供应商数据到数据库
+  const saveSuppliers = useCallback(async (suppliers) => {
     try {
-      localStorage.setItem("suppliers", JSON.stringify(suppliers));
+      const response = await fetch("/api/mysql", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "pushSuppliers",
+          data: suppliers,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        dispatch({
+          type: ActionTypes.SET_ERROR,
+          payload: result.message || "保存供应商数据失败",
+        });
+        return false;
+      }
+
+      return true;
     } catch (error) {
       console.error("保存供应商数据失败:", error);
       dispatch({
         type: ActionTypes.SET_ERROR,
         payload: "保存供应商数据失败",
       });
+      return false;
     }
   }, []);
 
   // 添加供应商
   const addSupplier = useCallback(
-    (supplier) => {
+    async (supplier) => {
       try {
         const newSupplier = {
-          id: Date.now().toString(), // 简单的ID生成
+          id: `supplier-${Date.now()}-${Math.random()
+            .toString(36)
+            .substr(2, 9)}`, // 生成唯一ID
           name: supplier.name.trim(),
           supplierId: supplier.supplierId.trim(),
           matchString: supplier.matchString ? supplier.matchString.trim() : "",
@@ -122,6 +163,11 @@ export function SupplierProvider({ children }) {
             type: ActionTypes.SET_ERROR,
             payload: "供应商名称和ID不能为空",
           });
+          toast({
+            variant: "destructive",
+            title: "添加失败",
+            description: "供应商名称和ID不能为空",
+          });
           return false;
         }
 
@@ -134,19 +180,42 @@ export function SupplierProvider({ children }) {
             type: ActionTypes.SET_ERROR,
             payload: "供应商ID已存在",
           });
+          toast({
+            variant: "destructive",
+            title: "添加失败",
+            description: "供应商ID已存在",
+          });
           return false;
         }
 
-        dispatch({ type: ActionTypes.ADD_SUPPLIER, payload: newSupplier });
-        saveSuppliers([...state.suppliers, newSupplier]);
-
-        dispatch({ type: ActionTypes.CLEAR_ERROR });
-        return true;
+        // 保存到数据库
+        const success = await saveSuppliers([...state.suppliers, newSupplier]);
+        if (success) {
+          dispatch({ type: ActionTypes.ADD_SUPPLIER, payload: newSupplier });
+          dispatch({ type: ActionTypes.CLEAR_ERROR });
+          toast({
+            title: "添加成功",
+            description: `供应商 "${newSupplier.name}" 已添加`,
+          });
+          return true;
+        } else {
+          toast({
+            variant: "destructive",
+            title: "添加失败",
+            description: `供应商 "${newSupplier.name}" 添加失败`,
+          });
+        }
+        return false;
       } catch (error) {
         console.error("添加供应商失败:", error);
         dispatch({
           type: ActionTypes.SET_ERROR,
           payload: "添加供应商失败",
+        });
+        toast({
+          variant: "destructive",
+          title: "添加失败",
+          description: "添加供应商失败",
         });
         return false;
       }
@@ -156,7 +225,7 @@ export function SupplierProvider({ children }) {
 
   // 更新供应商
   const updateSupplier = useCallback(
-    (id, updates) => {
+    async (id, updates) => {
       try {
         const supplierIndex = state.suppliers.findIndex(
           (supplier) => supplier.id === id
@@ -165,6 +234,11 @@ export function SupplierProvider({ children }) {
           dispatch({
             type: ActionTypes.SET_ERROR,
             payload: "供应商不存在",
+          });
+          toast({
+            variant: "destructive",
+            title: "更新失败",
+            description: "供应商不存在",
           });
           return false;
         }
@@ -189,6 +263,11 @@ export function SupplierProvider({ children }) {
             type: ActionTypes.SET_ERROR,
             payload: "供应商名称和ID不能为空",
           });
+          toast({
+            variant: "destructive",
+            title: "更新失败",
+            description: "供应商名称和ID不能为空",
+          });
           return false;
         }
 
@@ -201,25 +280,48 @@ export function SupplierProvider({ children }) {
             type: ActionTypes.SET_ERROR,
             payload: "供应商ID已存在",
           });
+          toast({
+            variant: "destructive",
+            title: "更新失败",
+            description: "供应商ID已存在",
+          });
           return false;
         }
 
-        dispatch({
-          type: ActionTypes.UPDATE_SUPPLIER,
-          payload: updatedSupplier,
-        });
-
+        // 保存到数据库
         const newSuppliers = [...state.suppliers];
         newSuppliers[supplierIndex] = updatedSupplier;
-        saveSuppliers(newSuppliers);
+        const success = await saveSuppliers(newSuppliers);
 
-        dispatch({ type: ActionTypes.CLEAR_ERROR });
-        return true;
+        if (success) {
+          dispatch({
+            type: ActionTypes.UPDATE_SUPPLIER,
+            payload: updatedSupplier,
+          });
+          dispatch({ type: ActionTypes.CLEAR_ERROR });
+          toast({
+            title: "更新成功",
+            description: `供应商 "${updatedSupplier.name}" 已更新`,
+          });
+          return true;
+        } else {
+          toast({
+            variant: "destructive",
+            title: "更新失败",
+            description: `供应商 "${updatedSupplier.name}" 更新失败`,
+          });
+        }
+        return false;
       } catch (error) {
         console.error("更新供应商失败:", error);
         dispatch({
           type: ActionTypes.SET_ERROR,
           payload: "更新供应商失败",
+        });
+        toast({
+          variant: "destructive",
+          title: "更新失败",
+          description: "更新供应商失败",
         });
         return false;
       }
@@ -229,7 +331,7 @@ export function SupplierProvider({ children }) {
 
   // 删除供应商
   const deleteSupplier = useCallback(
-    (id) => {
+    async (id) => {
       try {
         const supplierIndex = state.suppliers.findIndex(
           (supplier) => supplier.id === id
@@ -239,28 +341,66 @@ export function SupplierProvider({ children }) {
             type: ActionTypes.SET_ERROR,
             payload: "供应商不存在",
           });
+          toast({
+            variant: "destructive",
+            title: "删除失败",
+            description: "供应商不存在",
+          });
           return false;
         }
 
-        dispatch({ type: ActionTypes.DELETE_SUPPLIER, payload: id });
+        // 获取要删除的供应商信息，用于 toast 提示
+        const supplierToDelete = state.suppliers[supplierIndex];
 
-        const newSuppliers = state.suppliers.filter(
-          (supplier) => supplier.id !== id
-        );
-        saveSuppliers(newSuppliers);
+        // 从数据库删除
+        const response = await fetch("/api/mysql", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            action: "deleteSupplier",
+            data: id,
+          }),
+        });
 
-        dispatch({ type: ActionTypes.CLEAR_ERROR });
-        return true;
+        const result = await response.json();
+
+        if (result.success) {
+          dispatch({ type: ActionTypes.DELETE_SUPPLIER, payload: id });
+          dispatch({ type: ActionTypes.CLEAR_ERROR });
+          toast({
+            title: "删除成功",
+            description: `供应商 "${supplierToDelete.name}" 已删除`,
+          });
+          return true;
+        } else {
+          dispatch({
+            type: ActionTypes.SET_ERROR,
+            payload: result.message || "删除供应商失败",
+          });
+          toast({
+            variant: "destructive",
+            title: "删除失败",
+            description: result.message || "删除供应商失败",
+          });
+          return false;
+        }
       } catch (error) {
         console.error("删除供应商失败:", error);
         dispatch({
           type: ActionTypes.SET_ERROR,
           payload: "删除供应商失败",
         });
+        toast({
+          variant: "destructive",
+          title: "删除失败",
+          description: "删除供应商失败",
+        });
         return false;
       }
     },
-    [state.suppliers, saveSuppliers]
+    [state.suppliers]
   );
 
   // 清除错误

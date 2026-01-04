@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Button } from "./ui/button";
+import { useToast } from "@/hooks/use-toast";
 import {
   validateMultipleInventoryForms,
   createMultipleInventoryItems,
@@ -13,6 +14,7 @@ const generateId = () => {
 };
 
 export function BatchInventoryAdd({ onAddItems, onCancel }) {
+  const { toast } = useToast();
   const [rows, setRows] = useState([
     {
       id: generateId(),
@@ -94,8 +96,17 @@ export function BatchInventoryAdd({ onAddItems, onCancel }) {
       // 创建多个库存项
       const newItems = createMultipleInventoryItems(rows);
       onAddItems(newItems);
+      toast({
+        title: "批量添加成功",
+        description: `成功添加 ${newItems.length} 个库存项`,
+      });
     } catch (error) {
       setGlobalErrors([`批量添加库存项失败: ${error.message}`]);
+      toast({
+        variant: "destructive",
+        title: "批量添加失败",
+        description: `批量添加库存项失败: ${error.message}`,
+      });
     }
   };
 

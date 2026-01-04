@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useCallback } from "react";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 import { useProduct } from "@/context/ProductContext";
 import {
   validateFileType,
@@ -16,6 +16,7 @@ import { Button } from "./ui/button";
 
 export function ProductImport() {
   const { products, addProduct, setError, setLoading } = useProduct();
+  const { toast } = useToast();
 
   const [isDragOver, setIsDragOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -42,7 +43,10 @@ export function ProductImport() {
           throw new Error("文件大小不能超过50MB");
         }
 
-        toast.success(`文件 "${file.name}" 上传成功`);
+        toast({
+          title: "上传成功",
+          description: `文件 "${file.name}" 上传成功`,
+        });
 
         // 读取文件
         const fileType = file.name.match(/\.(xlsx|xls|csv)$/i)[1].toLowerCase();
@@ -51,7 +55,10 @@ export function ProductImport() {
         // 验证商品数据结构
         setImportStatus("正在验证数据结构...");
         validateProductDataStructure(data);
-        toast.success("数据结构验证通过");
+        toast({
+          title: "验证通过",
+          description: "数据结构验证通过",
+        });
 
         // 处理商品数据
         setImportStatus("正在处理商品数据...");
@@ -101,10 +108,17 @@ export function ProductImport() {
               throw new Error(pushResult.message);
             }
 
-            toast.success("商品数据已同步到数据库");
+            toast({
+              title: "同步成功",
+              description: "商品数据已同步到数据库",
+            });
           } catch (error) {
             console.error("同步到数据库失败:", error);
-            toast.error(`同步到数据库失败: ${error.message}`);
+            toast({
+              variant: "destructive",
+              title: "同步失败",
+              description: `同步到数据库失败: ${error.message}`,
+            });
           }
         }
 
@@ -119,16 +133,26 @@ export function ProductImport() {
         setImportStatus("导入完成");
 
         if (newProducts.length > 0) {
-          toast.success(`成功导入 ${newProducts.length} 个商品`);
+          toast({
+            title: "导入成功",
+            description: `成功导入 ${newProducts.length} 个商品`,
+          });
         }
 
         if (duplicateSkus.length > 0) {
-          toast.warning(`跳过 ${duplicateSkus.length} 个重复SKU`);
+          toast({
+            title: "跳过重复",
+            description: `跳过 ${duplicateSkus.length} 个重复SKU`,
+          });
         }
       } catch (error) {
         console.error("商品导入失败:", error);
         setError(error.message);
-        toast.error(`商品导入失败: ${error.message}`);
+        toast({
+          variant: "destructive",
+          title: "导入失败",
+          description: `商品导入失败: ${error.message}`,
+        });
         setImportStatus("导入失败");
       } finally {
         setIsProcessing(false);

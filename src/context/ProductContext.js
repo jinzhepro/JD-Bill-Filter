@@ -6,6 +6,7 @@ import React, {
   useReducer,
   useCallback,
 } from "react";
+import { toast } from "@/hooks/use-toast";
 
 // 商品相关的Action类型
 export const ProductActionTypes = {
@@ -133,14 +134,26 @@ export function ProductProvider({ children }) {
 
     addProduct: useCallback((product) => {
       dispatch({ type: ProductActionTypes.ADD_PRODUCT, payload: product });
+      toast({
+        title: "添加成功",
+        description: `商品 "${product.productName}" 已添加`,
+      });
     }, []),
 
     updateProduct: useCallback((product) => {
       dispatch({ type: ProductActionTypes.UPDATE_PRODUCT, payload: product });
+      toast({
+        title: "更新成功",
+        description: `商品 "${product.productName}" 已更新`,
+      });
     }, []),
 
     deleteProduct: useCallback((productId) => {
       dispatch({ type: ProductActionTypes.DELETE_PRODUCT, payload: productId });
+      toast({
+        title: "删除成功",
+        description: `商品已删除`,
+      });
     }, []),
 
     setProductForm: useCallback((formData) => {

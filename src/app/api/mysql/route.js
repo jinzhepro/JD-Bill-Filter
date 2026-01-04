@@ -1124,6 +1124,26 @@ export async function POST(request) {
         };
         break;
 
+      case "createSupplierTable":
+        result = await createSupplierTable();
+        break;
+
+      case "pushSuppliers":
+        result = await pushSuppliersToMySQL(data);
+        break;
+
+      case "getSuppliers":
+        result = await getSuppliersFromMySQL();
+        break;
+
+      case "deleteSupplier":
+        result = await deleteSupplierFromMySQL(data);
+        break;
+
+      case "clearSuppliers":
+        result = await clearSuppliersInMySQL();
+        break;
+
       default:
         result = { success: false, message: "未知的操作类型" };
     }
@@ -1215,5 +1235,197 @@ export async function GET(request) {
       { success: false, message: `API错误: ${error.message}` },
       { status: 500 }
     );
+  }
+}
+
+// ========== 供应商管理相关函数 ==========
+
+// 创建供应商表（如果不存在）
+async function createSupplierTable() {
+  try {
+    const connection = await pool.getConnection();
+
+    // 先删除旧表（如果存在）
+    await connection.execute("DROP TABLE IF EXISTS suppliers");
+
+    // 创建新表
+    const createTableSQL = `
+      CREATE TABLE suppliers (
+        id VARCHAR(255) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL COMMENT '供应商名称',
+        supplier_id VARCHAR(255) NOT NULL UNIQUE COMMENT '供应商ID',
+        match_string VARCHAR(500) DEFAULT '' COMMENT '匹配字符串',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+        INDEX idx_name (name),
+        INDEX idx_supplier_id (supplier_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='供应商表';
+    `;
+
+    await connection.execute(createTableSQL);
+    connection.release();
+
+    return { success: true, message: "供应商表创建成功" };
+  } catch (error) {
+    console.error("创建供应商表失败:", error);
+    return { success: false, message: `创建供应商表失败: ${error.message}` };
+  }
+}
+
+// 推送供应商数据到MySQL
+async function pushSuppliersToMySQL(suppliers) {
+  if (!suppliers || suppliers.length === 0) {
+    return { success: false, message: "没有供应商数据需要推送" };
+  }
+
+  try {
+    // 先确保供应商表已创建
+    await createSupplierTable();
+
+    const connection = await pool.getConnection();
+
+    // 开始事务
+    await connection.beginTransaction();
+
+    try {
+      // 准备插入语句
+      const insertSQL = `
+        INSERT INTO suppliers (
+          id, name, supplier_id, match_string
+        ) VALUES (?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          name = VALUES(name),
+          supplier_id = VALUES(supplier_id),
+          match_string = VALUES(match_string),
+          updated_at = CURRENT_TIMESTAMP
+      `;
+
+      // 批量插入数据
+      for (const supplier of suppliers) {
+        await connection.execute(insertSQL, [
+          supplier.id,
+          supplier.name,
+          supplier.supplierId,
+          supplier.matchString ?? "",
+        ]);
+      }
+
+      // 提交事务
+      await connection.commit();
+      connection.release();
+
+      return {
+        success: true,
+        message: `成功推送 ${suppliers.length} 条供应商数据到MySQL数据库`,
+      };
+    } catch (error) {
+      // 回滚事务
+      await connection.rollback();
+      connection.release();
+      throw error;
+    }
+  } catch (error) {
+    console.error("推送供应商数据到MySQL失败:", error);
+    return {
+      success: false,
+      message: `推送供应商数据到MySQL失败: ${error.message}`,
+    };
+  }
+}
+
+// 从MySQL获取供应商数据
+async function getSuppliersFromMySQL() {
+  try {
+    const connection = await pool.getConnection();
+
+    const [rows] = await connection.execute(`
+      SELECT
+        id, name, supplier_id, match_string,
+        created_at, updated_at
+      FROM suppliers
+      ORDER BY name
+    `);
+
+    connection.release();
+
+    // 转换字段名为前端使用的格式
+    const suppliers = rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      supplierId: row.supplier_id,
+      matchString: row.match_string,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+
+    return {
+      success: true,
+      data: suppliers,
+      message: `从MySQL获取了 ${suppliers.length} 条供应商数据`,
+    };
+  } catch (error) {
+    console.error("从MySQL获取供应商数据失败:", error);
+    return {
+      success: false,
+      message: `从MySQL获取供应商数据失败: ${error.message}`,
+    };
+  }
+}
+
+// 删除供应商数据
+async function deleteSupplierFromMySQL(id) {
+  if (!id) {
+    return { success: false, message: "缺少供应商ID" };
+  }
+
+  try {
+    const connection = await pool.getConnection();
+
+    const [result] = await connection.execute(
+      "DELETE FROM suppliers WHERE id = ?",
+      [id]
+    );
+
+    connection.release();
+
+    if (result.affectedRows > 0) {
+      return {
+        success: true,
+        message: "成功删除供应商",
+      };
+    } else {
+      return {
+        success: false,
+        message: "未找到要删除的供应商",
+      };
+    }
+  } catch (error) {
+    console.error("从MySQL删除供应商失败:", error);
+    return {
+      success: false,
+      message: `从MySQL删除供应商失败: ${error.message}`,
+    };
+  }
+}
+
+// 清空MySQL中的供应商数据
+async function clearSuppliersInMySQL() {
+  try {
+    const connection = await pool.getConnection();
+
+    await connection.execute("DELETE FROM suppliers");
+
+    connection.release();
+
+    return {
+      success: true,
+      message: "已清空MySQL中的供应商数据",
+    };
+  } catch (error) {
+    console.error("清空MySQL供应商数据失败:", error);
+    return {
+      success: false,
+      message: `清空MySQL供应商数据失败: ${error.message}`,
+    };
   }
 }

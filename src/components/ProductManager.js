@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 import { useProduct } from "@/context/ProductContext";
 import { Button } from "./ui/button";
 import { ProductImport } from "./ProductImport";
@@ -30,6 +30,8 @@ export function ProductManager() {
     setError,
     setLoading,
   } = useProduct();
+
+  const { toast } = useToast();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isFormVisible, setIsFormVisible] = useState(false);
@@ -155,12 +157,18 @@ export function ProductManager() {
         );
         const updatedItem = updateProductItem(existingItem, productForm);
         updateProduct(updatedItem);
-        toast.success(`商品 "${productForm.productName}" 已更新`);
+        toast({
+          title: "更新成功",
+          description: `商品 "${productForm.productName}" 已更新`,
+        });
       } else {
         // 添加新项
         const newItem = createProductItem(productForm);
         addProduct(newItem);
-        toast.success(`商品 "${productForm.productName}" 已添加`);
+        toast({
+          title: "添加成功",
+          description: `商品 "${productForm.productName}" 已添加`,
+        });
       }
 
       // 保存到数据库
@@ -214,7 +222,10 @@ export function ProductManager() {
       try {
         await deleteProductFromMySQL(id);
         deleteProduct(id);
-        toast.success(`商品 "${item.productName}" 已删除`);
+        toast({
+          title: "删除成功",
+          description: `商品 "${item.productName}" 已删除`,
+        });
       } catch (error) {
         setError(`删除商品失败: ${error.message}`);
       }
@@ -230,9 +241,16 @@ export function ProductManager() {
 
     try {
       await navigator.clipboard.writeText(sku);
-      toast.success(`SKU "${sku}" 已复制到剪贴板`);
+      toast({
+        title: "复制成功",
+        description: `SKU "${sku}" 已复制到剪贴板`,
+      });
     } catch (error) {
-      toast.error(`复制SKU失败: ${error.message}`);
+      toast({
+        variant: "destructive",
+        title: "复制失败",
+        description: `复制SKU失败: ${error.message}`,
+      });
     }
   };
 
@@ -245,9 +263,16 @@ export function ProductManager() {
 
     try {
       await navigator.clipboard.writeText(productName);
-      toast.success(`商品名称 "${productName}" 已复制到剪贴板`);
+      toast({
+        title: "复制成功",
+        description: `商品名称 "${productName}" 已复制到剪贴板`,
+      });
     } catch (error) {
-      toast.error(`复制商品名称失败: ${error.message}`);
+      toast({
+        variant: "destructive",
+        title: "复制失败",
+        description: `复制商品名称失败: ${error.message}`,
+      });
     }
   };
 
@@ -289,10 +314,17 @@ export function ProductManager() {
       const columnText = columnData.join("\n");
 
       await navigator.clipboard.writeText(columnText);
-      toast.success(`已复制 ${columnName} 列数据 (${columnData.length} 行)`);
+      toast({
+        title: "复制成功",
+        description: `已复制 ${columnName} 列数据 (${columnData.length} 行)`,
+      });
     } catch (error) {
       console.error("复制列数据失败:", error);
-      toast.error(`复制列数据失败: ${error.message}`);
+      toast({
+        variant: "destructive",
+        title: "复制失败",
+        description: `复制列数据失败: ${error.message}`,
+      });
     }
   };
 
@@ -314,14 +346,25 @@ export function ProductManager() {
       const result = await testConnection();
       if (result.success) {
         setMySqlStatus("MySQL连接测试成功");
-        toast.success(result.message);
+        toast({
+          title: "连接测试成功",
+          description: result.message,
+        });
       } else {
         setMySqlStatus("MySQL连接测试失败");
-        toast.error(result.message);
+        toast({
+          variant: "destructive",
+          title: "连接测试失败",
+          description: result.message,
+        });
       }
     } catch (error) {
       setMySqlStatus("MySQL连接测试出错");
-      toast.error(`MySQL连接测试出错: ${error.message}`);
+      toast({
+        variant: "destructive",
+        title: "连接测试出错",
+        description: `MySQL连接测试出错: ${error.message}`,
+      });
     } finally {
       setIsMySqlProcessing(false);
     }
@@ -356,13 +399,20 @@ export function ProductManager() {
       const pushResult = await pushProductsToMySQL(products);
       if (pushResult.success) {
         setMySqlStatus("数据推送成功");
-        toast.success(pushResult.message);
+        toast({
+          title: "推送成功",
+          description: pushResult.message,
+        });
       } else {
         throw new Error(pushResult.message);
       }
     } catch (error) {
       setMySqlStatus("数据推送失败");
-      toast.error(`数据推送失败: ${error.message}`);
+      toast({
+        variant: "destructive",
+        title: "推送失败",
+        description: `数据推送失败: ${error.message}`,
+      });
     } finally {
       setIsMySqlProcessing(false);
     }
@@ -384,10 +434,17 @@ export function ProductManager() {
     try {
       await loadProductsFromDB();
       setMySqlStatus("数据拉取成功");
-      toast.success(`成功从数据库拉取 ${products.length} 条商品数据`);
+      toast({
+        title: "拉取成功",
+        description: `成功从数据库拉取 ${products.length} 条商品数据`,
+      });
     } catch (error) {
       setMySqlStatus("数据拉取失败");
-      toast.error(`数据拉取失败: ${error.message}`);
+      toast({
+        variant: "destructive",
+        title: "拉取失败",
+        description: `数据拉取失败: ${error.message}`,
+      });
     } finally {
       setIsMySqlProcessing(false);
     }
@@ -408,13 +465,20 @@ export function ProductManager() {
       const result = await clearProductsInMySQL();
       if (result.success) {
         setMySqlStatus("MySQL数据清空成功");
-        toast.success(result.message);
+        toast({
+          title: "清空成功",
+          description: result.message,
+        });
       } else {
         throw new Error(result.message);
       }
     } catch (error) {
       setMySqlStatus("MySQL数据清空失败");
-      toast.error(`MySQL数据清空失败: ${error.message}`);
+      toast({
+        variant: "destructive",
+        title: "清空失败",
+        description: `MySQL数据清空失败: ${error.message}`,
+      });
     } finally {
       setIsMySqlProcessing(false);
     }
@@ -429,13 +493,20 @@ export function ProductManager() {
       const result = await ensureWarehouseColumn();
       if (result.success) {
         setMySqlStatus("warehouse字段修复成功");
-        toast.success(result.message);
+        toast({
+          title: "修复成功",
+          description: result.message,
+        });
       } else {
         throw new Error(result.message);
       }
     } catch (error) {
       setMySqlStatus("warehouse字段修复失败");
-      toast.error(`warehouse字段修复失败: ${error.message}`);
+      toast({
+        variant: "destructive",
+        title: "修复失败",
+        description: `warehouse字段修复失败: ${error.message}`,
+      });
     } finally {
       setIsMySqlProcessing(false);
     }
@@ -629,8 +700,11 @@ export function ProductManager() {
         </h2>
 
         {isLoading ? (
-          <div className="text-center py-8 text-gray-500">
-            正在从数据库加载商品数据...
+          <div className="flex items-center justify-center py-8">
+            <div className="flex flex-col items-center space-y-2">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-500"></div>
+              <div className="text-lg text-gray-600">正在加载商品数据...</div>
+            </div>
           </div>
         ) : filteredProducts.length === 0 ? (
           <div className="text-center py-8 text-gray-500">

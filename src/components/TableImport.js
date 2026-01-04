@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback } from "react";
 import { Button } from "./ui/button";
+import { useToast } from "@/hooks/use-toast";
 import {
   readFile,
   validateFileType,
@@ -11,6 +12,7 @@ import { createMultipleInventoryItems } from "@/lib/inventoryStorage";
 import { updateProductNamesBySku } from "@/data/jdSkuMapping";
 
 export function TableImport({ onImportItems, onCancel }) {
+  const { toast } = useToast();
   const [file, setFile] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [previewData, setPreviewData] = useState([]);
@@ -25,12 +27,22 @@ export function TableImport({ onImportItems, onCancel }) {
     // 验证文件类型
     if (!validateFileType(selectedFile)) {
       setErrors(["请选择有效的Excel文件(.xlsx, .xls)或CSV文件"]);
+      toast({
+        variant: "destructive",
+        title: "文件类型错误",
+        description: "请选择有效的Excel文件(.xlsx, .xls)或CSV文件",
+      });
       return;
     }
 
     // 验证文件大小
     if (!validateFileSize(selectedFile)) {
       setErrors(["文件大小不能超过50MB"]);
+      toast({
+        variant: "destructive",
+        title: "文件过大",
+        description: "文件大小不能超过50MB",
+      });
       return;
     }
 
@@ -56,12 +68,22 @@ export function TableImport({ onImportItems, onCancel }) {
     // 验证文件类型
     if (!validateFileType(droppedFile)) {
       setErrors(["请选择有效的Excel文件(.xlsx, .xls)或CSV文件"]);
+      toast({
+        variant: "destructive",
+        title: "文件类型错误",
+        description: "请选择有效的Excel文件(.xlsx, .xls)或CSV文件",
+      });
       return;
     }
 
     // 验证文件大小
     if (!validateFileSize(droppedFile)) {
       setErrors(["文件大小不能超过50MB"]);
+      toast({
+        variant: "destructive",
+        title: "文件过大",
+        description: "文件大小不能超过50MB",
+      });
       return;
     }
 
@@ -104,10 +126,19 @@ export function TableImport({ onImportItems, onCancel }) {
       setImportProgress(
         `成功解析 ${convertedData.length} 条数据，显示前5条预览`
       );
+      toast({
+        title: "解析成功",
+        description: `成功解析 ${convertedData.length} 条数据`,
+      });
     } catch (error) {
       console.error("数据解析失败:", error);
       setErrors([`数据解析失败: ${error.message}`]);
       setPreviewData([]);
+      toast({
+        variant: "destructive",
+        title: "解析失败",
+        description: `数据解析失败: ${error.message}`,
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -247,6 +278,11 @@ export function TableImport({ onImportItems, onCancel }) {
         `成功导入 ${newItems.length} 条库存数据，正在添加到系统...`
       );
 
+      toast({
+        title: "导入成功",
+        description: `成功导入 ${newItems.length} 条库存数据`,
+      });
+
       // 延迟一下让用户看到成功消息
       setTimeout(() => {
         onImportItems(newItems);
@@ -255,6 +291,11 @@ export function TableImport({ onImportItems, onCancel }) {
       console.error("导入失败:", error);
       setErrors([`导入失败: ${error.message}`]);
       setImportProgress("");
+      toast({
+        variant: "destructive",
+        title: "导入失败",
+        description: `导入失败: ${error.message}`,
+      });
     } finally {
       setIsProcessing(false);
     }

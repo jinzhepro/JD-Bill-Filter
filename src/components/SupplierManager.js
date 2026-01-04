@@ -110,6 +110,60 @@ export default function SupplierManager() {
     }));
   }, []);
 
+  // 处理添加供应商
+  const handleAddSupplier = useCallback(async () => {
+    const success = await addSupplier(formData);
+    if (success) {
+      toast({
+        title: "添加成功",
+        description: `供应商 "${formData.name}" 已添加`,
+      });
+      // 重新加载数据
+      loadSuppliers();
+      handleCloseModal();
+    } else {
+      toast({
+        variant: "destructive",
+        title: "添加失败",
+        description: `供应商 "${formData.name}" 添加失败`,
+      });
+    }
+  }, [addSupplier, formData, handleCloseModal, loadSuppliers]);
+
+  // 处理更新供应商
+  const handleUpdateSupplier = useCallback(async () => {
+    if (!editingSupplier) return;
+
+    const success = await updateSupplier(editingSupplier.id, formData);
+    if (success) {
+      toast({
+        title: "更新成功",
+        description: `供应商 "${formData.name}" 已更新`,
+      });
+      // 重新加载数据
+      loadSuppliers();
+      handleCloseModal();
+    } else {
+      toast({
+        variant: "destructive",
+        title: "更新失败",
+        description: `供应商 "${formData.name}" 更新失败`,
+      });
+    }
+  }, [
+    editingSupplier,
+    updateSupplier,
+    formData,
+    handleCloseModal,
+    loadSuppliers,
+  ]);
+
+  // 处理删除供应商
+  const handleDeleteSupplier = useCallback((supplier) => {
+    setDeletingSupplier(supplier);
+    setIsDeleteModalOpen(true);
+  }, []);
+
   // 处理转换文本输入变化
   const handleConvertTextChange = useCallback((e) => {
     setConvertText(e.target.value);
@@ -157,30 +211,6 @@ export default function SupplierManager() {
     }
   }, [convertResults, toast]);
 
-  // 处理添加供应商
-  const handleAddSupplier = useCallback(() => {
-    const success = addSupplier(formData);
-    if (success) {
-      handleCloseModal();
-    }
-  }, [addSupplier, formData, handleCloseModal]);
-
-  // 处理更新供应商
-  const handleUpdateSupplier = useCallback(() => {
-    if (!editingSupplier) return;
-
-    const success = updateSupplier(editingSupplier.id, formData);
-    if (success) {
-      handleCloseModal();
-    }
-  }, [editingSupplier, updateSupplier, formData, handleCloseModal]);
-
-  // 处理删除供应商
-  const handleDeleteSupplier = useCallback((supplier) => {
-    setDeletingSupplier(supplier);
-    setIsDeleteModalOpen(true);
-  }, []);
-
   // 第一次确认删除
   const handleConfirmDelete = useCallback(() => {
     if (deletingSupplier) {
@@ -190,16 +220,26 @@ export default function SupplierManager() {
   }, [deletingSupplier]);
 
   // 第二次确认删除
-  const handleFinalConfirmDelete = useCallback(() => {
+  const handleFinalConfirmDelete = useCallback(async () => {
     if (deletingSupplier) {
-      deleteSupplier(deletingSupplier.id);
-      toast({
-        title: "删除成功",
-        description: `供应商 "${deletingSupplier.name}" 已删除`,
-      });
+      const success = await deleteSupplier(deletingSupplier.id);
+      if (success) {
+        toast({
+          title: "删除成功",
+          description: `供应商 "${deletingSupplier.name}" 已删除`,
+        });
+        // 重新加载数据
+        loadSuppliers();
+      }
       handleCloseModal();
     }
-  }, [deletingSupplier, deleteSupplier, toast, handleCloseModal]);
+  }, [
+    deletingSupplier,
+    deleteSupplier,
+    toast,
+    handleCloseModal,
+    loadSuppliers,
+  ]);
 
   // 处理回车键提交
   const handleKeyPress = useCallback(
@@ -218,7 +258,10 @@ export default function SupplierManager() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="text-lg text-gray-600">加载中...</div>
+        <div className="flex flex-col items-center space-y-2">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-500"></div>
+          <div className="text-lg text-gray-600">正在加载供应商数据...</div>
+        </div>
       </div>
     );
   }
@@ -275,9 +318,6 @@ export default function SupplierManager() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   创建时间
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  更新时间
-                </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   操作
                 </th>
@@ -299,9 +339,6 @@ export default function SupplierManager() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {new Date(supplier.createdAt).toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(supplier.updatedAt).toLocaleString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
@@ -401,7 +438,7 @@ export default function SupplierManager() {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              供应商名称
+              供应商名称 *
             </label>
             <input
               type="text"
@@ -416,7 +453,7 @@ export default function SupplierManager() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              供应商ID
+              供应商ID *
             </label>
             <input
               type="text"

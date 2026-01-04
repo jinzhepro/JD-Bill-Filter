@@ -818,8 +818,11 @@ export function InventoryManager() {
         </h2>
 
         {isDbLoading ? (
-          <div className="text-center py-8 text-gray-500">
-            正在从数据库加载库存数据...
+          <div className="flex items-center justify-center py-8">
+            <div className="flex flex-col items-center space-y-2">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-500"></div>
+              <div className="text-lg text-gray-600">正在加载库存数据...</div>
+            </div>
           </div>
         ) : filteredItems.length === 0 ? (
           <div className="text-center py-8 text-gray-500">

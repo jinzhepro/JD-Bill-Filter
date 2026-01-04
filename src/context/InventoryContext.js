@@ -9,6 +9,7 @@ import {
 } from "react";
 import { LogType } from "@/types";
 import { getInventoryFromDatabase } from "@/lib/inventoryStorage";
+import { toast } from "@/hooks/use-toast";
 
 // 初始状态
 const initialState = {
@@ -195,6 +196,12 @@ export function InventoryProvider({ children }) {
           },
         });
 
+        // 显示添加成功 toast
+        toast({
+          title: "添加成功",
+          description: `库存项 "${item.materialName}" 已添加`,
+        });
+
         // 尝试保存到MySQL数据库
         try {
           const { pushInventoryToMySQL } = await import(
@@ -225,6 +232,12 @@ export function InventoryProvider({ children }) {
               type: ActionTypes.SET_ERROR,
               payload: `保存到数据库失败: ${result.message}`,
             });
+            // 显示保存失败 toast
+            toast({
+              variant: "destructive",
+              title: "保存失败",
+              description: `保存到数据库失败: ${result.message}`,
+            });
           }
         } catch (error) {
           console.error("保存库存项到数据库失败:", error);
@@ -238,6 +251,12 @@ export function InventoryProvider({ children }) {
           dispatch({
             type: ActionTypes.SET_ERROR,
             payload: `保存到数据库失败: ${error.message}`,
+          });
+          // 显示保存失败 toast
+          toast({
+            variant: "destructive",
+            title: "保存失败",
+            description: `保存到数据库失败: ${error.message}`,
           });
         }
       },
@@ -259,6 +278,12 @@ export function InventoryProvider({ children }) {
             message: `成功添加 ${items.length} 个库存项到本地`,
             type: LogType.SUCCESS,
           },
+        });
+
+        // 显示批量添加成功 toast
+        toast({
+          title: "批量添加成功",
+          description: `成功添加 ${items.length} 个库存项`,
         });
 
         // 尝试保存到MySQL数据库
@@ -291,6 +316,12 @@ export function InventoryProvider({ children }) {
               type: ActionTypes.SET_ERROR,
               payload: `保存到数据库失败: ${result.message}`,
             });
+            // 显示保存失败 toast
+            toast({
+              variant: "destructive",
+              title: "保存失败",
+              description: `保存到数据库失败: ${result.message}`,
+            });
           }
         } catch (error) {
           console.error("批量保存库存项到数据库失败:", error);
@@ -304,6 +335,12 @@ export function InventoryProvider({ children }) {
           dispatch({
             type: ActionTypes.SET_ERROR,
             payload: `保存到数据库失败: ${error.message}`,
+          });
+          // 显示保存失败 toast
+          toast({
+            variant: "destructive",
+            title: "保存失败",
+            description: `保存到数据库失败: ${error.message}`,
           });
         }
       },
@@ -322,6 +359,12 @@ export function InventoryProvider({ children }) {
             message: `成功更新库存项 "${item.materialName}" 在本地`,
             type: LogType.SUCCESS,
           },
+        });
+
+        // 显示更新成功 toast
+        toast({
+          title: "更新成功",
+          description: `库存项 "${item.materialName}" 已更新`,
         });
 
         // 尝试保存到MySQL数据库
@@ -354,6 +397,12 @@ export function InventoryProvider({ children }) {
               type: ActionTypes.SET_ERROR,
               payload: `更新到数据库失败: ${result.message}`,
             });
+            // 显示更新失败 toast
+            toast({
+              variant: "destructive",
+              title: "更新失败",
+              description: `更新到数据库失败: ${result.message}`,
+            });
           }
         } catch (error) {
           console.error("更新库存项到数据库失败:", error);
@@ -368,37 +417,71 @@ export function InventoryProvider({ children }) {
             type: ActionTypes.SET_ERROR,
             payload: `更新到数据库失败: ${error.message}`,
           });
+          // 显示更新失败 toast
+          toast({
+            variant: "destructive",
+            title: "更新失败",
+            description: `更新到数据库失败: ${error.message}`,
+          });
         }
       },
       [state.inventoryItems]
     ),
 
-    deleteInventoryItem: useCallback(async (id) => {
-      // 先从数据库删除
-      try {
-        const { deleteInventoryFromMySQL } = await import(
-          "@/lib/mysqlConnection"
+    deleteInventoryItem: useCallback(
+      async (id) => {
+        // 先获取要删除的项的信息，用于 toast 提示
+        const itemToDelete = state.inventoryItems.find(
+          (item) => item.id === id
         );
-        const result = await deleteInventoryFromMySQL(id);
 
-        if (result.success) {
-          // 数据库删除成功后，更新本地状态
-          dispatch({ type: ActionTypes.DELETE_INVENTORY_ITEM, payload: id });
-        } else {
-          console.error("删除库存项从数据库失败:", result.message);
+        // 先从数据库删除
+        try {
+          const { deleteInventoryFromMySQL } = await import(
+            "@/lib/mysqlConnection"
+          );
+          const result = await deleteInventoryFromMySQL(id);
+
+          if (result.success) {
+            // 数据库删除成功后，更新本地状态
+            dispatch({ type: ActionTypes.DELETE_INVENTORY_ITEM, payload: id });
+
+            // 显示删除成功 toast
+            if (itemToDelete) {
+              toast({
+                title: "删除成功",
+                description: `库存项 "${itemToDelete.materialName}" 已删除`,
+              });
+            }
+          } else {
+            console.error("删除库存项从数据库失败:", result.message);
+            dispatch({
+              type: ActionTypes.SET_ERROR,
+              payload: `删除库存项失败: ${result.message}`,
+            });
+            // 显示删除失败 toast
+            toast({
+              variant: "destructive",
+              title: "删除失败",
+              description: `删除库存项失败: ${result.message}`,
+            });
+          }
+        } catch (error) {
+          console.error("删除库存项从数据库失败:", error);
           dispatch({
             type: ActionTypes.SET_ERROR,
-            payload: `删除库存项失败: ${result.message}`,
+            payload: `删除库存项失败: ${error.message}`,
+          });
+          // 显示删除失败 toast
+          toast({
+            variant: "destructive",
+            title: "删除失败",
+            description: `删除库存项失败: ${error.message}`,
           });
         }
-      } catch (error) {
-        console.error("删除库存项从数据库失败:", error);
-        dispatch({
-          type: ActionTypes.SET_ERROR,
-          payload: `删除库存项失败: ${error.message}`,
-        });
-      }
-    }, []),
+      },
+      [state.inventoryItems]
+    ),
 
     setInventoryForm: useCallback((formData) => {
       dispatch({ type: ActionTypes.SET_INVENTORY_FORM, payload: formData });
