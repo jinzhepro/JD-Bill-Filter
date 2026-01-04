@@ -521,3 +521,64 @@ export async function deductInventory(enhancedData, inventoryItems) {
     errors: deductionErrors,
   };
 }
+
+// 验证商品数据结构
+export function validateProductDataStructure(data) {
+  if (data.length === 0) {
+    throw new Error("商品数据为空");
+  }
+
+  const firstRow = data[0];
+  const requiredColumns = ["京东SKU", "商品名称"];
+
+  for (const column of requiredColumns) {
+    if (!(column in firstRow)) {
+      throw new Error(`缺少必要的列: ${column}`);
+    }
+  }
+
+  return true;
+}
+
+// 处理商品导入数据
+export function processProductImportData(data) {
+  if (!data || data.length === 0) {
+    throw new Error("没有商品数据需要处理");
+  }
+
+  console.log(`开始处理 ${data.length} 条商品数据`);
+
+  const processedProducts = data.map((row, index) => {
+    // 提取必要字段
+    const sku = row["京东SKU"] || row["SKU"] || row["sku"] || "";
+    const productName = row["商品名称"] || row["产品名称"] || row["名称"] || "";
+    const brand = row["品牌"] || row["Brand"] || "";
+    const warehouse = row["仓库"] || row["Warehouse"] || "";
+
+    // 验证必要字段
+    if (!sku || sku.trim() === "") {
+      throw new Error(`第 ${index + 1} 行：京东SKU不能为空`);
+    }
+
+    if (!productName || productName.trim() === "") {
+      throw new Error(`第 ${index + 1} 行：商品名称不能为空`);
+    }
+
+    // 创建商品对象
+    return {
+      id: `product-${Date.now()}-${Math.random()
+        .toString(36)
+        .substr(2, 9)}-${index}`,
+      sku: sku.toString().trim(),
+      productName: productName.trim(),
+      brand: brand ? brand.trim() : "",
+      warehouse: warehouse ? warehouse.trim() : "",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  });
+
+  console.log(`商品数据处理完成，生成 ${processedProducts.length} 条商品记录`);
+
+  return processedProducts;
+}

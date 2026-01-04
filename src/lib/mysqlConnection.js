@@ -227,3 +227,125 @@ export async function rollbackDeductionRecords(timestamp) {
     };
   }
 }
+
+// 创建商品表
+export async function createProductTable() {
+  try {
+    const response = await fetch("/api/mysql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "createProductTable",
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("创建商品表失败:", error);
+    return {
+      success: false,
+      message: `创建商品表失败: ${error.message}`,
+    };
+  }
+}
+
+// 推送商品数据到MySQL
+export async function pushProductsToMySQL(products) {
+  try {
+    const response = await fetch("/api/mysql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "pushProducts",
+        data: products,
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("推送商品数据失败:", error);
+    return {
+      success: false,
+      message: `推送商品数据失败: ${error.message}`,
+    };
+  }
+}
+
+// 从MySQL获取商品数据
+export async function getProductsFromMySQL() {
+  try {
+    const response = await fetch("/api/mysql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "getProducts",
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("获取商品数据失败:", error);
+    return {
+      success: false,
+      message: `获取商品数据失败: ${error.message}`,
+    };
+  }
+}
+
+// 删除商品数据
+export async function deleteProductFromMySQL(id) {
+  try {
+    const response = await fetch("/api/mysql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "deleteProduct",
+        data: id,
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("删除商品数据失败:", error);
+    return {
+      success: false,
+      message: `删除商品数据失败: ${error.message}`,
+    };
+  }
+}
+
+// 清空MySQL中的商品数据
+export async function clearProductsInMySQL() {
+  try {
+    const response = await fetch("/api/mysql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "clearProducts",
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("清空商品数据失败:", error);
+    return {
+      success: false,
+      message: `清空商品数据失败: ${error.message}`,
+    };
+  }
+}

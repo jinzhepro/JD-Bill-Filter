@@ -389,6 +389,219 @@ async function getDeductionRecords() {
   }
 }
 
+// 创建商品表（如果不存在）
+async function createProductTable() {
+  let connection;
+  try {
+    console.log("开始创建商品表...");
+    connection = await pool.getConnection();
+    console.log("获取数据库连接成功");
+
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS products (
+        id VARCHAR(255) PRIMARY KEY,
+        sku VARCHAR(255) NOT NULL UNIQUE COMMENT '京东SKU',
+        product_name VARCHAR(500) NOT NULL COMMENT '商品名称',
+        brand VARCHAR(255) DEFAULT '' COMMENT '品牌',
+        warehouse VARCHAR(255) DEFAULT '' COMMENT '仓库',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+        INDEX idx_sku (sku),
+        INDEX idx_brand (brand),
+        INDEX idx_warehouse (warehouse)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='商品表';
+    `;
+
+    console.log("执行创建表SQL...");
+    await connection.execute(createTableSQL);
+    console.log("商品表创建SQL执行完成");
+
+    if (connection) {
+      connection.release();
+      console.log("数据库连接已释放");
+    }
+
+    return { success: true, message: "商品表创建成功或已存在" };
+  } catch (error) {
+    console.error("创建商品表失败:", error);
+    if (connection) {
+      connection.release();
+      console.log("错误时释放数据库连接");
+    }
+    return { success: false, message: `创建商品表失败: ${error.message}` };
+  }
+}
+
+// 推送商品数据到MySQL
+async function pushProductsToMySQL(products) {
+  if (!products || products.length === 0) {
+    return { success: false, message: "没有商品数据需要推送" };
+  }
+
+  try {
+    const connection = await pool.getConnection();
+
+    // 开始事务
+    await connection.beginTransaction();
+
+    try {
+      // 准备插入语句
+      const insertSQL = `
+        INSERT INTO products (
+          id, sku, product_name, brand, warehouse
+        ) VALUES (?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          product_name = VALUES(product_name),
+          brand = VALUES(brand),
+          warehouse = VALUES(warehouse),
+          updated_at = CURRENT_TIMESTAMP
+      `;
+
+      // 批量插入数据
+      for (const product of products) {
+        await connection.execute(insertSQL, [
+          product.id,
+          product.sku,
+          product.productName,
+          product.brand || "",
+          product.warehouse || "",
+        ]);
+      }
+
+      // 提交事务
+      await connection.commit();
+      connection.release();
+
+      return {
+        success: true,
+        message: `成功推送 ${products.length} 条商品数据到MySQL数据库`,
+      };
+    } catch (error) {
+      // 回滚事务
+      await connection.rollback();
+      connection.release();
+      throw error;
+    }
+  } catch (error) {
+    console.error("推送商品数据到MySQL失败:", error);
+    return {
+      success: false,
+      message: `推送商品数据到MySQL失败: ${error.message}`,
+    };
+  }
+}
+
+// 从MySQL获取商品数据
+async function getProductsFromMySQL() {
+  let connection;
+  try {
+    console.log("开始获取商品数据...");
+    connection = await pool.getConnection();
+    console.log("获取数据库连接成功");
+
+    const [rows] = await connection.execute(`
+      SELECT
+        id, sku, product_name, category, brand, specifications,
+        created_at, updated_at
+      FROM products
+      ORDER BY sku
+    `);
+    console.log("查询商品数据完成，行数:", rows.length);
+
+    if (connection) {
+      connection.release();
+      console.log("数据库连接已释放");
+    }
+
+    // 转换字段名为前端使用的格式
+    const products = rows.map((row) => ({
+      id: row.id,
+      sku: row.sku,
+      productName: row.product_name,
+      category: row.category,
+      brand: row.brand,
+      specifications: row.specifications,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+
+    console.log("商品数据转换完成，返回数据");
+    return {
+      success: true,
+      data: products,
+      message: `从MySQL获取了 ${products.length} 条商品数据`,
+    };
+  } catch (error) {
+    console.error("从MySQL获取商品数据失败:", error);
+    if (connection) {
+      connection.release();
+      console.log("错误时释放数据库连接");
+    }
+    return {
+      success: false,
+      message: `从MySQL获取商品数据失败: ${error.message}`,
+    };
+  }
+}
+
+// 删除商品数据
+async function deleteProductFromMySQL(id) {
+  if (!id) {
+    return { success: false, message: "缺少商品ID" };
+  }
+
+  try {
+    const connection = await pool.getConnection();
+
+    const [result] = await connection.execute(
+      "DELETE FROM products WHERE id = ?",
+      [id]
+    );
+
+    connection.release();
+
+    if (result.affectedRows > 0) {
+      return {
+        success: true,
+        message: "成功删除商品",
+      };
+    } else {
+      return {
+        success: false,
+        message: "未找到要删除的商品",
+      };
+    }
+  } catch (error) {
+    console.error("从MySQL删除商品失败:", error);
+    return {
+      success: false,
+      message: `从MySQL删除商品失败: ${error.message}`,
+    };
+  }
+}
+
+// 清空MySQL中的商品数据
+async function clearProductsInMySQL() {
+  try {
+    const connection = await pool.getConnection();
+
+    await connection.execute("DELETE FROM products");
+
+    connection.release();
+
+    return {
+      success: true,
+      message: "已清空MySQL中的商品数据",
+    };
+  } catch (error) {
+    console.error("清空MySQL商品数据失败:", error);
+    return {
+      success: false,
+      message: `清空MySQL商品数据失败: ${error.message}`,
+    };
+  }
+}
+
 // 撤回库存扣减记录
 async function rollbackDeductionRecords(timestamp) {
   if (!timestamp) {
@@ -454,11 +667,24 @@ async function rollbackDeductionRecords(timestamp) {
 
 // API路由处理函数
 export async function POST(request) {
-  try {
-    const body = await request.json();
-    const { action, data } = body;
+  const startTime = Date.now();
+  let timeoutId;
 
-    console.log("MySQL API请求:", { action, data });
+  try {
+    // 设置30秒超时
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error("API请求超时（30秒）"));
+      }, 30000);
+    });
+
+    const bodyPromise = request.json();
+    const { action, data } = await Promise.race([bodyPromise, timeoutPromise]);
+
+    clearTimeout(timeoutId);
+    console.log(`MySQL API请求: ${action}`, {
+      data: data ? "received" : "none",
+    });
 
     let result;
 
@@ -499,14 +725,47 @@ export async function POST(request) {
         result = await rollbackDeductionRecords(data);
         break;
 
+      case "createProductTable":
+        result = await createProductTable();
+        break;
+
+      case "pushProducts":
+        result = await pushProductsToMySQL(data);
+        break;
+
+      case "getProducts":
+        result = await getProductsFromMySQL();
+        break;
+
+      case "deleteProduct":
+        result = await deleteProductFromMySQL(data);
+        break;
+
+      case "clearProducts":
+        result = await clearProductsInMySQL();
+        break;
+
       default:
         result = { success: false, message: "未知的操作类型" };
     }
 
-    console.log("API响应:", result);
+    const duration = Date.now() - startTime;
+    console.log(`API响应: ${action}`, {
+      success: result.success,
+      duration: `${duration}ms`,
+    });
+
     return NextResponse.json(result);
   } catch (error) {
-    console.error("MySQL API错误:", error);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+
+    const duration = Date.now() - startTime;
+    console.error(`MySQL API错误: ${error.message}`, {
+      duration: `${duration}ms`,
+    });
+
     return NextResponse.json(
       { success: false, message: `API错误: ${error.message}` },
       { status: 500 }

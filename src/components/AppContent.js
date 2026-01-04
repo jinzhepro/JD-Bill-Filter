@@ -49,6 +49,12 @@ export function AppContent() {
               >
                 库存管理
               </Link>
+              <Link
+                href="/products"
+                className="px-6 py-3 rounded-lg font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700"
+              >
+                商品管理
+              </Link>
             </div>
             <p className="mt-4 text-sm text-gray-600">
               {uploadMode === "single"
