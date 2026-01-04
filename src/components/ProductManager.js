@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useProduct } from "@/context/ProductContext";
-import Button from "./ui/Button";
+import { Button } from "./ui/button.js";
 import { ProductImport } from "./ProductImport";
 import {
   createProductTable,

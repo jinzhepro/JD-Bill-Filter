@@ -302,6 +302,30 @@ export function SupplierProvider({ children }) {
     [state.suppliers]
   );
 
+  // 批量转换文本为供应商ID
+  const convertTextToSuppliers = useCallback(
+    (text) => {
+      if (!text) return [];
+
+      // 按行分割文本
+      const lines = text.split("\n").filter((line) => line.trim() !== "");
+
+      const results = lines.map((line) => {
+        const trimmedLine = line.trim();
+        const supplier = getSupplierByMatchString(trimmedLine);
+
+        return {
+          originalText: trimmedLine,
+          supplier: supplier,
+          matched: !!supplier,
+        };
+      });
+
+      return results;
+    },
+    [getSupplierByMatchString]
+  );
+
   const value = {
     ...state,
     loadSuppliers,
@@ -312,6 +336,7 @@ export function SupplierProvider({ children }) {
     getSupplierById,
     getSupplierBySupplierId,
     getSupplierByMatchString,
+    convertTextToSuppliers,
   };
 
   return (

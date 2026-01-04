@@ -5,7 +5,7 @@ import { useApp } from "@/context/AppContext";
 import { useSupplier } from "@/context/SupplierContext";
 import { downloadExcel } from "@/lib/excelHandler";
 import { processWithSkuAndBatch } from "@/lib/dataProcessor";
-import Button from "./ui/Button";
+import { Button } from "./ui/button.js";
 import { toast } from "sonner";
 
 export default function ResultDisplay() {
@@ -503,7 +503,7 @@ export default function ResultDisplay() {
                     : "下载Excel结果"}
                 </Button>
               )}
-              <Button variant="danger" onClick={handleReset}>
+              <Button variant="destructive" onClick={handleReset}>
                 重新上传
               </Button>
             </div>

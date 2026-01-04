@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useSupplier } from "@/context/SupplierContext";
-import Button from "./ui/Button";
+import { Button } from "./ui/button.js";
 import Modal from "./ui/Modal";
 
 export default function SupplierManager() {
@@ -16,16 +16,20 @@ export default function SupplierManager() {
     deleteSupplier,
     clearError,
     getSupplierById,
+    convertTextToSuppliers,
   } = useSupplier();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
     supplierId: "",
     matchString: "",
   });
+  const [convertText, setConvertText] = useState("");
+  const [convertResults, setConvertResults] = useState([]);
 
   // 组件挂载时加载数据
   useEffect(() => {
@@ -40,6 +44,13 @@ export default function SupplierManager() {
       matchString: "",
     });
     setEditingSupplier(null);
+    clearError();
+  }, [clearError]);
+
+  // 重置转换表单
+  const resetConvertForm = useCallback(() => {
+    setConvertText("");
+    setConvertResults([]);
     clearError();
   }, [clearError]);
 
@@ -66,10 +77,17 @@ export default function SupplierManager() {
     [getSupplierById]
   );
 
+  // 打开转换模态框
+  const handleConvertClick = useCallback(() => {
+    resetConvertForm();
+    setIsConvertModalOpen(true);
+  }, [resetConvertForm]);
+
   // 关闭模态框
   const handleCloseModal = useCallback(() => {
     setIsAddModalOpen(false);
     setIsEditModalOpen(false);
+    setIsConvertModalOpen(false);
     resetForm();
   }, [resetForm]);
 
@@ -81,6 +99,43 @@ export default function SupplierManager() {
       [name]: value,
     }));
   }, []);
+
+  // 处理转换文本输入变化
+  const handleConvertTextChange = useCallback((e) => {
+    setConvertText(e.target.value);
+  }, []);
+
+  // 处理转换
+  const handleConvert = useCallback(() => {
+    if (!convertText.trim()) {
+      return;
+    }
+    const results = convertTextToSuppliers(convertText);
+    setConvertResults(results);
+  }, [convertText, convertTextToSuppliers]);
+
+  // 复制供应商ID到剪贴板
+  const handleCopySupplierIds = useCallback(() => {
+    const supplierIds = convertResults
+      .filter((result) => result.matched)
+      .map((result) => result.supplier.supplierId)
+      .join("\n");
+
+    if (supplierIds) {
+      navigator.clipboard
+        .writeText(supplierIds)
+        .then(() => {
+          // 可以添加一个成功提示
+          alert("供应商ID已复制到剪贴板");
+        })
+        .catch((err) => {
+          console.error("复制失败:", err);
+          alert("复制失败，请手动复制");
+        });
+    } else {
+      alert("没有可复制的供应商ID");
+    }
+  }, [convertResults]);
 
   // 处理添加供应商
   const handleAddSupplier = useCallback(() => {
@@ -153,18 +208,19 @@ export default function SupplierManager() {
       {/* 操作栏 */}
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-800">供应商管理</h2>
-        <Button variant="primary" onClick={handleAddClick}>
-          添加供应商
-        </Button>
+        <div className="flex space-x-3">
+          <Button onClick={handleConvertClick} variant="secondary">
+            文本转换
+          </Button>
+          <Button onClick={handleAddClick}>添加供应商</Button>
+        </div>
       </div>
 
       {/* 供应商列表 */}
       {suppliers.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-8 text-center">
           <div className="text-gray-500 text-lg mb-4">暂无供应商数据</div>
-          <Button variant="primary" onClick={handleAddClick}>
-            添加第一个供应商
-          </Button>
+          <Button onClick={handleAddClick}>添加第一个供应商</Button>
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -365,6 +421,98 @@ export default function SupplierManager() {
               更新
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      {/* 文本转换模态框 */}
+      <Modal
+        isOpen={isConvertModalOpen}
+        onClose={handleCloseModal}
+        title="文本转换为供应商ID"
+        size="xl"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              输入文本
+            </label>
+            <textarea
+              value={convertText}
+              onChange={handleConvertTextChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              rows={10}
+              placeholder="请输入要转换的文本，每行一个编码"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              每行输入一个编码，系统将根据供应商的匹配字符串自动识别对应的供应商
+            </p>
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-4">
+            <Button variant="secondary" onClick={handleCloseModal}>
+              取消
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleConvert}
+              disabled={!convertText.trim()}
+            >
+              转换
+            </Button>
+          </div>
+
+          {/* 转换结果 */}
+          {convertResults.length > 0 && (
+            <div className="mt-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-gray-900">转换结果</h3>
+                <Button
+                  onClick={handleCopySupplierIds}
+                  variant="secondary"
+                  size="sm"
+                  disabled={
+                    convertResults.filter((r) => r.matched).length === 0
+                  }
+                >
+                  复制供应商ID
+                </Button>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  供应商ID结果
+                </label>
+                <textarea
+                  readOnly
+                  value={convertResults
+                    .filter((result) => result.matched)
+                    .map((result) => result.supplier.supplierId)
+                    .join("\n")}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  rows={10}
+                  placeholder="转换后的供应商ID将显示在这里"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  只显示匹配成功的供应商ID，可直接复制使用
+                </p>
+              </div>
+
+              {/* 统计信息 */}
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">
+                    总计: {convertResults.length} 条
+                  </span>
+                  <span className="text-green-600">
+                    匹配成功: {convertResults.filter((r) => r.matched).length}{" "}
+                    条
+                  </span>
+                  <span className="text-red-600">
+                    未匹配: {convertResults.filter((r) => !r.matched).length} 条
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </Modal>
     </div>

@@ -7,7 +7,7 @@ import {
   processWithSkuAndBatch,
 } from "@/lib/dataProcessor";
 import { downloadExcel } from "@/lib/excelHandler";
-import Button from "./ui/Button";
+import { Button } from "./ui/button.js";
 import { toast } from "sonner";
 
 export default function MergeProcessor() {
@@ -510,10 +510,8 @@ export default function MergeProcessor() {
                       : "下载Excel结果"}
                   </Button>
                 )}
-                <Button variant="primary" onClick={handleMergeProcess}>
-                  重新合并
-                </Button>
-                <Button variant="danger" onClick={handleResetMerge}>
+                <Button onClick={handleMergeProcess}>重新合并</Button>
+                <Button variant="destructive" onClick={handleResetMerge}>
                   重新开始
                 </Button>
               </div>

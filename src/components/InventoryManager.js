@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useInventory } from "@/context/InventoryContext";
-import Button from "./ui/Button";
+import { Button } from "./ui/button.js";
 import { BatchInventoryAdd } from "./BatchInventoryAdd";
 import { TableImport } from "./TableImport";
 import { DeductionRecords } from "./DeductionRecords";

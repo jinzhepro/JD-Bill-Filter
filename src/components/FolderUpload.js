@@ -8,7 +8,7 @@ import {
   readFile,
 } from "@/lib/excelHandler";
 import { validateDataStructure, processOrderData } from "@/lib/dataProcessor";
-import Button from "./ui/Button";
+import { Button } from "./ui/button.js";
 
 export default function FolderUpload() {
   const {
@@ -289,7 +289,7 @@ export default function FolderUpload() {
           <p className="text-gray-600 mb-6 max-w-md mx-auto">
             拖拽一个或多个文件夹到此处，或点击选择文件夹（将自动递归处理所有支持的文件）
           </p>
-          <Button variant="primary" size="lg" disabled={false} className="px-8">
+          <Button size="lg" disabled={false} className="px-8">
             选择文件夹
           </Button>
         </div>

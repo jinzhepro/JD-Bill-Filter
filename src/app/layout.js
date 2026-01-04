@@ -1,5 +1,5 @@
 import "./globals.css";
-import { Toaster } from "sonner";
+import { Toaster } from "@/components/ui/toaster";
 
 export const metadata = {
   title: "京东万商库存管理系统",
@@ -9,9 +9,9 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="zh-CN">
-      <body className="antialiased bg-gray-50">
+      <body className="antialiased">
         {children}
-        <Toaster position="top-right" />
+        <Toaster />
       </body>
     </html>
   );

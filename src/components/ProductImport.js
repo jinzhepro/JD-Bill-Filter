@@ -12,7 +12,7 @@ import {
   validateProductDataStructure,
   processProductImportData,
 } from "@/lib/dataProcessor";
-import Button from "./ui/Button";
+import { Button } from "./ui/button.js";
 
 export function ProductImport() {
   const { products, addProduct, setError, setLoading } = useProduct();
@@ -207,10 +207,7 @@ export function ProductImport() {
               </div>
             )}
           </div>
-          <Button
-            onClick={handleReset}
-            className="mt-3 bg-green-600 text-white hover:bg-green-700"
-          >
+          <Button onClick={handleReset} className="mt-3">
             继续导入
           </Button>
         </div>
@@ -241,12 +238,7 @@ export function ProductImport() {
             <p className="text-gray-600 mb-4 max-w-md mx-auto">
               拖拽文件到此处或点击选择文件（支持 .xlsx, .xls, .csv 格式）
             </p>
-            <Button
-              variant="primary"
-              size="lg"
-              disabled={isProcessing}
-              className="px-6"
-            >
+            <Button size="lg" disabled={isProcessing} className="px-6">
               {isProcessing ? "处理中..." : "选择文件"}
             </Button>
           </div>

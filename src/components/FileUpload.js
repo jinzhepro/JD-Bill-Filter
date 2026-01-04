@@ -9,7 +9,7 @@ import {
   downloadExcel,
 } from "@/lib/excelHandler";
 import { validateDataStructure, processOrderData } from "@/lib/dataProcessor";
-import Button from "./ui/Button";
+import { Button } from "./ui/button.js";
 
 export default function FileUpload() {
   const {
@@ -136,7 +136,7 @@ export default function FileUpload() {
           <p className="text-gray-600 mb-6 max-w-md mx-auto">
             拖拽文件到此处或点击选择文件（支持 .xlsx, .xls, .csv 格式）
           </p>
-          <Button variant="primary" size="lg" disabled={false} className="px-8">
+          <Button size="lg" disabled={false} className="px-8">
             选择文件
           </Button>
         </div>

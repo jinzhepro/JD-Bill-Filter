@@ -8,7 +8,7 @@ import {
   readFile,
 } from "@/lib/excelHandler";
 import { validateDataStructure } from "@/lib/dataProcessor";
-import Button from "./ui/Button";
+import { Button } from "./ui/button.js";
 
 export default function MultiFileUpload() {
   const {
@@ -194,7 +194,7 @@ export default function MultiFileUpload() {
           <p className="text-gray-600 mb-6 max-w-md mx-auto">
             拖拽多个文件到此处或点击选择文件（支持 .xlsx, .xls, .csv 格式）
           </p>
-          <Button variant="primary" size="lg" disabled={false} className="px-8">
+          <Button size="lg" disabled={false} className="px-8">
             选择多个文件
           </Button>
         </div>
@@ -236,7 +236,7 @@ export default function MultiFileUpload() {
                     </div>
                   </div>
                   <Button
-                    variant="danger"
+                    variant="destructive"
                     size="sm"
                     onClick={() => handleRemoveFile(index)}
                   >
@@ -249,7 +249,6 @@ export default function MultiFileUpload() {
             {/* 合并按钮 */}
             <div className="mt-6 text-center">
               <Button
-                variant="success"
                 size="lg"
                 onClick={handleMergeFiles}
                 disabled={uploadedFiles.length < 2}
