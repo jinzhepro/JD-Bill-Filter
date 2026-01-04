@@ -270,8 +270,12 @@ export function mergeSameSKU(processedData) {
   }));
 }
 
-// 根据仓库SKU替换商品名并添加批次号
-export function processWithSkuAndBatch(processedData, inventoryItems) {
+// 根据仓库SKU替换商品名并添加批次号和供应商信息
+export function processWithSkuAndBatch(
+  processedData,
+  inventoryItems,
+  suppliers = []
+) {
   if (!processedData || processedData.length === 0) {
     throw new Error("没有处理后的数据");
   }
@@ -281,7 +285,7 @@ export function processWithSkuAndBatch(processedData, inventoryItems) {
   }
 
   console.log(
-    `开始处理 ${processedData.length} 条订单数据，匹配 ${inventoryItems.length} 条库存数据`
+    `开始处理 ${processedData.length} 条订单数据，匹配 ${inventoryItems.length} 条库存数据，${suppliers.length} 个供应商`
   );
 
   // 创建商品编号到库存项的映射
@@ -292,9 +296,18 @@ export function processWithSkuAndBatch(processedData, inventoryItems) {
     }
   });
 
+  // 创建供应商ID到供应商名称的映射
+  const supplierMap = {};
+  suppliers.forEach((supplier) => {
+    if (supplier.supplierId && supplier.supplierId.trim() !== "") {
+      supplierMap[supplier.supplierId.trim()] = supplier.name;
+    }
+  });
+
   // 统计信息
   let successCount = 0;
   let failedSkus = [];
+  let supplierMatchCount = 0;
 
   // 处理每条订单数据
   const enhancedData = processedData.map((orderItem) => {
@@ -334,13 +347,56 @@ export function processWithSkuAndBatch(processedData, inventoryItems) {
       // 添加批次号
       newItem["批次号"] = matchedInventoryItem.purchaseBatch;
 
+      // 通过批次号匹配供应商
+      let matchedSupplier = null;
+      if (
+        matchedInventoryItem.purchaseBatch &&
+        matchedInventoryItem.purchaseBatch.trim() !== ""
+      ) {
+        const batchNumber = matchedInventoryItem.purchaseBatch.trim();
+
+        // 遍历所有供应商，检查匹配字符串是否包含批次号
+        for (const supplier of suppliers) {
+          if (supplier.matchString && supplier.matchString.trim() !== "") {
+            const matchString = supplier.matchString.trim();
+            // 检查批次号是否包含供应商的匹配字符串，或者匹配字符串是否包含批次号
+            if (
+              batchNumber.includes(matchString) ||
+              matchString.includes(batchNumber)
+            ) {
+              matchedSupplier = supplier;
+              break;
+            }
+          }
+        }
+      }
+
+      // 添加供应商信息
+      if (matchedSupplier) {
+        newItem["供应商ID"] = matchedSupplier.supplierId;
+        newItem["供应商名称"] = matchedSupplier.name;
+        supplierMatchCount++;
+        console.log(
+          `供应商匹配成功: 批次号 ${matchedInventoryItem.purchaseBatch} -> 供应商 ${matchedSupplier.name} (ID: ${matchedSupplier.supplierId})`
+        );
+      } else {
+        newItem["供应商ID"] = "";
+        newItem["供应商名称"] = "";
+      }
+
       successCount++;
       console.log(
-        `匹配成功: 商品编号 ${productNo}, 原商品名 ${originalProductName} -> 物料名称 ${matchedInventoryItem.materialName}, 批次号 ${matchedInventoryItem.purchaseBatch}`
+        `匹配成功: 商品编号 ${productNo}, 原商品名 ${originalProductName} -> 物料名称 ${
+          matchedInventoryItem.materialName
+        }, 批次号 ${matchedInventoryItem.purchaseBatch}, 供应商ID ${
+          newItem["供应商ID"] || "无"
+        }`
       );
     } else {
-      // 如果没有匹配的库存项，添加空批次号
+      // 如果没有匹配的库存项，添加空批次号和供应商信息
       newItem["批次号"] = "";
+      newItem["供应商ID"] = "";
+      newItem["供应商名称"] = "";
       failedSkus.push(productNo);
       console.log(
         `未匹配: 商品编号 ${productNo}, 商品名称 ${originalProductName}`
@@ -350,7 +406,10 @@ export function processWithSkuAndBatch(processedData, inventoryItems) {
     return newItem;
   });
 
-  console.log(`SKU和批次号处理完成，生成 ${enhancedData.length} 条增强数据`);
+  console.log(
+    `SKU、批次号和供应商处理完成，生成 ${enhancedData.length} 条增强数据`
+  );
+  console.log(`供应商匹配统计: 成功匹配 ${supplierMatchCount} 条记录`);
 
   // 返回处理后的数据和统计信息
   return {
@@ -360,6 +419,7 @@ export function processWithSkuAndBatch(processedData, inventoryItems) {
       success: successCount,
       failed: failedSkus.length,
       failedSkus: failedSkus,
+      supplierMatches: supplierMatchCount,
     },
   };
 }

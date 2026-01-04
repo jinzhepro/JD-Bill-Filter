@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useApp } from "@/context/AppContext";
+import { useSupplier } from "@/context/SupplierContext";
 import { downloadExcel } from "@/lib/excelHandler";
 import { processWithSkuAndBatch } from "@/lib/dataProcessor";
 import Button from "./ui/Button";
@@ -22,6 +23,25 @@ export default function ResultDisplay() {
     addLog,
     setError,
   } = useApp();
+
+  const { suppliers, loadSuppliers } = useSupplier();
+  const [suppliersLoaded, setSuppliersLoaded] = useState(false);
+
+  // 组件挂载时加载供应商数据
+  useEffect(() => {
+    const loadSupplierData = async () => {
+      try {
+        await loadSuppliers();
+        setSuppliersLoaded(true);
+        addLog("供应商数据加载完成", "info");
+      } catch (error) {
+        console.error("加载供应商数据失败:", error);
+        addLog("加载供应商数据失败", "error");
+      }
+    };
+
+    loadSupplierData();
+  }, [loadSuppliers, addLog]);
 
   // 获取第一个上传的文件（兼容单文件模式）
   const uploadedFile = uploadedFiles.length > 0 ? uploadedFiles[0] : null;
@@ -146,6 +166,11 @@ export default function ResultDisplay() {
       return;
     }
 
+    if (!suppliersLoaded) {
+      setError("供应商数据尚未加载完成，请稍后再试");
+      return;
+    }
+
     try {
       setSkuProcessing(true);
       addLog("正在从数据库加载库存数据...", "info");
@@ -162,9 +187,14 @@ export default function ResultDisplay() {
       }
 
       addLog(`从数据库加载了 ${dbInventoryItems.length} 条库存数据`, "info");
-      addLog("开始物料名称替换和批次号添加处理...", "info");
+      addLog(`使用 ${suppliers.length} 个供应商数据进行匹配`, "info");
+      addLog("开始物料名称替换、批次号和供应商信息添加处理...", "info");
 
-      const result = processWithSkuAndBatch(processedData, dbInventoryItems);
+      const result = processWithSkuAndBatch(
+        processedData,
+        dbInventoryItems,
+        suppliers
+      );
       const enhancedData = result.data;
       const stats = result.stats;
 
@@ -176,7 +206,7 @@ export default function ResultDisplay() {
       setHasFailedReplacements(stats.failed > 0);
 
       addLog(
-        `物料名称替换和批次号处理完成，生成 ${enhancedData.length} 条增强数据`,
+        `物料名称替换、批次号和供应商信息处理完成，生成 ${enhancedData.length} 条增强数据`,
         "success"
       );
 
@@ -184,6 +214,16 @@ export default function ResultDisplay() {
       addLog(
         `替换统计: 成功 ${stats.success} 条，失败 ${stats.failed} 条`,
         stats.failed > 0 ? "warning" : "success"
+      );
+
+      // 统计供应商信息匹配情况
+      const supplierMatchedCount = enhancedData.filter(
+        (item) => item["供应商ID"] && item["供应商ID"].trim() !== ""
+      ).length;
+
+      addLog(
+        `供应商信息匹配: ${supplierMatchedCount} 条记录包含供应商信息`,
+        "info"
       );
 
       if (stats.failed > 0) {
@@ -316,7 +356,7 @@ export default function ResultDisplay() {
                 <h4 className="text-sm font-medium text-blue-900 mb-2">
                   物料名称替换统计
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   <div>
                     <span className="text-blue-700">替换成功:</span>
                     <span className="ml-2 font-medium text-blue-900">
@@ -336,6 +376,33 @@ export default function ResultDisplay() {
                         skuProcessedData.filter(
                           (item) =>
                             !item["批次号"] || item["批次号"].trim() === ""
+                        ).length
+                      }{" "}
+                      条
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-blue-700">供应商匹配:</span>
+                    <span className="ml-2 font-medium text-blue-900">
+                      {
+                        skuProcessedData.filter(
+                          (item) =>
+                            item["供应商ID"] && item["供应商ID"].trim() !== ""
+                        ).length
+                      }{" "}
+                      条
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-blue-700">批次号匹配:</span>
+                    <span className="ml-2 font-medium text-blue-900">
+                      {
+                        skuProcessedData.filter(
+                          (item) =>
+                            item["供应商ID"] &&
+                            item["供应商ID"].trim() !== "" &&
+                            item["批次号"] &&
+                            item["批次号"].trim() !== ""
                         ).length
                       }{" "}
                       条

@@ -2,30 +2,33 @@
 
 import React from "react";
 import { AppProvider } from "@/context/AppContext";
+import { SupplierProvider } from "@/context/SupplierContext";
 import { AppContent } from "@/components/AppContent";
 import { MainLayout } from "@/components/MainLayout";
 
 export default function Home() {
   return (
     <AppProvider>
-      <MainLayout>
-        <div className="space-y-8">
-          {/* 功能介绍 */}
-          <section className="bg-white rounded-xl shadow-lg p-6 animate-fade-in">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">
-                对帐单处理
-              </h2>
-              <p className="text-gray-600 mb-6">
-                智能处理Excel/CSV对帐单，自动合并相同商品编码和单价的记录
-              </p>
-            </div>
-          </section>
+      <SupplierProvider>
+        <MainLayout>
+          <div className="space-y-8">
+            {/* 功能介绍 */}
+            <section className="bg-white rounded-xl shadow-lg p-6 animate-fade-in">
+              <div className="text-center">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">
+                  对帐单处理
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  智能处理Excel/CSV对帐单，自动合并相同商品编码和单价的记录
+                </p>
+              </div>
+            </section>
 
-          {/* 主要功能内容 */}
-          <AppContent />
-        </div>
-      </MainLayout>
+            {/* 主要功能内容 */}
+            <AppContent />
+          </div>
+        </MainLayout>
+      </SupplierProvider>
     </AppProvider>
   );
 }
