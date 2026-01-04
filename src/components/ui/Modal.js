@@ -18,6 +18,8 @@ export default function Modal({
     md: "max-w-lg",
     lg: "max-w-2xl",
     xl: "max-w-4xl",
+    "2xl": "max-w-6xl",
+    "3xl": "max-w-7xl",
     full: "max-w-full mx-4",
   };
 
@@ -56,9 +58,9 @@ export function ConfirmModal({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-md p-0">
         <div className="text-center p-6">
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 mb-4">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-gray-100 mb-4">
             <svg
-              className="h-6 w-6 text-yellow-600"
+              className="h-6 w-6 text-gray-600"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -99,9 +101,9 @@ export function ErrorModal({ isOpen, onClose, title = "错误提示", message })
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-md p-0">
         <div className="text-center p-6">
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-gray-100 mb-4">
             <svg
-              className="h-6 w-6 text-red-600"
+              className="h-6 w-6 text-gray-600"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

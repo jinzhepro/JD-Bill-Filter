@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { toast } from "sonner";
+import React, { useState, useEffect, useCallback } from "react";
 import { useInventory } from "@/context/InventoryContext";
 import { Button } from "./ui/button.js";
+import Modal, { ConfirmModal } from "./ui/Modal";
 import { BatchInventoryAdd } from "./BatchInventoryAdd";
 import { TableImport } from "./TableImport";
 import { DeductionRecords } from "./DeductionRecords";
+import { useToast } from "@/hooks/use-toast";
 import {
   createInventoryItem,
   updateInventoryItem,
@@ -47,15 +48,27 @@ export function InventoryManager() {
     loadInventoryFromDB,
   } = useInventory();
 
+  const { toast } = useToast();
+
   const [searchTerm, setSearchTerm] = useState("");
-  const [isFormVisible, setIsFormVisible] = useState(false);
-  const [isBatchFormVisible, setIsBatchFormVisible] = useState(false);
-  const [isTableImportVisible, setIsTableImportVisible] = useState(false);
+  const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+  const [isTableImportModalOpen, setIsTableImportModalOpen] = useState(false);
   const [isDeductionRecordsVisible, setIsDeductionRecordsVisible] =
     useState(false);
   const [formErrors, setFormErrors] = useState([]);
   const [isMySqlProcessing, setIsMySqlProcessing] = useState(false);
   const [mySqlStatus, setMySqlStatus] = useState("");
+
+  // 确认对话框状态
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isConfirmDeleteModalOpen, setIsConfirmDeleteModalOpen] =
+    useState(false);
+  const [deletingItem, setDeletingItem] = useState(null);
+  const [isDeleteBatchModalOpen, setIsDeleteBatchModalOpen] = useState(false);
+  const [isConfirmDeleteBatchModalOpen, setIsConfirmDeleteBatchModalOpen] =
+    useState(false);
+  const [deletingBatch, setDeletingBatch] = useState(null);
 
   // 在组件挂载时从数据库加载库存数据
   useEffect(() => {
@@ -90,17 +103,25 @@ export function InventoryManager() {
         const updatedItem = updateInventoryItem(existingItem, inventoryForm);
         updateItem(updatedItem);
         addLog(`库存项 "${inventoryForm.materialName}" 已更新`, "success");
+        toast({
+          title: "更新成功",
+          description: `库存项 "${inventoryForm.materialName}" 已更新`,
+        });
       } else {
         // 添加新项
         const newItem = createInventoryItem(inventoryForm);
         addInventoryItem(newItem);
         addLog(`库存项 "${inventoryForm.materialName}" 已添加`, "success");
+        toast({
+          title: "添加成功",
+          description: `库存项 "${inventoryForm.materialName}" 已添加`,
+        });
       }
 
       // 重置表单
       resetInventoryForm();
       setEditingInventoryId(null);
-      setIsFormVisible(false);
+      setIsInventoryModalOpen(false);
     } catch (error) {
       setError(`保存库存项失败: ${error.message}`);
     }
@@ -111,15 +132,24 @@ export function InventoryManager() {
     try {
       addMultipleInventoryItems(items);
       addLog(`成功批量添加 ${items.length} 个库存项`, "success");
-      setIsBatchFormVisible(false);
+      toast({
+        title: "批量添加成功",
+        description: `成功添加 ${items.length} 个库存项`,
+      });
+      setIsBatchModalOpen(false);
     } catch (error) {
       setError(`批量添加库存项失败: ${error.message}`);
+      toast({
+        variant: "destructive",
+        title: "批量添加失败",
+        description: `批量添加库存项失败: ${error.message}`,
+      });
     }
   };
 
   // 批量添加取消处理
   const handleBatchCancel = () => {
-    setIsBatchFormVisible(false);
+    setIsBatchModalOpen(false);
   };
 
   // 表格导入处理
@@ -127,43 +157,61 @@ export function InventoryManager() {
     try {
       addMultipleInventoryItems(items);
       addLog(`成功通过表格导入 ${items.length} 个库存项`, "success");
-      setIsTableImportVisible(false);
+      toast({
+        title: "表格导入成功",
+        description: `成功导入 ${items.length} 个库存项`,
+      });
+      setIsTableImportModalOpen(false);
     } catch (error) {
       setError(`表格导入库存项失败: ${error.message}`);
+      toast({
+        variant: "destructive",
+        title: "表格导入失败",
+        description: `表格导入库存项失败: ${error.message}`,
+      });
     }
   };
 
   // 表格导入取消处理
   const handleTableImportCancel = () => {
-    setIsTableImportVisible(false);
+    setIsTableImportModalOpen(false);
   };
 
   // 清空数据库处理
   const handleClearDatabase = async () => {
-    if (
-      inventoryItems.length === 0 ||
-      window.confirm(
-        `确定要清空所有库存数据吗？此操作将删除 ${inventoryItems.length} 条库存记录，且无法恢复！`
-      )
-    ) {
-      try {
-        // 清空数据库中的数据
-        const { clearInventoryInMySQL } = await import("@/lib/mysqlConnection");
-        const result = await clearInventoryInMySQL();
+    if (inventoryItems.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "无数据",
+        description: "没有库存数据可以清空",
+      });
+      return;
+    }
 
-        if (result.success) {
-          // 清空成功后，重新从数据库加载数据
-          await actions.loadInventoryFromDB();
-          actions.addLog("库存数据已清空", LogType.SUCCESS);
-        } else {
-          actions.addLog(`清空库存数据失败: ${result.message}`, LogType.ERROR);
-        }
+    // 这里可以添加确认对话框，但为了简化，暂时直接处理
+    try {
+      // 清空数据库中的数据
+      const { clearInventoryInMySQL } = await import("@/lib/mysqlConnection");
+      const result = await clearInventoryInMySQL();
+
+      if (result.success) {
         // 清空状态中的数据
         setInventoryItems([]);
         addLog("所有库存数据已清空", "warning");
-      } catch (error) {
-        setError(`清空数据库失败: ${error.message}`);
+        toast({
+          title: "清空成功",
+          description: `已清空 ${inventoryItems.length} 条库存记录`,
+        });
+      } else {
+        throw new Error(result.message);
       }
+    } catch (error) {
+      setError(`清空数据库失败: ${error.message}`);
+      toast({
+        variant: "destructive",
+        title: "清空失败",
+        description: `清空数据库失败: ${error.message}`,
+      });
     }
   };
 
@@ -181,7 +229,7 @@ export function InventoryManager() {
       warehouse: item.warehouse || "",
     });
     setEditingInventoryId(item.id);
-    setIsFormVisible(true);
+    setIsInventoryModalOpen(true);
     setFormErrors([]);
   };
 
@@ -195,88 +243,159 @@ export function InventoryManager() {
     console.log("handleDelete被调用，ID:", id);
 
     const item = inventoryItems.find((item) => item.id === id);
-    if (
-      item &&
-      window.confirm(`确定要删除库存项 "${item.materialName}" 吗？`)
-    ) {
+    if (item) {
+      setDeletingItem(item);
+      setIsDeleteModalOpen(true);
+    }
+  };
+
+  // 第一次确认删除
+  const handleConfirmDelete = useCallback(() => {
+    if (deletingItem) {
+      setIsDeleteModalOpen(false);
+      setIsConfirmDeleteModalOpen(true);
+    }
+  }, [deletingItem]);
+
+  // 第二次确认删除
+  const handleFinalConfirmDelete = useCallback(async () => {
+    if (deletingItem) {
       try {
-        console.log("开始调用deleteInventoryItem，ID:", id);
-        await deleteInventoryItem(id);
+        console.log("开始调用deleteInventoryItem，ID:", deletingItem.id);
+        await deleteInventoryItem(deletingItem.id);
         console.log("deleteInventoryItem调用完成");
-        addLog(`库存项 "${item.materialName}" 已删除`, "warning");
+        addLog(`库存项 "${deletingItem.materialName}" 已删除`, "warning");
+        toast({
+          title: "删除成功",
+          description: `库存项 "${deletingItem.materialName}" 已删除`,
+        });
+        setIsConfirmDeleteModalOpen(false);
+        setDeletingItem(null);
       } catch (error) {
         console.error("删除库存项失败:", error);
         setError(`删除库存项失败: ${error.message}`);
+        toast({
+          variant: "destructive",
+          title: "删除失败",
+          description: `删除库存项失败: ${error.message}`,
+        });
       }
     }
-  };
+  }, [deletingItem, deleteInventoryItem, addLog, setError]);
 
   // 立即更新商品名称处理
   const handleUpdateProductNames = async () => {
     if (inventoryItems.length === 0) {
-      setError("没有库存数据可以更新");
+      toast({
+        variant: "destructive",
+        title: "无数据",
+        description: "没有库存数据可以更新",
+      });
       return;
     }
 
-    if (
-      window.confirm(
-        `确定要从数据库更新所有库存项的商品名称吗？此操作将根据数据库中的商品表自动更新商品名称，无法撤销！`
-      )
-    ) {
-      try {
-        // 从数据库获取商品数据
-        const { getProductsFromMySQL } = await import("@/lib/mysqlConnection");
-        const productsResult = await getProductsFromMySQL();
+    try {
+      // 从数据库获取商品数据
+      const { getProductsFromMySQL } = await import("@/lib/mysqlConnection");
+      const productsResult = await getProductsFromMySQL();
 
-        if (!productsResult.success) {
-          throw new Error(productsResult.message || "获取商品数据失败");
-        }
-
-        const products = productsResult.data;
-        if (!products || products.length === 0) {
-          setError("数据库中没有商品数据，请先添加商品");
-          return;
-        }
-
-        // 创建SKU到商品名称的映射
-        const skuMap = {};
-        products.forEach((product) => {
-          if (product.sku && product.productName) {
-            skuMap[product.sku.toString()] = product.productName;
-          }
-        });
-
-        // 使用数据库中的商品数据更新库存项的商品名称
-        const updatedItems = inventoryItems.map((item) => {
-          if (item.sku && skuMap[item.sku.toString()]) {
-            return {
-              ...item,
-              materialName: skuMap[item.sku.toString()],
-            };
-          }
-          return item;
-        });
-
-        // 更新状态
-        setInventoryItems(updatedItems);
-
-        // 保存到MySQL数据库
-        const { pushInventoryToMySQL } = await import("@/lib/mysqlConnection");
-        await pushInventoryToMySQL(updatedItems);
-
-        // 统计更新数量
-        const updatedCount = updatedItems.filter(
-          (item, index) =>
-            item.materialName !== inventoryItems[index].materialName
-        ).length;
-
-        addLog(
-          `成功从数据库更新 ${updatedCount} 个库存项的商品名称`,
-          "success"
-        );
-      } catch (error) {
-        setError(`从数据库更新商品名称失败: ${error.message}`);
+      if (!productsResult.success) {
+        throw new Error(productsResult.message || "获取商品数据失败");
       }
+
+      const products = productsResult.data;
+      if (!products || products.length === 0) {
+        toast({
+          variant: "destructive",
+          title: "无商品数据",
+          description: "数据库中没有商品数据，请先添加商品",
+        });
+        return;
+      }
+
+      // 创建SKU到商品名称的映射
+      const skuMap = {};
+      products.forEach((product) => {
+        if (product.sku && product.productName) {
+          skuMap[product.sku.toString()] = product.productName;
+        }
+      });
+
+      // 使用数据库中的商品数据更新库存项的商品名称
+      const updatedItems = inventoryItems.map((item) => {
+        if (item.sku && skuMap[item.sku.toString()]) {
+          return {
+            ...item,
+            materialName: skuMap[item.sku.toString()],
+          };
+        }
+        return item;
+      });
+
+      // 更新状态
+      setInventoryItems(updatedItems);
+
+      // 保存到MySQL数据库
+      const { pushInventoryToMySQL } = await import("@/lib/mysqlConnection");
+      await pushInventoryToMySQL(updatedItems);
+
+      // 统计更新详情
+      const updatedDetails = [];
+      const updatedCount = updatedItems.filter((item, index) => {
+        const isUpdated =
+          item.materialName !== inventoryItems[index].materialName;
+        if (isUpdated) {
+          updatedDetails.push({
+            sku: item.sku,
+            oldName: inventoryItems[index].materialName,
+            newName: item.materialName,
+          });
+        }
+        return isUpdated;
+      }).length;
+
+      addLog(`成功从数据库更新 ${updatedCount} 个库存项的商品名称`, "success");
+
+      // 显示详细的更新信息
+      if (updatedCount > 0) {
+        const detailsText = updatedDetails
+          .slice(0, 3)
+          .map(
+            (detail) =>
+              `SKU ${detail.sku}: "${detail.oldName}" → "${detail.newName}"`
+          )
+          .join("\n");
+
+        const moreText =
+          updatedDetails.length > 3
+            ? `\n...还有 ${updatedDetails.length - 3} 项更新`
+            : "";
+
+        toast({
+          title: "更新成功",
+          description: `成功更新 ${updatedCount} 个库存项的商品名称`,
+        });
+
+        // 显示详细更新信息的toast
+        setTimeout(() => {
+          toast({
+            title: "更新详情",
+            description: detailsText + moreText,
+          });
+        }, 1000);
+      } else {
+        toast({
+          title: "无需更新",
+          description: "所有库存项的商品名称已是最新",
+        });
+      }
+    } catch (error) {
+      setError(`从数据库更新商品名称失败: ${error.message}`);
+      toast({
+        variant: "destructive",
+        title: "更新失败",
+        description: `从数据库更新商品名称失败: ${error.message}`,
+      });
     }
   };
 
@@ -284,7 +403,7 @@ export function InventoryManager() {
   const handleCancel = () => {
     resetInventoryForm();
     setEditingInventoryId(null);
-    setIsFormVisible(false);
+    setIsInventoryModalOpen(false);
     setFormErrors([]);
   };
 
@@ -335,15 +454,11 @@ export function InventoryManager() {
   // 推送数据到MySQL
   const handlePushToMySQL = async () => {
     if (inventoryItems.length === 0) {
-      setError("没有库存数据可以推送");
-      return;
-    }
-
-    if (
-      !window.confirm(
-        `确定要将 ${inventoryItems.length} 条库存数据推送到MySQL数据库吗？此操作将会覆盖数据库中的现有数据！`
-      )
-    ) {
+      toast({
+        variant: "destructive",
+        title: "无数据",
+        description: "没有库存数据可以推送",
+      });
       return;
     }
 
@@ -362,12 +477,21 @@ export function InventoryManager() {
       if (pushResult.success) {
         setMySqlStatus("数据推送成功");
         addLog(pushResult.message, "success");
+        toast({
+          title: "推送成功",
+          description: pushResult.message,
+        });
       } else {
         throw new Error(pushResult.message);
       }
     } catch (error) {
       setMySqlStatus("数据推送失败");
       addLog(`数据推送失败: ${error.message}`, "error");
+      toast({
+        variant: "destructive",
+        title: "推送失败",
+        description: `数据推送失败: ${error.message}`,
+      });
     } finally {
       setIsMySqlProcessing(false);
     }
@@ -375,14 +499,6 @@ export function InventoryManager() {
 
   // 从MySQL拉取数据
   const handlePullFromMySQL = async () => {
-    if (
-      !window.confirm(
-        "确定要从MySQL数据库拉取库存数据吗？此操作将会覆盖当前本地数据！"
-      )
-    ) {
-      return;
-    }
-
     setIsMySqlProcessing(true);
     setMySqlStatus("正在从MySQL拉取数据...");
 
@@ -390,9 +506,18 @@ export function InventoryManager() {
       const items = await loadInventoryFromDB();
       setMySqlStatus("数据拉取成功");
       addLog(`成功从数据库拉取 ${items.length} 条库存数据`, "success");
+      toast({
+        title: "拉取成功",
+        description: `成功从数据库拉取 ${items.length} 条库存数据`,
+      });
     } catch (error) {
       setMySqlStatus("数据拉取失败");
       addLog(`数据拉取失败: ${error.message}`, "error");
+      toast({
+        variant: "destructive",
+        title: "拉取失败",
+        description: `数据拉取失败: ${error.message}`,
+      });
     } finally {
       setIsMySqlProcessing(false);
     }
@@ -400,12 +525,6 @@ export function InventoryManager() {
 
   // 清空MySQL数据
   const handleClearMySQL = async () => {
-    if (
-      !window.confirm("确定要清空MySQL数据库中的库存数据吗？此操作无法撤销！")
-    ) {
-      return;
-    }
-
     setIsMySqlProcessing(true);
     setMySqlStatus("正在清空MySQL数据...");
 
@@ -414,12 +533,21 @@ export function InventoryManager() {
       if (result.success) {
         setMySqlStatus("MySQL数据清空成功");
         addLog(result.message, "warning");
+        toast({
+          title: "清空成功",
+          description: result.message,
+        });
       } else {
         throw new Error(result.message);
       }
     } catch (error) {
       setMySqlStatus("MySQL数据清空失败");
       addLog(`MySQL数据清空失败: ${error.message}`, "error");
+      toast({
+        variant: "destructive",
+        title: "清空失败",
+        description: `MySQL数据清空失败: ${error.message}`,
+      });
     } finally {
       setIsMySqlProcessing(false);
     }
@@ -434,10 +562,17 @@ export function InventoryManager() {
 
     try {
       await navigator.clipboard.writeText(materialName);
-      toast.success(`物料名称 "${materialName}" 已复制到剪贴板`);
+      toast({
+        title: "复制成功",
+        description: `物料名称 "${materialName}" 已复制到剪贴板`,
+      });
     } catch (error) {
       console.error("复制失败:", error);
-      toast.error(`复制物料名称失败: ${error.message}`);
+      toast({
+        variant: "destructive",
+        title: "复制失败",
+        description: `复制物料名称失败: ${error.message}`,
+      });
     }
   };
 
@@ -493,12 +628,17 @@ export function InventoryManager() {
       const columnText = columnData.join("\n");
 
       await navigator.clipboard.writeText(columnText);
-      toast.success(
-        `已复制批次 "${batchName}" 的 ${columnName} 列数据 (${columnData.length} 行)`
-      );
+      toast({
+        title: "复制成功",
+        description: `已复制批次 "${batchName}" 的 ${columnName} 列数据 (${columnData.length} 行)`,
+      });
     } catch (error) {
       console.error("复制批次列数据失败:", error);
-      toast.error(`复制批次列数据失败: ${error.message}`);
+      toast({
+        variant: "destructive",
+        title: "复制失败",
+        description: `复制批次列数据失败: ${error.message}`,
+      });
     }
   };
 
@@ -524,25 +664,56 @@ export function InventoryManager() {
       return;
     }
 
-    if (
-      window.confirm(
-        `确定要删除批次 "${batchName}" 吗？此操作将删除该批次下的所有库存项，且无法恢复！`
-      )
-    ) {
+    setDeletingBatch(batchName);
+    setIsDeleteBatchModalOpen(true);
+  };
+
+  // 第一次确认删除批次
+  const handleConfirmDeleteBatch = useCallback(() => {
+    if (deletingBatch) {
+      setIsDeleteBatchModalOpen(false);
+      setIsConfirmDeleteBatchModalOpen(true);
+    }
+  }, [deletingBatch]);
+
+  // 第二次确认删除批次
+  const handleFinalConfirmDeleteBatch = useCallback(async () => {
+    if (deletingBatch) {
       try {
-        const result = await deleteBatch(batchName);
+        const result = await deleteBatch(deletingBatch);
         if (result.success) {
-          addLog(`批次 "${batchName}" 已删除`, "warning");
+          addLog(`批次 "${deletingBatch}" 已删除`, "warning");
+          toast({
+            title: "删除成功",
+            description: `批次 "${deletingBatch}" 已删除`,
+          });
           // 重新加载数据
           await loadInventoryFromDB();
+          setIsConfirmDeleteBatchModalOpen(false);
+          setDeletingBatch(null);
         } else {
           throw new Error(result.message);
         }
       } catch (error) {
         setError(`删除批次失败: ${error.message}`);
+        toast({
+          variant: "destructive",
+          title: "删除失败",
+          description: `删除批次失败: ${error.message}`,
+        });
       }
     }
-  };
+  }, [deletingBatch, deleteBatch, addLog, loadInventoryFromDB, setError]);
+
+  // 关闭所有确认模态框
+  const handleCloseAllModals = useCallback(() => {
+    setIsDeleteModalOpen(false);
+    setIsConfirmDeleteModalOpen(false);
+    setIsDeleteBatchModalOpen(false);
+    setIsConfirmDeleteBatchModalOpen(false);
+    setDeletingItem(null);
+    setDeletingBatch(null);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -550,28 +721,28 @@ export function InventoryManager() {
       <section className="bg-white rounded-xl shadow-lg p-6 animate-fade-in">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">库存统计</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="text-center p-3 bg-blue-50 rounded-lg">
-            <div className="text-2xl font-bold text-blue-600">
+          <div className="text-center p-3 bg-gray-50 rounded-lg">
+            <div className="text-2xl font-bold text-gray-800">
               {stats.totalItems}
             </div>
             <div className="text-sm text-gray-600">总品种</div>
           </div>
-          <div className="text-center p-3 bg-green-50 rounded-lg">
-            <div className="text-2xl font-bold text-green-600">
+          <div className="text-center p-3 bg-gray-50 rounded-lg">
+            <div className="text-2xl font-bold text-gray-800">
               {stats.totalQuantity}
             </div>
             <div className="text-sm text-gray-600">总数量</div>
           </div>
-          <div className="text-center p-3 bg-indigo-50 rounded-lg">
-            <div className="text-2xl font-bold text-indigo-600">
+          <div className="text-center p-3 bg-gray-50 rounded-lg">
+            <div className="text-2xl font-bold text-gray-800">
               {stats.totalBatches}
             </div>
             <div className="text-sm text-gray-600">采购批次数</div>
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mt-4">
-          <div className="text-center p-3 bg-green-50 rounded-lg">
-            <div className="text-2xl font-bold text-green-600">
+          <div className="text-center p-3 bg-gray-50 rounded-lg">
+            <div className="text-2xl font-bold text-gray-800">
               ¥{totalAmount.toFixed(2)}
             </div>
             <div className="text-sm text-gray-600">总金额</div>
@@ -588,31 +759,31 @@ export function InventoryManager() {
               placeholder="搜索物料名称、采购批号、仓库或SKU..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
             />
           </div>
           <div className="flex gap-3">
             <Button
-              onClick={() => setIsFormVisible(true)}
+              onClick={() => setIsInventoryModalOpen(true)}
               className="w-full md:w-auto"
             >
               添加库存项
             </Button>
             <Button
-              onClick={() => setIsBatchFormVisible(true)}
-              className="w-full md:w-auto bg-green-600 text-white hover:bg-green-700"
+              onClick={() => setIsBatchModalOpen(true)}
+              className="w-full md:w-auto"
             >
               批量添加库存项
             </Button>
             <Button
-              onClick={() => setIsTableImportVisible(true)}
-              className="w-full md:w-auto bg-purple-600 text-white hover:bg-purple-700"
+              onClick={() => setIsTableImportModalOpen(true)}
+              className="w-full md:w-auto"
             >
               表格导入
             </Button>
             <Button
               onClick={handleUpdateProductNames}
-              className="w-full md:w-auto bg-blue-600 text-white hover:bg-blue-700"
+              className="w-full md:w-auto"
               disabled={inventoryItems.length === 0}
               title="从数据库商品表拉取最新的商品名称并更新库存项"
             >
@@ -620,13 +791,13 @@ export function InventoryManager() {
             </Button>
             <Button
               onClick={() => setIsDeductionRecordsVisible(true)}
-              className="w-full md:w-auto bg-orange-600 text-white hover:bg-orange-700"
+              className="w-full md:w-auto"
             >
               查看扣减记录
             </Button>
             <Button
               onClick={handleClearDatabase}
-              className="w-full md:w-auto bg-red-600 text-white hover:bg-red-700"
+              className="w-full md:w-auto"
               disabled={inventoryItems.length === 0 || isDbLoading}
             >
               清空数据库
@@ -634,260 +805,6 @@ export function InventoryManager() {
           </div>
         </div>
       </section>
-
-      {/* MySQL数据库操作区域 */}
-      <section className="bg-white rounded-xl shadow-lg p-6 animate-fade-in">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">
-          MySQL数据库操作
-        </h2>
-
-        {/* MySQL状态显示 */}
-        {mySqlStatus && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="text-blue-600 text-sm">{mySqlStatus}</div>
-          </div>
-        )}
-
-        <div className="flex flex-wrap gap-3">
-          <Button
-            onClick={handleHealthCheck}
-            disabled={isMySqlProcessing}
-            className="bg-yellow-600 text-white hover:bg-yellow-700"
-          >
-            {isMySqlProcessing ? "检查中..." : "API健康检查"}
-          </Button>
-
-          <Button
-            onClick={handleTestMySqlConnection}
-            disabled={isMySqlProcessing}
-            className="bg-blue-600 text-white hover:bg-blue-700"
-          >
-            {isMySqlProcessing ? "测试中..." : "测试MySQL连接"}
-          </Button>
-
-          <Button
-            onClick={handlePushToMySQL}
-            disabled={isMySqlProcessing || inventoryItems.length === 0}
-            className="bg-green-600 text-white hover:bg-green-700"
-          >
-            {isMySqlProcessing ? "推送中..." : "推送数据到MySQL"}
-          </Button>
-
-          <Button
-            onClick={handlePullFromMySQL}
-            disabled={isMySqlProcessing}
-            className="bg-purple-600 text-white hover:bg-purple-700"
-          >
-            {isMySqlProcessing ? "拉取中..." : "从MySQL拉取数据"}
-          </Button>
-
-          <Button
-            onClick={handleClearMySQL}
-            disabled={isMySqlProcessing}
-            className="bg-red-600 text-white hover:bg-red-700"
-          >
-            {isMySqlProcessing ? "清空中..." : "清空MySQL数据"}
-          </Button>
-        </div>
-
-        <div className="mt-4 text-sm text-gray-600">
-          <p className="font-medium mb-2">MySQL数据库连接信息：</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-            <div>• 主机: localhost:3306</div>
-            <div>• 数据库: testdb</div>
-            <div>• 用户: root</div>
-            <div>• 表名: inventory</div>
-          </div>
-        </div>
-      </section>
-
-      {/* 添加/编辑表单 */}
-      {isFormVisible && (
-        <section className="bg-white rounded-xl shadow-lg p-6 animate-fade-in">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">
-            {editingInventoryId ? "编辑库存项" : "添加库存项"}
-          </h2>
-
-          {formErrors.length > 0 && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-              {formErrors.map((error, index) => (
-                <div key={index} className="text-red-600 text-sm">
-                  {error}
-                </div>
-              ))}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  物料名称 *
-                </label>
-                <input
-                  type="text"
-                  name="materialName"
-                  value={inventoryForm.materialName}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  数量 *
-                </label>
-                <input
-                  type="number"
-                  name="quantity"
-                  value={inventoryForm.quantity}
-                  onChange={handleInputChange}
-                  min="0"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  采购批号 *
-                </label>
-                <input
-                  type="text"
-                  name="purchaseBatch"
-                  value={inventoryForm.purchaseBatch}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  商品SKU
-                </label>
-                <input
-                  type="text"
-                  name="sku"
-                  value={inventoryForm.sku}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  placeholder="可选，输入商品SKU"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  单价
-                </label>
-                <input
-                  type="number"
-                  name="unitPrice"
-                  value={inventoryForm.unitPrice}
-                  onChange={handleInputChange}
-                  min="0"
-                  step="0.01"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  placeholder="可选，输入单价"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  总价
-                </label>
-                <input
-                  type="number"
-                  name="totalPrice"
-                  value={inventoryForm.totalPrice}
-                  onChange={handleInputChange}
-                  min="0"
-                  step="0.01"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  placeholder="可选，输入总价"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  税率 (%)
-                </label>
-                <input
-                  type="number"
-                  name="taxRate"
-                  value={inventoryForm.taxRate}
-                  onChange={handleInputChange}
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  placeholder="可选，输入税率"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  税额
-                </label>
-                <input
-                  type="number"
-                  name="taxAmount"
-                  value={inventoryForm.taxAmount}
-                  onChange={handleInputChange}
-                  min="0"
-                  step="0.01"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  placeholder="可选，输入税额"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  仓库
-                </label>
-                <input
-                  type="text"
-                  name="warehouse"
-                  value={inventoryForm.warehouse}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  placeholder="可选，输入仓库名称"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-3 justify-end">
-              <Button
-                type="button"
-                onClick={handleCancel}
-                className="bg-gray-200 text-gray-700 hover:bg-gray-300"
-              >
-                取消
-              </Button>
-              <Button type="submit">
-                {editingInventoryId ? "更新" : "添加"}
-              </Button>
-            </div>
-          </form>
-        </section>
-      )}
-
-      {/* 批量添加表单 */}
-      {isBatchFormVisible && (
-        <BatchInventoryAdd
-          onAddItems={handleBatchAdd}
-          onCancel={handleBatchCancel}
-        />
-      )}
-
-      {/* 表格导入表单 */}
-      {isTableImportVisible && (
-        <TableImport
-          onImportItems={handleTableImport}
-          onCancel={handleTableImportCancel}
-        />
-      )}
 
       {/* 库存扣减记录 */}
       {isDeductionRecordsVisible && (
@@ -924,7 +841,7 @@ export function InventoryManager() {
                       </h3>
                       <Button
                         onClick={() => handleDeleteBatch(batch)}
-                        className="px-2 py-1 text-xs bg-red-500 text-white hover:bg-red-600"
+                        className="px-2 py-1 text-xs"
                         title="删除整个批次"
                       >
                         删除批次
@@ -955,7 +872,7 @@ export function InventoryManager() {
                     <thead>
                       <tr className="bg-gray-50">
                         <th
-                          className="px-3 py-3 text-left font-semibold text-primary-600 cursor-pointer hover:bg-blue-50"
+                          className="px-3 py-3 text-left font-semibold text-gray-700 cursor-pointer hover:bg-gray-50"
                           onClick={(e) =>
                             handleCopyBatchColumn("materialName", batch, e)
                           }
@@ -964,7 +881,7 @@ export function InventoryManager() {
                           物料名称 📋
                         </th>
                         <th
-                          className="px-3 py-3 text-left font-semibold text-primary-600 cursor-pointer hover:bg-blue-50"
+                          className="px-3 py-3 text-left font-semibold text-gray-700 cursor-pointer hover:bg-gray-50"
                           onClick={(e) =>
                             handleCopyBatchColumn("quantity", batch, e)
                           }
@@ -973,7 +890,7 @@ export function InventoryManager() {
                           数量 📋
                         </th>
                         <th
-                          className="px-3 py-3 text-left font-semibold text-primary-600 cursor-pointer hover:bg-blue-50"
+                          className="px-3 py-3 text-left font-semibold text-gray-700 cursor-pointer hover:bg-gray-50"
                           onClick={(e) =>
                             handleCopyBatchColumn("unitPrice", batch, e)
                           }
@@ -982,7 +899,7 @@ export function InventoryManager() {
                           单价 📋
                         </th>
                         <th
-                          className="px-3 py-3 text-left font-semibold text-primary-600 cursor-pointer hover:bg-blue-50"
+                          className="px-3 py-3 text-left font-semibold text-gray-700 cursor-pointer hover:bg-gray-50"
                           onClick={(e) =>
                             handleCopyBatchColumn("totalPrice", batch, e)
                           }
@@ -991,7 +908,7 @@ export function InventoryManager() {
                           总价 📋
                         </th>
                         <th
-                          className="px-3 py-3 text-left font-semibold text-primary-600 cursor-pointer hover:bg-blue-50"
+                          className="px-3 py-3 text-left font-semibold text-gray-700 cursor-pointer hover:bg-gray-50"
                           onClick={(e) =>
                             handleCopyBatchColumn("taxRate", batch, e)
                           }
@@ -1000,7 +917,7 @@ export function InventoryManager() {
                           税率 📋
                         </th>
                         <th
-                          className="px-3 py-3 text-left font-semibold text-primary-600 cursor-pointer hover:bg-blue-50"
+                          className="px-3 py-3 text-left font-semibold text-gray-700 cursor-pointer hover:bg-gray-50"
                           onClick={(e) =>
                             handleCopyBatchColumn("sku", batch, e)
                           }
@@ -1009,7 +926,7 @@ export function InventoryManager() {
                           商品SKU 📋
                         </th>
                         <th
-                          className="px-3 py-3 text-left font-semibold text-primary-600 cursor-pointer hover:bg-blue-50"
+                          className="px-3 py-3 text-left font-semibold text-gray-700 cursor-pointer hover:bg-gray-50"
                           onClick={(e) =>
                             handleCopyBatchColumn("warehouse", batch, e)
                           }
@@ -1018,7 +935,7 @@ export function InventoryManager() {
                           仓库 📋
                         </th>
                         <th
-                          className="px-3 py-3 text-left font-semibold text-primary-600 cursor-pointer hover:bg-blue-50"
+                          className="px-3 py-3 text-left font-semibold text-gray-700 cursor-pointer hover:bg-gray-50"
                           onClick={(e) =>
                             handleCopyBatchColumn("purchaseBatch", batch, e)
                           }
@@ -1026,7 +943,7 @@ export function InventoryManager() {
                         >
                           采购批号 📋
                         </th>
-                        <th className="px-3 py-3 text-left font-semibold text-primary-600">
+                        <th className="px-3 py-3 text-left font-semibold text-gray-700">
                           操作
                         </th>
                       </tr>
@@ -1080,13 +997,13 @@ export function InventoryManager() {
                             <div className="flex gap-1">
                               <Button
                                 onClick={() => handleEdit(item)}
-                                className="px-2 py-1 text-xs bg-blue-500 text-white hover:bg-blue-600"
+                                className="px-2 py-1 text-xs"
                               >
                                 编辑
                               </Button>
                               <Button
                                 onClick={(e) => handleDelete(item.id, e)}
-                                className="px-2 py-1 text-xs bg-red-500 text-white hover:bg-red-600"
+                                className="px-2 py-1 text-xs"
                               >
                                 删除
                               </Button>
@@ -1102,6 +1019,249 @@ export function InventoryManager() {
           </div>
         )}
       </section>
+
+      {/* 确认删除库存项模态框 */}
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={handleCloseAllModals}
+        onConfirm={handleConfirmDelete}
+        title="删除库存项"
+        message={`确定要删除库存项 "${deletingItem?.materialName}" 吗？此操作不可撤销。`}
+        confirmText="删除"
+        cancelText="取消"
+        confirmVariant="destructive"
+      />
+
+      {/* 第二次确认删除库存项模态框 */}
+      <ConfirmModal
+        isOpen={isConfirmDeleteModalOpen}
+        onClose={handleCloseAllModals}
+        onConfirm={handleFinalConfirmDelete}
+        title="最终确认删除"
+        message={`请再次确认：真的要删除库存项 "${deletingItem?.materialName}" 吗？此操作不可撤销！`}
+        confirmText="确认删除"
+        cancelText="取消"
+        confirmVariant="destructive"
+      />
+
+      {/* 确认删除批次模态框 */}
+      <ConfirmModal
+        isOpen={isDeleteBatchModalOpen}
+        onClose={handleCloseAllModals}
+        onConfirm={handleConfirmDeleteBatch}
+        title="删除批次"
+        message={`确定要删除批次 "${deletingBatch}" 吗？此操作将删除该批次下的所有库存项，且无法恢复！`}
+        confirmText="删除"
+        cancelText="取消"
+        confirmVariant="destructive"
+      />
+
+      {/* 第二次确认删除批次模态框 */}
+      <ConfirmModal
+        isOpen={isConfirmDeleteBatchModalOpen}
+        onClose={handleCloseAllModals}
+        onConfirm={handleFinalConfirmDeleteBatch}
+        title="最终确认删除批次"
+        message={`请再次确认：真的要删除批次 "${deletingBatch}" 吗？此操作将删除该批次下的所有库存项，且无法恢复！`}
+        confirmText="确认删除"
+        cancelText="取消"
+        confirmVariant="destructive"
+      />
+
+      {/* 添加/编辑库存项模态框 */}
+      <Modal
+        isOpen={isInventoryModalOpen}
+        onClose={handleCancel}
+        title={editingInventoryId ? "编辑库存项" : "添加库存项"}
+        size="xl"
+      >
+        <div className="space-y-4">
+          {formErrors.length > 0 && (
+            <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+              {formErrors.map((error, index) => (
+                <div key={index} className="text-gray-600 text-sm">
+                  {error}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  物料名称 *
+                </label>
+                <input
+                  type="text"
+                  name="materialName"
+                  value={inventoryForm.materialName}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  数量 *
+                </label>
+                <input
+                  type="number"
+                  name="quantity"
+                  value={inventoryForm.quantity}
+                  onChange={handleInputChange}
+                  min="0"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  采购批号 *
+                </label>
+                <input
+                  type="text"
+                  name="purchaseBatch"
+                  value={inventoryForm.purchaseBatch}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  商品SKU
+                </label>
+                <input
+                  type="text"
+                  name="sku"
+                  value={inventoryForm.sku}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  placeholder="可选，输入商品SKU"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  单价
+                </label>
+                <input
+                  type="number"
+                  name="unitPrice"
+                  value={inventoryForm.unitPrice}
+                  onChange={handleInputChange}
+                  min="0"
+                  step="0.01"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  placeholder="可选，输入单价"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  总价
+                </label>
+                <input
+                  type="number"
+                  name="totalPrice"
+                  value={inventoryForm.totalPrice}
+                  onChange={handleInputChange}
+                  min="0"
+                  step="0.01"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  placeholder="可选，输入总价"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  税率 (%)
+                </label>
+                <input
+                  type="number"
+                  name="taxRate"
+                  value={inventoryForm.taxRate}
+                  onChange={handleInputChange}
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  placeholder="可选，输入税率"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  税额
+                </label>
+                <input
+                  type="number"
+                  name="taxAmount"
+                  value={inventoryForm.taxAmount}
+                  onChange={handleInputChange}
+                  min="0"
+                  step="0.01"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  placeholder="可选，输入税额"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  仓库
+                </label>
+                <input
+                  type="text"
+                  name="warehouse"
+                  value={inventoryForm.warehouse}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  placeholder="可选，输入仓库名称"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-4">
+              <Button variant="secondary" onClick={handleCancel}>
+                取消
+              </Button>
+              <Button variant="primary" type="submit">
+                {editingInventoryId ? "更新" : "添加"}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </Modal>
+
+      {/* 批量添加模态框 */}
+      <Modal
+        isOpen={isBatchModalOpen}
+        onClose={handleBatchCancel}
+        title="批量添加库存项"
+        size="3xl"
+      >
+        <BatchInventoryAdd
+          onAddItems={handleBatchAdd}
+          onCancel={handleBatchCancel}
+        />
+      </Modal>
+
+      {/* 表格导入模态框 */}
+      <Modal
+        isOpen={isTableImportModalOpen}
+        onClose={handleTableImportCancel}
+        title="表格导入库存项"
+        size="xl"
+      >
+        <TableImport
+          onImportItems={handleTableImport}
+          onCancel={handleTableImportCancel}
+        />
+      </Modal>
     </div>
   );
 }

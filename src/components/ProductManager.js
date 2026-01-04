@@ -459,20 +459,20 @@ export function ProductManager() {
       <section className="bg-white rounded-xl shadow-lg p-6 animate-fade-in">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">商品统计</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="text-center p-3 bg-blue-50 rounded-lg">
-            <div className="text-2xl font-bold text-blue-600">
+          <div className="text-center p-3 bg-gray-50 rounded-lg">
+            <div className="text-2xl font-bold text-gray-800">
               {products.length}
             </div>
             <div className="text-sm text-gray-600">总商品数</div>
           </div>
-          <div className="text-center p-3 bg-green-50 rounded-lg">
-            <div className="text-2xl font-bold text-green-600">
+          <div className="text-center p-3 bg-gray-50 rounded-lg">
+            <div className="text-2xl font-bold text-gray-800">
               {new Set(products.map((p) => p.warehouse).filter(Boolean)).size}
             </div>
             <div className="text-sm text-gray-600">仓库数</div>
           </div>
-          <div className="text-center p-3 bg-indigo-50 rounded-lg">
-            <div className="text-2xl font-bold text-indigo-600">
+          <div className="text-center p-3 bg-gray-50 rounded-lg">
+            <div className="text-2xl font-bold text-gray-800">
               {new Set(products.map((p) => p.brand).filter(Boolean)).size}
             </div>
             <div className="text-sm text-gray-600">品牌数</div>
@@ -488,7 +488,7 @@ export function ProductManager() {
             onClick={() => setActiveTab("manual")}
             className={`px-4 py-2 font-medium text-sm ${
               activeTab === "manual"
-                ? "border-b-2 border-primary-500 text-primary-600"
+                ? "border-b-2 border-gray-500 text-gray-700"
                 : "text-gray-500 hover:text-gray-700"
             }`}
           >
@@ -498,7 +498,7 @@ export function ProductManager() {
             onClick={() => setActiveTab("import")}
             className={`px-4 py-2 font-medium text-sm ml-6 ${
               activeTab === "import"
-                ? "border-b-2 border-primary-500 text-primary-600"
+                ? "border-b-2 border-gray-500 text-gray-700"
                 : "text-gray-500 hover:text-gray-700"
             }`}
           >
@@ -514,7 +514,7 @@ export function ProductManager() {
               placeholder="搜索SKU、商品名称、品牌或仓库..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
             />
           </div>
           {activeTab === "manual" && (
@@ -530,72 +530,6 @@ export function ProductManager() {
         </div>
       </section>
 
-      {/* MySQL数据库操作区域 */}
-      <section className="bg-white rounded-xl shadow-lg p-6 animate-fade-in">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">
-          MySQL数据库操作
-        </h2>
-
-        {/* MySQL状态显示 */}
-        {mySqlStatus && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="text-blue-600 text-sm">{mySqlStatus}</div>
-          </div>
-        )}
-
-        <div className="flex flex-wrap gap-3">
-          <Button
-            onClick={handleTestMySqlConnection}
-            disabled={isMySqlProcessing}
-            className="bg-blue-600 text-white hover:bg-blue-700"
-          >
-            {isMySqlProcessing ? "测试中..." : "测试MySQL连接"}
-          </Button>
-
-          <Button
-            onClick={handlePushToMySQL}
-            disabled={isMySqlProcessing || products.length === 0}
-            className="bg-green-600 text-white hover:bg-green-700"
-          >
-            {isMySqlProcessing ? "推送中..." : "推送数据到MySQL"}
-          </Button>
-
-          <Button
-            onClick={handlePullFromMySQL}
-            disabled={isMySqlProcessing}
-            className="bg-purple-600 text-white hover:bg-purple-700"
-          >
-            {isMySqlProcessing ? "拉取中..." : "从MySQL拉取数据"}
-          </Button>
-
-          <Button
-            onClick={handleClearMySQL}
-            disabled={isMySqlProcessing}
-            className="bg-red-600 text-white hover:bg-red-700"
-          >
-            {isMySqlProcessing ? "清空中..." : "清空MySQL数据"}
-          </Button>
-
-          <Button
-            onClick={handleFixWarehouseColumn}
-            disabled={isMySqlProcessing}
-            className="bg-orange-600 text-white hover:bg-orange-700"
-          >
-            {isMySqlProcessing ? "修复中..." : "修复warehouse字段"}
-          </Button>
-        </div>
-
-        <div className="mt-4 text-sm text-gray-600">
-          <p className="font-medium mb-2">MySQL数据库连接信息：</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-            <div>• 主机: localhost:3306</div>
-            <div>• 数据库: testdb</div>
-            <div>• 用户: root</div>
-            <div>• 表名: products</div>
-          </div>
-        </div>
-      </section>
-
       {/* 批量导入区域 */}
       {activeTab === "import" && <ProductImport />}
 
@@ -607,9 +541,9 @@ export function ProductManager() {
           </h2>
 
           {formErrors.length > 0 && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
               {formErrors.map((error, index) => (
-                <div key={index} className="text-red-600 text-sm">
+                <div key={index} className="text-gray-600 text-sm">
                   {error}
                 </div>
               ))}
@@ -627,7 +561,7 @@ export function ProductManager() {
                   name="sku"
                   value={productForm.sku}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
                   required
                   disabled={!!editingProductId}
                 />
@@ -642,7 +576,7 @@ export function ProductManager() {
                   name="productName"
                   value={productForm.productName}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
                   required
                 />
               </div>
@@ -656,7 +590,7 @@ export function ProductManager() {
                   name="brand"
                   value={productForm.brand}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
                   placeholder="可选，输入品牌"
                 />
               </div>
@@ -670,18 +604,14 @@ export function ProductManager() {
                   name="warehouse"
                   value={productForm.warehouse}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
                   placeholder="可选，输入仓库"
                 />
               </div>
             </div>
 
             <div className="flex gap-3 justify-end">
-              <Button
-                type="button"
-                onClick={handleCancel}
-                className="bg-gray-200 text-gray-700 hover:bg-gray-300"
-              >
+              <Button type="button" onClick={handleCancel} variant="secondary">
                 取消
               </Button>
               <Button type="submit">
@@ -712,34 +642,34 @@ export function ProductManager() {
               <thead>
                 <tr className="bg-gray-50">
                   <th
-                    className="px-3 py-3 text-left font-semibold text-primary-600 cursor-pointer hover:bg-blue-50"
+                    className="px-3 py-3 text-left font-semibold text-gray-700 cursor-pointer hover:bg-gray-50"
                     onClick={(e) => handleCopyColumn("sku", e)}
                     title="点击复制整列数据"
                   >
                     京东SKU 📋
                   </th>
                   <th
-                    className="px-3 py-3 text-left font-semibold text-primary-600 cursor-pointer hover:bg-blue-50"
+                    className="px-3 py-3 text-left font-semibold text-gray-700 cursor-pointer hover:bg-gray-50"
                     onClick={(e) => handleCopyColumn("productName", e)}
                     title="点击复制整列数据"
                   >
                     商品名称 📋
                   </th>
                   <th
-                    className="px-3 py-3 text-left font-semibold text-primary-600 cursor-pointer hover:bg-blue-50"
+                    className="px-3 py-3 text-left font-semibold text-gray-700 cursor-pointer hover:bg-gray-50"
                     onClick={(e) => handleCopyColumn("brand", e)}
                     title="点击复制整列数据"
                   >
                     品牌 📋
                   </th>
                   <th
-                    className="px-3 py-3 text-left font-semibold text-primary-600 cursor-pointer hover:bg-blue-50"
+                    className="px-3 py-3 text-left font-semibold text-gray-700 cursor-pointer hover:bg-gray-50"
                     onClick={(e) => handleCopyColumn("warehouse", e)}
                     title="点击复制整列数据"
                   >
                     仓库 📋
                   </th>
-                  <th className="px-3 py-3 text-left font-semibold text-primary-600">
+                  <th className="px-3 py-3 text-left font-semibold text-gray-700">
                     操作
                   </th>
                 </tr>
@@ -757,7 +687,7 @@ export function ProductManager() {
                         </span>
                         <Button
                           onClick={(e) => handleCopySku(product.sku, e)}
-                          className="px-2 py-1 text-xs bg-gray-500 text-white hover:bg-gray-600 flex-shrink-0"
+                          className="px-2 py-1 text-xs flex-shrink-0"
                           title="复制SKU"
                         >
                           复制
@@ -776,7 +706,7 @@ export function ProductManager() {
                           onClick={(e) =>
                             handleCopyProductName(product.productName, e)
                           }
-                          className="px-2 py-1 text-xs bg-gray-500 text-white hover:bg-gray-600 flex-shrink-0"
+                          className="px-2 py-1 text-xs flex-shrink-0"
                           title="复制商品名称"
                         >
                           复制
@@ -796,13 +726,13 @@ export function ProductManager() {
                       <div className="flex gap-1">
                         <Button
                           onClick={() => handleEdit(product)}
-                          className="px-2 py-1 text-xs bg-blue-500 text-white hover:bg-blue-600"
+                          className="px-2 py-1 text-xs"
                         >
                           编辑
                         </Button>
                         <Button
                           onClick={(e) => handleDelete(product.id, e)}
-                          className="px-2 py-1 text-xs bg-red-500 text-white hover:bg-red-600"
+                          className="px-2 py-1 text-xs"
                         >
                           删除
                         </Button>

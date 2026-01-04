@@ -26,6 +26,8 @@ export default function SupplierManager() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isConfirmDeleteModalOpen, setIsConfirmDeleteModalOpen] =
+    useState(false);
   const [deletingSupplier, setDeletingSupplier] = useState(null);
   const [editingSupplier, setEditingSupplier] = useState(null);
   const [formData, setFormData] = useState({
@@ -94,6 +96,7 @@ export default function SupplierManager() {
     setIsEditModalOpen(false);
     setIsConvertModalOpen(false);
     setIsDeleteModalOpen(false);
+    setIsConfirmDeleteModalOpen(false);
     setDeletingSupplier(null);
     resetForm();
   }, [resetForm]);
@@ -178,8 +181,16 @@ export default function SupplierManager() {
     setIsDeleteModalOpen(true);
   }, []);
 
-  // 确认删除供应商
+  // 第一次确认删除
   const handleConfirmDelete = useCallback(() => {
+    if (deletingSupplier) {
+      setIsDeleteModalOpen(false);
+      setIsConfirmDeleteModalOpen(true);
+    }
+  }, [deletingSupplier]);
+
+  // 第二次确认删除
+  const handleFinalConfirmDelete = useCallback(() => {
     if (deletingSupplier) {
       deleteSupplier(deletingSupplier.id);
       toast({
@@ -216,13 +227,13 @@ export default function SupplierManager() {
     <div className="space-y-6">
       {/* 错误提示 */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
           <div className="flex items-center">
-            <span className="text-red-600 mr-2">⚠️</span>
-            <span className="text-red-700">{error}</span>
+            <span className="text-gray-600 mr-2">⚠️</span>
+            <span className="text-gray-700">{error}</span>
             <button
               onClick={clearError}
-              className="ml-auto text-red-500 hover:text-red-700"
+              className="ml-auto text-gray-500 hover:text-gray-700"
             >
               ✕
             </button>
@@ -295,13 +306,13 @@ export default function SupplierManager() {
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
                       onClick={() => handleEditClick(supplier)}
-                      className="text-indigo-600 hover:text-indigo-900 mr-4"
+                      className="text-gray-600 hover:text-gray-900 mr-4"
                     >
                       编辑
                     </button>
                     <button
                       onClick={() => handleDeleteSupplier(supplier)}
-                      className="text-red-600 hover:text-red-900"
+                      className="text-gray-600 hover:text-gray-900"
                     >
                       删除
                     </button>
@@ -330,7 +341,7 @@ export default function SupplierManager() {
               value={formData.name}
               onChange={handleInputChange}
               onKeyPress={handleKeyPress}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
               placeholder="请输入供应商名称"
               autoFocus
             />
@@ -345,7 +356,7 @@ export default function SupplierManager() {
               value={formData.supplierId}
               onChange={handleInputChange}
               onKeyPress={handleKeyPress}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
               placeholder="请输入供应商ID"
             />
           </div>
@@ -359,7 +370,7 @@ export default function SupplierManager() {
               value={formData.matchString}
               onChange={handleInputChange}
               onKeyPress={handleKeyPress}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
               placeholder="请输入用于匹配的字符串（可选）"
             />
             <p className="mt-1 text-xs text-gray-500">
@@ -398,7 +409,7 @@ export default function SupplierManager() {
               value={formData.name}
               onChange={handleInputChange}
               onKeyPress={handleKeyPress}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
               placeholder="请输入供应商名称"
               autoFocus
             />
@@ -413,7 +424,7 @@ export default function SupplierManager() {
               value={formData.supplierId}
               onChange={handleInputChange}
               onKeyPress={handleKeyPress}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
               placeholder="请输入供应商ID"
             />
           </div>
@@ -427,7 +438,7 @@ export default function SupplierManager() {
               value={formData.matchString}
               onChange={handleInputChange}
               onKeyPress={handleKeyPress}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
               placeholder="请输入用于匹配的字符串（可选）"
             />
             <p className="mt-1 text-xs text-gray-500">
@@ -464,7 +475,7 @@ export default function SupplierManager() {
             <textarea
               value={convertText}
               onChange={handleConvertTextChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
               rows={10}
               placeholder="请输入要转换的文本，每行一个编码"
             />
@@ -512,7 +523,7 @@ export default function SupplierManager() {
                     .filter((result) => result.matched)
                     .map((result) => result.supplier.supplierId)
                     .join("\n")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500"
                   rows={10}
                   placeholder="转换后的供应商ID将显示在这里"
                 />
@@ -527,11 +538,11 @@ export default function SupplierManager() {
                   <span className="text-gray-600">
                     总计: {convertResults.length} 条
                   </span>
-                  <span className="text-green-600">
+                  <span className="text-gray-600">
                     匹配成功: {convertResults.filter((r) => r.matched).length}{" "}
                     条
                   </span>
-                  <span className="text-red-600">
+                  <span className="text-gray-600">
                     未匹配: {convertResults.filter((r) => !r.matched).length} 条
                   </span>
                 </div>
@@ -549,6 +560,18 @@ export default function SupplierManager() {
         title="删除供应商"
         message={`确定要删除供应商 "${deletingSupplier?.name}" 吗？此操作不可撤销。`}
         confirmText="删除"
+        cancelText="取消"
+        confirmVariant="destructive"
+      />
+
+      {/* 第二次确认删除模态框 */}
+      <ConfirmModal
+        isOpen={isConfirmDeleteModalOpen}
+        onClose={handleCloseModal}
+        onConfirm={handleFinalConfirmDelete}
+        title="最终确认删除"
+        message={`请再次确认：真的要删除供应商 "${deletingSupplier?.name}" 吗？此操作不可撤销！`}
+        confirmText="确认删除"
         cancelText="取消"
         confirmVariant="destructive"
       />
