@@ -215,22 +215,37 @@ export function TableImport({ onImportItems, onCancel }) {
       // 重新读取完整数据
       const fileExtension = file.name.split(".").pop().toLowerCase();
       const fileType = fileExtension === "csv" ? "csv" : "excel";
+      setImportProgress("正在读取文件...");
       const rawData = await readFile(file, fileType);
 
+      if (!rawData || rawData.length === 0) {
+        throw new Error("文件中没有数据或文件格式不正确");
+      }
+
+      setImportProgress("正在转换数据格式...");
       // 转换所有数据
       const convertedData = convertTableDataToInventory(rawData);
 
       if (convertedData.length === 0) {
-        throw new Error("没有有效的数据可以导入");
+        throw new Error("没有找到有效的库存数据，请检查文件格式和字段名称");
       }
 
+      setImportProgress("正在更新商品名称...");
       // 使用SKU映射更新商品名称
       const updatedItems = updateProductNamesBySku(convertedData);
 
+      setImportProgress("正在创建库存项...");
       // 创建库存项
       const newItems = createMultipleInventoryItems(updatedItems);
 
-      setImportProgress(`成功导入 ${newItems.length} 条库存数据`);
+      // 验证创建的库存项
+      if (!newItems || newItems.length === 0) {
+        throw new Error("创建库存项失败，数据验证未通过");
+      }
+
+      setImportProgress(
+        `成功导入 ${newItems.length} 条库存数据，正在添加到系统...`
+      );
 
       // 延迟一下让用户看到成功消息
       setTimeout(() => {
@@ -239,6 +254,7 @@ export function TableImport({ onImportItems, onCancel }) {
     } catch (error) {
       console.error("导入失败:", error);
       setErrors([`导入失败: ${error.message}`]);
+      setImportProgress("");
     } finally {
       setIsProcessing(false);
     }

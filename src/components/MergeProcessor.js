@@ -8,6 +8,7 @@ import {
 } from "@/lib/dataProcessor";
 import { downloadExcel } from "@/lib/excelHandler";
 import Button from "./ui/Button";
+import { toast } from "sonner";
 
 export default function MergeProcessor() {
   const {
@@ -30,6 +31,54 @@ export default function MergeProcessor() {
   const [hasFailedReplacements, setHasFailedReplacements] = useState(false);
   const [isDeductingInventory, setIsDeductingInventory] = useState(false);
   const [inventoryDeducted, setInventoryDeducted] = useState(false);
+
+  // 提取文件名中的日期部分
+  const extractDateFromFileName = (fileName) => {
+    if (!fileName) {
+      return "";
+    }
+
+    // 优先匹配格式：数字_数字（如 162418297002_20251130），取后面的8位数字
+    const underscoreMatch = fileName.match(/_\d{8}/);
+    if (underscoreMatch) {
+      const datePart = underscoreMatch[0].substring(1); // 去掉下划线
+      return datePart;
+    }
+
+    // 如果没有下划线格式，匹配任何8位数字
+    const dateMatch = fileName.match(/(\d{8})/);
+    if (dateMatch) {
+      return dateMatch[1];
+    }
+
+    // 如果都没有找到，返回去除扩展名的文件名
+    return fileName.replace(/\.[^/.]+$/, "");
+  };
+
+  // 复制列数据功能
+  const handleCopyColumn = (columnName) => {
+    const dataToCopy = mergedData
+      .map((row) => row[columnName])
+      .filter((value) => value !== null && value !== undefined);
+    const textToCopy = dataToCopy.join("\n");
+
+    navigator.clipboard
+      .writeText(textToCopy)
+      .then(() => {
+        addLog(
+          `已复制列 "${columnName}" 的 ${dataToCopy.length} 条数据到剪贴板`,
+          "success"
+        );
+        toast.success(
+          `已复制列 "${columnName}" 的 ${dataToCopy.length} 条数据到剪贴板`
+        );
+      })
+      .catch((err) => {
+        console.error("复制失败:", err);
+        addLog(`复制列 "${columnName}" 失败`, "error");
+        toast.error(`复制列 "${columnName}" 失败`);
+      });
+  };
 
   // 处理多文件合并
   const handleMergeProcess = useCallback(async () => {
@@ -206,16 +255,29 @@ export default function MergeProcessor() {
     if (!mergedData || mergedData.length === 0) return;
 
     try {
-      const fileName = `多文件合并结果_${new Date()
-        .toISOString()
-        .slice(0, 10)}.xlsx`;
+      // 提取所有文件的日期部分
+      const dateParts = uploadedFiles
+        .map((file) => extractDateFromFileName(file.name))
+        .filter((date) => date);
+      let datePart;
+
+      if (dateParts.length === 0) {
+        datePart = "data";
+      } else if (dateParts.length === 1) {
+        datePart = dateParts[0];
+      } else {
+        // 多个文件时，用分隔符连接日期
+        datePart = dateParts.join("-");
+      }
+
+      const fileName = `多文件合并结果_${datePart}.xlsx`;
       downloadExcel(mergedData, fileName);
       addLog(`合并结果已下载: ${fileName}`, "success");
     } catch (error) {
       console.error("下载合并结果失败:", error);
       setError(`下载失败: ${error.message}`);
     }
-  }, [mergedData, addLog, setError]);
+  }, [mergedData, addLog, setError, uploadedFiles]);
 
   // 重置合并模式
   const handleResetMerge = useCallback(() => {
@@ -468,7 +530,14 @@ export default function MergeProcessor() {
                 <tr>
                   {mergedData.length > 0 &&
                     Object.keys(mergedData[0]).map((header, index) => (
-                      <th key={index}>{header}</th>
+                      <th
+                        key={index}
+                        onClick={() => handleCopyColumn(header)}
+                        title={`点击复制 "${header}" 列数据`}
+                        className="cursor-pointer hover:bg-blue-50 transition-colors"
+                      >
+                        {header} 📋
+                      </th>
                     ))}
                 </tr>
               </thead>
@@ -488,6 +557,9 @@ export default function MergeProcessor() {
                 ))}
               </tbody>
             </table>
+            <div className="mt-2 text-sm text-gray-500 text-center">
+              💡 提示：点击表头可复制该列的所有数据
+            </div>
           </div>
         </section>
       )}

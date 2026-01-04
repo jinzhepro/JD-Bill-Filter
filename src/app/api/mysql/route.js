@@ -59,7 +59,7 @@ async function createInventoryTable() {
       CREATE TABLE IF NOT EXISTS inventory_batches (
         id VARCHAR(255) PRIMARY KEY,
         batch_name VARCHAR(255) NOT NULL UNIQUE COMMENT '采购批号',
-        description TEXT DEFAULT '' COMMENT '批次描述',
+        description TEXT COMMENT '批次描述',
         total_items INT DEFAULT 0 COMMENT '总品种数',
         total_quantity INT DEFAULT 0 COMMENT '总数量',
         total_amount DECIMAL(12, 2) DEFAULT 0.00 COMMENT '总金额',
@@ -127,14 +127,28 @@ async function pushInventoryToMySQL(inventoryItems) {
     await connection.beginTransaction();
 
     try {
-      // 收集所有批次名称
+      // 首先确保批次表存在
+      await ensureBatchTableExists(connection);
+      console.log("批次表检查完成");
+
+      // 收集所有批次名称，过滤掉空值
       const batchNames = [
-        ...new Set(inventoryItems.map((item) => item.purchaseBatch)),
+        ...new Set(
+          inventoryItems
+            .map((item) => item.purchaseBatch)
+            .filter((batch) => batch && batch.trim() !== "")
+        ),
       ];
+
+      console.log("处理批次数量:", batchNames.length, "批次名称:", batchNames);
 
       // 确保所有批次都存在
       for (const batchName of batchNames) {
-        await createOrUpdateBatch(batchName);
+        console.log("正在处理批次:", batchName);
+        const batchResult = await createOrUpdateBatch(batchName);
+        if (!batchResult.success) {
+          throw new Error(`创建批次失败: ${batchResult.message}`);
+        }
       }
 
       // 准备插入语句
@@ -201,8 +215,16 @@ async function pushInventoryToMySQL(inventoryItems) {
 
 // 创建或更新库存批次
 async function createOrUpdateBatch(batchName, description = "") {
+  if (!batchName || batchName.trim() === "") {
+    return { success: false, message: "批次名称不能为空" };
+  }
+
   try {
     const connection = await pool.getConnection();
+    console.log("正在检查批次是否存在:", batchName);
+
+    // 首先确保批次表存在
+    await ensureBatchTableExists(connection);
 
     // 检查批次是否存在
     const [existingBatch] = await connection.execute(
@@ -211,12 +233,15 @@ async function createOrUpdateBatch(batchName, description = "") {
     );
 
     if (existingBatch.length > 0) {
+      console.log("批次已存在，正在更新:", batchName);
       // 更新现有批次
       await connection.execute(
         "UPDATE inventory_batches SET description = ?, updated_at = CURRENT_TIMESTAMP WHERE batch_name = ?",
         [description, batchName]
       );
+      console.log("批次更新成功:", batchName);
     } else {
+      console.log("创建新批次:", batchName);
       // 创建新批次
       const batchId = `batch-${Date.now()}-${Math.random()
         .toString(36)
@@ -225,20 +250,63 @@ async function createOrUpdateBatch(batchName, description = "") {
         "INSERT INTO inventory_batches (id, batch_name, description) VALUES (?, ?, ?)",
         [batchId, batchName, description]
       );
+      console.log("批次创建成功:", batchName);
     }
 
     connection.release();
-    return { success: true, message: "批次创建或更新成功" };
+    return { success: true, message: `批次 "${batchName}" 创建或更新成功` };
   } catch (error) {
     console.error("创建或更新批次失败:", error);
     return { success: false, message: `创建或更新批次失败: ${error.message}` };
   }
 }
 
+// 确保批次表存在
+async function ensureBatchTableExists(connection) {
+  try {
+    // 检查表是否存在
+    const [tables] = await connection.execute(
+      "SHOW TABLES LIKE 'inventory_batches'"
+    );
+
+    if (tables.length === 0) {
+      console.log("inventory_batches表不存在，正在创建...");
+
+      // 创建库存分组表
+      const createBatchTableSQL = `
+        CREATE TABLE inventory_batches (
+          id VARCHAR(255) PRIMARY KEY,
+          batch_name VARCHAR(255) NOT NULL UNIQUE COMMENT '采购批号',
+          description TEXT COMMENT '批次描述',
+          total_items INT DEFAULT 0 COMMENT '总品种数',
+          total_quantity INT DEFAULT 0 COMMENT '总数量',
+          total_amount DECIMAL(12, 2) DEFAULT 0.00 COMMENT '总金额',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+          INDEX idx_batch_name (batch_name)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='库存批次表'
+      `;
+
+      await connection.execute(createBatchTableSQL);
+      console.log("inventory_batches表创建成功");
+    } else {
+      console.log("inventory_batches表已存在");
+    }
+  } catch (error) {
+    console.error("确保批次表存在失败:", error);
+    throw error;
+  }
+}
+
 // 更新批次统计信息
 async function updateBatchStats(batchName) {
+  if (!batchName || batchName.trim() === "") {
+    return { success: false, message: "批次名称不能为空" };
+  }
+
   try {
     const connection = await pool.getConnection();
+    console.log("正在更新批次统计信息:", batchName);
 
     // 计算批次统计信息
     const [stats] = await connection.execute(
@@ -254,6 +322,7 @@ async function updateBatchStats(batchName) {
     );
 
     const { total_items, total_quantity, total_amount } = stats[0];
+    console.log("批次统计结果:", { total_items, total_quantity, total_amount });
 
     // 更新批次表
     await connection.execute(
@@ -266,7 +335,13 @@ async function updateBatchStats(batchName) {
     );
 
     connection.release();
-    return { success: true, message: "批次统计信息更新成功" };
+    console.log("批次统计信息更新成功:", batchName);
+    return {
+      success: true,
+      message: `批次 "${batchName}" 统计信息更新成功 (${total_items} 项, ${total_quantity} 件, ¥${
+        total_amount || 0
+      })`,
+    };
   } catch (error) {
     console.error("更新批次统计信息失败:", error);
     return {
@@ -925,11 +1000,13 @@ export async function POST(request) {
   let timeoutId;
 
   try {
-    // 设置30秒超时
+    console.log("MySQL API POST请求开始");
+
+    // 设置10秒超时（减少超时时间以便更快发现问题）
     const timeoutPromise = new Promise((_, reject) => {
       timeoutId = setTimeout(() => {
-        reject(new Error("API请求超时（30秒）"));
-      }, 30000);
+        reject(new Error("API请求超时（10秒）"));
+      }, 10000);
     });
 
     const bodyPromise = request.json();
@@ -1011,6 +1088,14 @@ export async function POST(request) {
         result = await deleteBatch(data);
         break;
 
+      case "health":
+        result = {
+          success: true,
+          message: "API健康检查通过",
+          timestamp: new Date().toISOString(),
+        };
+        break;
+
       default:
         result = { success: false, message: "未知的操作类型" };
     }
@@ -1030,6 +1115,7 @@ export async function POST(request) {
     const duration = Date.now() - startTime;
     console.error(`MySQL API错误: ${error.message}`, {
       duration: `${duration}ms`,
+      stack: error.stack,
     });
 
     return NextResponse.json(

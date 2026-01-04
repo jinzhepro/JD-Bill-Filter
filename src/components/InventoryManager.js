@@ -25,6 +25,7 @@ import {
   clearInventoryInMySQL,
   getInventoryBatches,
   deleteBatch,
+  healthCheck,
 } from "@/lib/mysqlConnection";
 
 export function InventoryManager() {
@@ -285,6 +286,28 @@ export function InventoryManager() {
     setEditingInventoryId(null);
     setIsFormVisible(false);
     setFormErrors([]);
+  };
+
+  // API健康检查
+  const handleHealthCheck = async () => {
+    setIsMySqlProcessing(true);
+    setMySqlStatus("正在进行API健康检查...");
+
+    try {
+      const result = await healthCheck();
+      if (result.success) {
+        setMySqlStatus("API健康检查通过");
+        addLog(`API健康检查通过: ${result.message}`, "success");
+      } else {
+        setMySqlStatus("API健康检查失败");
+        addLog(`API健康检查失败: ${result.message}`, "error");
+      }
+    } catch (error) {
+      setMySqlStatus("API健康检查出错");
+      addLog(`API健康检查出错: ${error.message}`, "error");
+    } finally {
+      setIsMySqlProcessing(false);
+    }
   };
 
   // 测试MySQL连接
@@ -626,6 +649,14 @@ export function InventoryManager() {
         )}
 
         <div className="flex flex-wrap gap-3">
+          <Button
+            onClick={handleHealthCheck}
+            disabled={isMySqlProcessing}
+            className="bg-yellow-600 text-white hover:bg-yellow-700"
+          >
+            {isMySqlProcessing ? "检查中..." : "API健康检查"}
+          </Button>
+
           <Button
             onClick={handleTestMySqlConnection}
             disabled={isMySqlProcessing}

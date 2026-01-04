@@ -183,15 +183,62 @@ export function InventoryProvider({ children }) {
 
     addInventoryItem: useCallback(
       async (item) => {
+        // 先添加到本地状态
         dispatch({ type: ActionTypes.ADD_INVENTORY_ITEM, payload: item });
-        // 保存到MySQL数据库
+
+        // 添加成功日志
+        dispatch({
+          type: ActionTypes.ADD_LOG,
+          payload: {
+            message: `成功添加库存项 "${item.materialName}" 到本地`,
+            type: LogType.SUCCESS,
+          },
+        });
+
+        // 尝试保存到MySQL数据库
         try {
           const { pushInventoryToMySQL } = await import(
             "@/lib/mysqlConnection"
           );
-          await pushInventoryToMySQL([...state.inventoryItems, item]);
+          const result = await pushInventoryToMySQL([
+            ...state.inventoryItems,
+            item,
+          ]);
+
+          if (result.success) {
+            dispatch({
+              type: ActionTypes.ADD_LOG,
+              payload: {
+                message: result.message,
+                type: LogType.SUCCESS,
+              },
+            });
+          } else {
+            dispatch({
+              type: ActionTypes.ADD_LOG,
+              payload: {
+                message: `保存到数据库失败: ${result.message}`,
+                type: LogType.ERROR,
+              },
+            });
+            dispatch({
+              type: ActionTypes.SET_ERROR,
+              payload: `保存到数据库失败: ${result.message}`,
+            });
+          }
         } catch (error) {
           console.error("保存库存项到数据库失败:", error);
+          dispatch({
+            type: ActionTypes.ADD_LOG,
+            payload: {
+              message: `保存到数据库失败: ${error.message}`,
+              type: LogType.ERROR,
+            },
+          });
+          dispatch({
+            type: ActionTypes.SET_ERROR,
+            payload: `保存到数据库失败: ${error.message}`,
+          });
         }
       },
       [state.inventoryItems]
@@ -199,18 +246,65 @@ export function InventoryProvider({ children }) {
 
     addMultipleInventoryItems: useCallback(
       async (items) => {
+        // 先添加到本地状态
         dispatch({
           type: ActionTypes.ADD_MULTIPLE_INVENTORY_ITEMS,
           payload: items,
         });
-        // 保存到MySQL数据库
+
+        // 添加成功日志
+        dispatch({
+          type: ActionTypes.ADD_LOG,
+          payload: {
+            message: `成功添加 ${items.length} 个库存项到本地`,
+            type: LogType.SUCCESS,
+          },
+        });
+
+        // 尝试保存到MySQL数据库
         try {
           const { pushInventoryToMySQL } = await import(
             "@/lib/mysqlConnection"
           );
-          await pushInventoryToMySQL([...state.inventoryItems, ...items]);
+          const result = await pushInventoryToMySQL([
+            ...state.inventoryItems,
+            ...items,
+          ]);
+
+          if (result.success) {
+            dispatch({
+              type: ActionTypes.ADD_LOG,
+              payload: {
+                message: result.message,
+                type: LogType.SUCCESS,
+              },
+            });
+          } else {
+            dispatch({
+              type: ActionTypes.ADD_LOG,
+              payload: {
+                message: `保存到数据库失败: ${result.message}`,
+                type: LogType.ERROR,
+              },
+            });
+            dispatch({
+              type: ActionTypes.SET_ERROR,
+              payload: `保存到数据库失败: ${result.message}`,
+            });
+          }
         } catch (error) {
           console.error("批量保存库存项到数据库失败:", error);
+          dispatch({
+            type: ActionTypes.ADD_LOG,
+            payload: {
+              message: `保存到数据库失败: ${error.message}`,
+              type: LogType.ERROR,
+            },
+          });
+          dispatch({
+            type: ActionTypes.SET_ERROR,
+            payload: `保存到数据库失败: ${error.message}`,
+          });
         }
       },
       [state.inventoryItems]
@@ -218,8 +312,19 @@ export function InventoryProvider({ children }) {
 
     updateInventoryItem: useCallback(
       async (item) => {
+        // 先更新本地状态
         dispatch({ type: ActionTypes.UPDATE_INVENTORY_ITEM, payload: item });
-        // 保存到MySQL数据库
+
+        // 添加成功日志
+        dispatch({
+          type: ActionTypes.ADD_LOG,
+          payload: {
+            message: `成功更新库存项 "${item.materialName}" 在本地`,
+            type: LogType.SUCCESS,
+          },
+        });
+
+        // 尝试保存到MySQL数据库
         try {
           const { pushInventoryToMySQL } = await import(
             "@/lib/mysqlConnection"
@@ -227,9 +332,42 @@ export function InventoryProvider({ children }) {
           const updatedItems = state.inventoryItems.map((i) =>
             i.id === item.id ? item : i
           );
-          await pushInventoryToMySQL(updatedItems);
+          const result = await pushInventoryToMySQL(updatedItems);
+
+          if (result.success) {
+            dispatch({
+              type: ActionTypes.ADD_LOG,
+              payload: {
+                message: result.message,
+                type: LogType.SUCCESS,
+              },
+            });
+          } else {
+            dispatch({
+              type: ActionTypes.ADD_LOG,
+              payload: {
+                message: `更新到数据库失败: ${result.message}`,
+                type: LogType.ERROR,
+              },
+            });
+            dispatch({
+              type: ActionTypes.SET_ERROR,
+              payload: `更新到数据库失败: ${result.message}`,
+            });
+          }
         } catch (error) {
           console.error("更新库存项到数据库失败:", error);
+          dispatch({
+            type: ActionTypes.ADD_LOG,
+            payload: {
+              message: `更新到数据库失败: ${error.message}`,
+              type: LogType.ERROR,
+            },
+          });
+          dispatch({
+            type: ActionTypes.SET_ERROR,
+            payload: `更新到数据库失败: ${error.message}`,
+          });
         }
       },
       [state.inventoryItems]

@@ -1,5 +1,26 @@
 // 通过API调用MySQL操作
 
+// API健康检查
+export async function healthCheck() {
+  try {
+    const response = await fetch("/api/mysql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "health",
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("API健康检查失败:", error);
+    return { success: false, message: `API健康检查失败: ${error.message}` };
+  }
+}
+
 // 测试数据库连接
 export async function testConnection() {
   try {

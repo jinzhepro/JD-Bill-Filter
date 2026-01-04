@@ -5,12 +5,13 @@ import { useApp } from "@/context/AppContext";
 import { downloadExcel } from "@/lib/excelHandler";
 import { processWithSkuAndBatch } from "@/lib/dataProcessor";
 import Button from "./ui/Button";
+import { toast } from "sonner";
 
 export default function ResultDisplay() {
   const {
     originalData,
     processedData,
-    uploadedFile,
+    uploadedFiles,
     reset,
     inventoryItems,
     skuProcessedData,
@@ -22,9 +23,68 @@ export default function ResultDisplay() {
     setError,
   } = useApp();
 
+  // 获取第一个上传的文件（兼容单文件模式）
+  const uploadedFile = uploadedFiles.length > 0 ? uploadedFiles[0] : null;
+
   const [hasFailedReplacements, setHasFailedReplacements] = useState(false);
   const [isDeductingInventory, setIsDeductingInventory] = useState(false);
   const [inventoryDeducted, setInventoryDeducted] = useState(false);
+
+  // 提取文件名中的日期部分
+  const extractDateFromFileName = (fileName) => {
+    if (!fileName) {
+      console.log("文件名为空，返回空字符串");
+      return "";
+    }
+
+    console.log("提取日期的文件名:", fileName); // 调试信息
+
+    // 优先匹配格式：数字_数字（如 162418297002_20251130），取后面的8位数字
+    const underscoreMatch = fileName.match(/_\d{8}/);
+    if (underscoreMatch) {
+      const datePart = underscoreMatch[0].substring(1); // 去掉下划线
+      console.log("找到下划线分隔的日期:", datePart);
+      return datePart;
+    }
+
+    // 如果没有下划线格式，匹配任何8位数字
+    const dateMatch = fileName.match(/(\d{8})/);
+    console.log("日期匹配结果:", dateMatch); // 调试信息
+
+    if (dateMatch) {
+      return dateMatch[1];
+    }
+
+    // 如果都没有找到，返回去除扩展名的文件名
+    const baseName = fileName.replace(/\.[^/.]+$/, "");
+    console.log("返回基础文件名:", baseName); // 调试信息
+    return baseName;
+  };
+
+  // 复制列数据功能
+  const handleCopyColumn = (columnName) => {
+    const dataToCopy = processedData
+      .map((row) => row[columnName])
+      .filter((value) => value !== null && value !== undefined);
+    const textToCopy = dataToCopy.join("\n");
+
+    navigator.clipboard
+      .writeText(textToCopy)
+      .then(() => {
+        addLog(
+          `已复制列 "${columnName}" 的 ${dataToCopy.length} 条数据到剪贴板`,
+          "success"
+        );
+        toast.success(
+          `已复制列 "${columnName}" 的 ${dataToCopy.length} 条数据到剪贴板`
+        );
+      })
+      .catch((err) => {
+        console.error("复制失败:", err);
+        addLog(`复制列 "${columnName}" 失败`, "error");
+        toast.error(`复制列 "${columnName}" 失败`);
+      });
+  };
 
   if (!originalData || originalData.length === 0) {
     return null;
@@ -71,9 +131,9 @@ export default function ResultDisplay() {
     if (!processedData || processedData.length === 0) return;
 
     try {
-      const fileName = `订单处理结果_${
-        uploadedFile?.name.replace(/\.[^/.]+$/, "") || "data"
-      }.xlsx`;
+      const datePart = extractDateFromFileName(uploadedFile?.name);
+      const fileName = `订单处理结果_${datePart}.xlsx`;
+      console.log("生成的文件名:", fileName); // 调试信息
       downloadExcel(processedData, fileName);
     } catch (error) {
       console.error("Excel下载失败:", error);
@@ -192,9 +252,9 @@ export default function ResultDisplay() {
     if (!skuProcessedData || skuProcessedData.length === 0) return;
 
     try {
-      const fileName = `物料名称替换订单结果_${
-        uploadedFile?.name.replace(/\.[^/.]+$/, "") || "data"
-      }.xlsx`;
+      const datePart = extractDateFromFileName(uploadedFile?.name);
+      const fileName = `物料名称替换订单结果_${datePart}.xlsx`;
+      console.log("生成的SKU文件名:", fileName); // 调试信息
       downloadExcel(skuProcessedData, fileName);
     } catch (error) {
       console.error("物料名称替换Excel下载失败:", error);
@@ -389,7 +449,14 @@ export default function ResultDisplay() {
                 <tr>
                   {processedData.length > 0 &&
                     Object.keys(processedData[0]).map((header, index) => (
-                      <th key={index}>{header}</th>
+                      <th
+                        key={index}
+                        onClick={() => handleCopyColumn(header)}
+                        title={`点击复制 "${header}" 列数据`}
+                        className="cursor-pointer hover:bg-blue-50 transition-colors"
+                      >
+                        {header} 📋
+                      </th>
                     ))}
                 </tr>
               </thead>
@@ -407,6 +474,9 @@ export default function ResultDisplay() {
                 ))}
               </tbody>
             </table>
+            <div className="mt-2 text-sm text-gray-500 text-center">
+              💡 提示：点击表头可复制该列的所有数据
+            </div>
           </div>
         </section>
       )}
