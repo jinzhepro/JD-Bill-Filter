@@ -5,7 +5,7 @@ import { useApp } from "@/context/AppContext";
 import FolderUpload from "./FolderUpload";
 import ResultDisplay from "./ResultDisplay";
 import MergeProcessor from "./MergeProcessor";
-import { ErrorModal } from "./ui/Modal";
+import { ErrorModal } from "./ui/Modal.js";
 import Link from "next/link";
 
 export function AppContent() {

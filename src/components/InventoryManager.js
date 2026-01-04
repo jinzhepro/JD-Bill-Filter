@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useInventory } from "@/context/InventoryContext";
 import { Button } from "./ui/button.js";
-import Modal, { ConfirmModal } from "./ui/Modal";
+import Modal, { ConfirmModal } from "./ui/Modal.js";
 import { BatchInventoryAdd } from "./BatchInventoryAdd";
 import { TableImport } from "./TableImport";
 import { DeductionRecords } from "./DeductionRecords";

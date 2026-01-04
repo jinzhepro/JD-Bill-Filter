@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useSupplier } from "@/context/SupplierContext";
 import { Button } from "./ui/button.js";
-import Modal, { ConfirmModal } from "./ui/Modal";
+import Modal, { ConfirmModal } from "./ui/Modal.js";
 import { useToast } from "@/hooks/use-toast";
 
 export default function SupplierManager() {
