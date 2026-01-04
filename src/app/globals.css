@@ -12,14 +12,14 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
     "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-color: #f9fafb;
   min-height: 100vh;
   color: #333;
 }
 
 /* 自定义工具类 */
 .container {
-  @apply max-w-6xl mx-auto px-5 min-h-screen flex flex-col;
+  @apply max-w-7xl mx-auto px-5;
 }
 
 /* 动画效果 */
@@ -89,25 +89,37 @@ body {
   }
 }
 
-/* 组件样式 */
-.header {
-  @apply text-center mb-10;
+/* 侧边栏样式 */
+.sidebar {
+  @apply bg-white shadow-lg transition-all duration-300;
 }
 
-.header h1 {
-  @apply text-4xl font-bold text-white mb-3;
+.sidebar-item {
+  @apply flex items-center px-3 py-2 rounded-lg transition-colors;
 }
 
-.subtitle {
-  @apply text-xl text-white opacity-90;
+.sidebar-item.active {
+  @apply bg-primary-100 text-primary-700;
 }
 
-.main-content {
-  @apply flex-1;
+.sidebar-item:not(.active) {
+  @apply text-gray-700 hover:bg-gray-100;
 }
 
-.footer {
-  @apply text-center mt-10 text-white opacity-80;
+/* 主内容区域样式 */
+.main-header {
+  @apply bg-white shadow-sm border-b border-gray-200;
+}
+
+/* 响应式侧边栏 */
+@media (max-width: 768px) {
+  .sidebar {
+    @apply fixed inset-y-0 left-0 z-50 transform -translate-x-full transition-transform duration-300;
+  }
+
+  .sidebar.open {
+    @apply translate-x-0;
+  }
 }
 
 /* 步骤进度条样式 */

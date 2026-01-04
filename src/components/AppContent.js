@@ -15,12 +15,12 @@ export function AppContent() {
 
   return (
     <div className="space-y-8">
-      {/* 功能模块选择 */}
+      {/* 处理模式选择 */}
       {(!originalData || originalData.length === 0) && !mergeMode && (
         <section className="bg-white rounded-xl shadow-lg p-6 animate-fade-in">
           <div className="text-center">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">
-              选择功能模块
+              选择处理模式
             </h2>
             <div className="flex justify-center gap-4 flex-wrap">
               <button
@@ -43,18 +43,6 @@ export function AppContent() {
               >
                 多文件合并
               </button>
-              <Link
-                href="/inventory"
-                className="px-6 py-3 rounded-lg font-medium transition-colors bg-green-600 text-white hover:bg-green-700"
-              >
-                库存管理
-              </Link>
-              <Link
-                href="/products"
-                className="px-6 py-3 rounded-lg font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700"
-              >
-                商品管理
-              </Link>
             </div>
             <p className="mt-4 text-sm text-gray-600">
               {uploadMode === "single"
