@@ -18,14 +18,7 @@ export function MainLayout({ children }) {
               京东万商库存管理系统
             </h1>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-500">
-                {new Date().toLocaleDateString("zh-CN", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                  weekday: "long",
-                })}
-              </span>
+              <span className="text-sm text-gray-500">管理系统 v3.0</span>
             </div>
           </div>
         </header>
