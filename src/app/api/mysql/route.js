@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import mysql from "mysql2/promise";
 
-// MySQL数据库连接配置
+// MySQL数据库连接配置 - 使用环境变量
 const dbConfig = {
-  host: "localhost",
-  user: "root",
-  password: "root123",
-  database: "testdb",
-  charset: "utf8mb4",
-  connectionLimit: 10,
+  host: process.env.DB_HOST || "localhost",
+  port: parseInt(process.env.DB_PORT) || 3306,
+  user: process.env.DB_USER || "root",
+  password: process.env.DB_PASSWORD || "",
+  database: process.env.DB_DATABASE || "testdb",
+  charset: process.env.DB_CHARSET || "utf8mb4",
+  connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT) || 10,
 };
 
 // 创建连接池
@@ -17,13 +18,37 @@ const pool = mysql.createPool(dbConfig);
 // 测试数据库连接
 async function testConnection() {
   try {
+    console.log("尝试连接数据库，配置:", {
+      host: dbConfig.host,
+      port: dbConfig.port,
+      user: dbConfig.user,
+      database: dbConfig.database,
+      charset: dbConfig.charset,
+      connectionLimit: dbConfig.connectionLimit,
+    });
+
     const connection = await pool.getConnection();
     await connection.ping();
     connection.release();
     return { success: true, message: "数据库连接成功" };
   } catch (error) {
     console.error("数据库连接失败:", error);
-    return { success: false, message: `数据库连接失败: ${error.message}` };
+    console.error("错误详情:", {
+      code: error.code,
+      errno: error.errno,
+      sqlState: error.sqlState,
+      sqlMessage: error.sqlMessage,
+    });
+    return {
+      success: false,
+      message: `数据库连接失败: ${error.message}`,
+      details: {
+        code: error.code,
+        errno: error.errno,
+        sqlState: error.sqlState,
+        sqlMessage: error.sqlMessage,
+      },
+    };
   }
 }
 
@@ -672,13 +697,16 @@ async function ensureWarehouseColumn() {
     connection = await pool.getConnection();
 
     // 检查warehouse字段是否存在
-    const [columns] = await connection.execute(`
+    const [columns] = await connection.execute(
+      `
       SELECT COLUMN_NAME
       FROM INFORMATION_SCHEMA.COLUMNS
-      WHERE TABLE_SCHEMA = 'testdb'
+      WHERE TABLE_SCHEMA = ?
       AND TABLE_NAME = 'products'
       AND COLUMN_NAME = 'warehouse'
-    `);
+    `,
+      [process.env.DB_DATABASE || "testdb"]
+    );
 
     if (columns.length === 0) {
       console.log("warehouse字段不存在，正在添加...");
