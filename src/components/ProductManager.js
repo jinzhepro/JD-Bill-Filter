@@ -7,6 +7,7 @@ import Button from "./ui/Button";
 import { ProductImport } from "./ProductImport";
 import {
   createProductTable,
+  ensureWarehouseColumn,
   pushProductsToMySQL,
   getProductsFromMySQL,
   deleteProductFromMySQL,
@@ -374,6 +375,27 @@ export function ProductManager() {
     }
   };
 
+  // 修复warehouse字段
+  const handleFixWarehouseColumn = async () => {
+    setIsMySqlProcessing(true);
+    setMySqlStatus("正在修复warehouse字段...");
+
+    try {
+      const result = await ensureWarehouseColumn();
+      if (result.success) {
+        setMySqlStatus("warehouse字段修复成功");
+        toast.success(result.message);
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error) {
+      setMySqlStatus("warehouse字段修复失败");
+      toast.error(`warehouse字段修复失败: ${error.message}`);
+    } finally {
+      setIsMySqlProcessing(false);
+    }
+  };
+
   // 获取过滤后的商品项
   const filteredProducts = products.filter((product) => {
     const searchLower = searchTerm.toLowerCase();
@@ -507,6 +529,14 @@ export function ProductManager() {
             className="bg-red-600 text-white hover:bg-red-700"
           >
             {isMySqlProcessing ? "清空中..." : "清空MySQL数据"}
+          </Button>
+
+          <Button
+            onClick={handleFixWarehouseColumn}
+            disabled={isMySqlProcessing}
+            className="bg-orange-600 text-white hover:bg-orange-700"
+          >
+            {isMySqlProcessing ? "修复中..." : "修复warehouse字段"}
           </Button>
         </div>
 

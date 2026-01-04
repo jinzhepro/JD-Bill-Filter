@@ -17,7 +17,6 @@ import {
   validateMultipleInventoryForms,
   createMultipleInventoryItems,
 } from "@/lib/inventoryStorage";
-import { updateProductNamesBySku } from "@/data/jdSkuMapping";
 import {
   testConnection,
   createInventoryTable,
@@ -218,12 +217,42 @@ export function InventoryManager() {
 
     if (
       window.confirm(
-        `确定要根据SKU更新所有库存项的商品名称吗？此操作将根据京东SKU映射表自动更新商品名称，无法撤销！`
+        `确定要从数据库更新所有库存项的商品名称吗？此操作将根据数据库中的商品表自动更新商品名称，无法撤销！`
       )
     ) {
       try {
-        // 使用SKU映射更新商品名称
-        const updatedItems = updateProductNamesBySku(inventoryItems);
+        // 从数据库获取商品数据
+        const { getProductsFromMySQL } = await import("@/lib/mysqlConnection");
+        const productsResult = await getProductsFromMySQL();
+
+        if (!productsResult.success) {
+          throw new Error(productsResult.message || "获取商品数据失败");
+        }
+
+        const products = productsResult.data;
+        if (!products || products.length === 0) {
+          setError("数据库中没有商品数据，请先添加商品");
+          return;
+        }
+
+        // 创建SKU到商品名称的映射
+        const skuMap = {};
+        products.forEach((product) => {
+          if (product.sku && product.productName) {
+            skuMap[product.sku.toString()] = product.productName;
+          }
+        });
+
+        // 使用数据库中的商品数据更新库存项的商品名称
+        const updatedItems = inventoryItems.map((item) => {
+          if (item.sku && skuMap[item.sku.toString()]) {
+            return {
+              ...item,
+              materialName: skuMap[item.sku.toString()],
+            };
+          }
+          return item;
+        });
 
         // 更新状态
         setInventoryItems(updatedItems);
@@ -238,9 +267,12 @@ export function InventoryManager() {
             item.materialName !== inventoryItems[index].materialName
         ).length;
 
-        addLog(`成功更新 ${updatedCount} 个库存项的商品名称`, "success");
+        addLog(
+          `成功从数据库更新 ${updatedCount} 个库存项的商品名称`,
+          "success"
+        );
       } catch (error) {
-        setError(`更新商品名称失败: ${error.message}`);
+        setError(`从数据库更新商品名称失败: ${error.message}`);
       }
     }
   };
@@ -469,6 +501,7 @@ export function InventoryManager() {
               onClick={handleUpdateProductNames}
               className="w-full md:w-auto bg-blue-600 text-white hover:bg-blue-700"
               disabled={inventoryItems.length === 0}
+              title="从数据库商品表拉取最新的商品名称并更新库存项"
             >
               立即更新商品名称
             </Button>

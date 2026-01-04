@@ -252,6 +252,30 @@ export async function createProductTable() {
   }
 }
 
+// 检查并添加warehouse字段
+export async function ensureWarehouseColumn() {
+  try {
+    const response = await fetch("/api/mysql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "ensureWarehouseColumn",
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("检查warehouse字段失败:", error);
+    return {
+      success: false,
+      message: `检查warehouse字段失败: ${error.message}`,
+    };
+  }
+}
+
 // 推送商品数据到MySQL
 export async function pushProductsToMySQL(products) {
   try {

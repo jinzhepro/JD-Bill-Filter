@@ -389,6 +389,58 @@ async function getDeductionRecords() {
   }
 }
 
+// 检查并添加商品表的warehouse字段
+async function ensureWarehouseColumn() {
+  let connection;
+  try {
+    console.log("检查商品表warehouse字段...");
+    connection = await pool.getConnection();
+
+    // 检查warehouse字段是否存在
+    const [columns] = await connection.execute(`
+      SELECT COLUMN_NAME
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = 'testdb'
+      AND TABLE_NAME = 'products'
+      AND COLUMN_NAME = 'warehouse'
+    `);
+
+    if (columns.length === 0) {
+      console.log("warehouse字段不存在，正在添加...");
+      // 添加warehouse字段
+      await connection.execute(`
+        ALTER TABLE products
+        ADD COLUMN warehouse VARCHAR(255) DEFAULT '' COMMENT '仓库'
+      `);
+
+      // 添加warehouse索引
+      await connection.execute(`
+        ALTER TABLE products
+        ADD INDEX idx_warehouse (warehouse)
+      `);
+
+      console.log("warehouse字段添加成功");
+    } else {
+      console.log("warehouse字段已存在");
+    }
+
+    if (connection) {
+      connection.release();
+    }
+
+    return { success: true, message: "warehouse字段检查完成" };
+  } catch (error) {
+    console.error("检查warehouse字段失败:", error);
+    if (connection) {
+      connection.release();
+    }
+    return {
+      success: false,
+      message: `检查warehouse字段失败: ${error.message}`,
+    };
+  }
+}
+
 // 创建商品表（如果不存在）
 async function createProductTable() {
   let connection;
@@ -415,6 +467,9 @@ async function createProductTable() {
     console.log("执行创建表SQL...");
     await connection.execute(createTableSQL);
     console.log("商品表创建SQL执行完成");
+
+    // 确保warehouse字段存在
+    await ensureWarehouseColumn();
 
     if (connection) {
       connection.release();
@@ -501,7 +556,7 @@ async function getProductsFromMySQL() {
 
     const [rows] = await connection.execute(`
       SELECT
-        id, sku, product_name, category, brand, specifications,
+        id, sku, product_name, brand, warehouse,
         created_at, updated_at
       FROM products
       ORDER BY sku
@@ -518,9 +573,8 @@ async function getProductsFromMySQL() {
       id: row.id,
       sku: row.sku,
       productName: row.product_name,
-      category: row.category,
       brand: row.brand,
-      specifications: row.specifications,
+      warehouse: row.warehouse,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }));
@@ -727,6 +781,10 @@ export async function POST(request) {
 
       case "createProductTable":
         result = await createProductTable();
+        break;
+
+      case "ensureWarehouseColumn":
+        result = await ensureWarehouseColumn();
         break;
 
       case "pushProducts":
