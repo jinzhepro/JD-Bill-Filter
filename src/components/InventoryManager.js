@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useApp } from "@/context/AppContext";
+import { useInventory } from "@/context/InventoryContext";
 import Button from "./ui/Button";
 import { BatchInventoryAdd } from "./BatchInventoryAdd";
 import { TableImport } from "./TableImport";
@@ -40,9 +40,8 @@ export function InventoryManager() {
     deleteInventoryItem,
     addLog,
     setError,
-    setInventoryMode,
     loadInventoryFromDB,
-  } = useApp();
+  } = useInventory();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isFormVisible, setIsFormVisible] = useState(false);
@@ -382,18 +381,6 @@ export function InventoryManager() {
 
   return (
     <div className="space-y-6">
-      {/* 返回按钮和标题 */}
-      <div className="flex justify-between items-center">
-        <Button
-          onClick={() => setInventoryMode(false)}
-          className="bg-gray-200 text-gray-700 hover:bg-gray-300"
-        >
-          ← 返回主界面
-        </Button>
-        <h1 className="text-2xl font-bold text-white">库存管理系统</h1>
-        <div></div>
-      </div>
-
       {/* 统计信息 */}
       <section className="bg-white rounded-xl shadow-lg p-6 animate-fade-in">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">库存统计</h2>

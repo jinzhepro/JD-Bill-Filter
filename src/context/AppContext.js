@@ -21,22 +21,6 @@ const initialState = {
   mergeMode: false, // 新增：是否处于合并模式
   mergedData: [], // 新增：合并后的数据
   fileDataArray: [], // 新增：存储多个文件的数据数组
-  // 库存管理相关状态
-  inventoryMode: false, // 是否处于库存管理模式
-  inventoryItems: [], // 库存物品列表
-  inventoryForm: {
-    // 库存表单数据
-    materialName: "",
-    quantity: "",
-    purchaseBatch: "",
-    sku: "",
-    unitPrice: "", // 单价
-    totalPrice: "", // 总价
-    taxRate: "13", // 税率，默认13%
-    taxAmount: "", // 税额
-    warehouse: "", // 仓库
-  },
-  editingInventoryId: null, // 正在编辑的库存项ID
   // SKU和批次号处理相关状态
   skuProcessedData: [], // 经过SKU替换和批次号添加的数据
   isSkuProcessing: false, // 是否正在进行SKU处理
@@ -60,17 +44,6 @@ const ActionTypes = {
   SET_MERGE_MODE: "SET_MERGE_MODE", // 新增：设置合并模式
   SET_MERGED_DATA: "SET_MERGED_DATA", // 新增：设置合并后的数据
   SET_FILE_DATA_ARRAY: "SET_FILE_DATA_ARRAY", // 新增：设置文件数据数组
-  // 库存管理相关Action类型
-  SET_INVENTORY_MODE: "SET_INVENTORY_MODE",
-  SET_INVENTORY_ITEMS: "SET_INVENTORY_ITEMS",
-  ADD_INVENTORY_ITEM: "ADD_INVENTORY_ITEM",
-  ADD_MULTIPLE_INVENTORY_ITEMS: "ADD_MULTIPLE_INVENTORY_ITEMS",
-  UPDATE_INVENTORY_ITEM: "UPDATE_INVENTORY_ITEM",
-  DELETE_INVENTORY_ITEM: "DELETE_INVENTORY_ITEM",
-  SET_INVENTORY_FORM: "SET_INVENTORY_FORM",
-  RESET_INVENTORY_FORM: "RESET_INVENTORY_FORM",
-  SET_EDITING_INVENTORY_ID: "SET_EDITING_INVENTORY_ID",
-  CLEAR_INVENTORY_DATA: "CLEAR_INVENTORY_DATA",
   // SKU和批次号处理相关Action类型
   SET_SKU_PROCESSED_DATA: "SET_SKU_PROCESSED_DATA",
   SET_SKU_PROCESSING: "SET_SKU_PROCESSING",
@@ -139,69 +112,6 @@ function appReducer(state, action) {
 
     case ActionTypes.SET_FILE_DATA_ARRAY:
       return { ...state, fileDataArray: action.payload };
-
-    // 库存管理相关处理
-    case ActionTypes.SET_INVENTORY_MODE:
-      return { ...state, inventoryMode: action.payload };
-
-    case ActionTypes.SET_INVENTORY_ITEMS:
-      return { ...state, inventoryItems: action.payload };
-
-    case ActionTypes.ADD_INVENTORY_ITEM:
-      return {
-        ...state,
-        inventoryItems: [...state.inventoryItems, action.payload],
-      };
-
-    case ActionTypes.ADD_MULTIPLE_INVENTORY_ITEMS:
-      return {
-        ...state,
-        inventoryItems: [...state.inventoryItems, ...action.payload],
-      };
-
-    case ActionTypes.UPDATE_INVENTORY_ITEM:
-      return {
-        ...state,
-        inventoryItems: state.inventoryItems.map((item) =>
-          item.id === action.payload.id ? action.payload : item
-        ),
-      };
-
-    case ActionTypes.DELETE_INVENTORY_ITEM:
-      return {
-        ...state,
-        inventoryItems: state.inventoryItems.filter(
-          (item) => item.id !== action.payload
-        ),
-      };
-
-    case ActionTypes.SET_INVENTORY_FORM:
-      return {
-        ...state,
-        inventoryForm: { ...state.inventoryForm, ...action.payload },
-      };
-
-    case ActionTypes.RESET_INVENTORY_FORM:
-      return {
-        ...state,
-        inventoryForm: {
-          materialName: "",
-          quantity: "",
-          purchaseBatch: "",
-          sku: "",
-          unitPrice: "", // 单价
-          totalPrice: "", // 总价
-          taxRate: "13", // 税率，默认13%
-          taxAmount: "", // 税额
-          warehouse: "", // 仓库
-        },
-      };
-
-    case ActionTypes.SET_EDITING_INVENTORY_ID:
-      return { ...state, editingInventoryId: action.payload };
-
-    case ActionTypes.CLEAR_INVENTORY_DATA:
-      return { ...state, inventoryItems: [] };
 
     // SKU和批次号处理相关处理
     case ActionTypes.SET_SKU_PROCESSED_DATA:
@@ -302,140 +212,6 @@ export function AppProvider({ children }) {
 
     setFileDataArray: useCallback((data) => {
       dispatch({ type: ActionTypes.SET_FILE_DATA_ARRAY, payload: data });
-    }, []),
-
-    // 库存管理相关actions
-    setInventoryMode: useCallback((inventoryMode) => {
-      dispatch({
-        type: ActionTypes.SET_INVENTORY_MODE,
-        payload: inventoryMode,
-      });
-    }, []),
-
-    setInventoryItems: useCallback((items) => {
-      dispatch({ type: ActionTypes.SET_INVENTORY_ITEMS, payload: items });
-    }, []),
-
-    addInventoryItem: useCallback(
-      async (item) => {
-        dispatch({ type: ActionTypes.ADD_INVENTORY_ITEM, payload: item });
-        // 保存到MySQL数据库
-        try {
-          const { pushInventoryToMySQL } = await import(
-            "@/lib/mysqlConnection"
-          );
-          await pushInventoryToMySQL([...state.inventoryItems, item]);
-        } catch (error) {
-          console.error("保存库存项到数据库失败:", error);
-        }
-      },
-      [state.inventoryItems]
-    ),
-
-    addMultipleInventoryItems: useCallback(
-      async (items) => {
-        dispatch({
-          type: ActionTypes.ADD_MULTIPLE_INVENTORY_ITEMS,
-          payload: items,
-        });
-        // 保存到MySQL数据库
-        try {
-          const { pushInventoryToMySQL } = await import(
-            "@/lib/mysqlConnection"
-          );
-          await pushInventoryToMySQL([...state.inventoryItems, ...items]);
-        } catch (error) {
-          console.error("批量保存库存项到数据库失败:", error);
-        }
-      },
-      [state.inventoryItems]
-    ),
-
-    updateInventoryItem: useCallback(
-      async (item) => {
-        dispatch({ type: ActionTypes.UPDATE_INVENTORY_ITEM, payload: item });
-        // 保存到MySQL数据库
-        try {
-          const { pushInventoryToMySQL } = await import(
-            "@/lib/mysqlConnection"
-          );
-          const updatedItems = state.inventoryItems.map((i) =>
-            i.id === item.id ? item : i
-          );
-          await pushInventoryToMySQL(updatedItems);
-        } catch (error) {
-          console.error("更新库存项到数据库失败:", error);
-        }
-      },
-      [state.inventoryItems]
-    ),
-
-    deleteInventoryItem: useCallback(async (id) => {
-      // 先从数据库删除
-      try {
-        const { deleteInventoryFromMySQL } = await import(
-          "@/lib/mysqlConnection"
-        );
-        const result = await deleteInventoryFromMySQL(id);
-
-        if (result.success) {
-          // 数据库删除成功后，更新本地状态
-          dispatch({ type: ActionTypes.DELETE_INVENTORY_ITEM, payload: id });
-        } else {
-          console.error("删除库存项从数据库失败:", result.message);
-          dispatch({
-            type: ActionTypes.SET_ERROR,
-            payload: `删除库存项失败: ${result.message}`,
-          });
-        }
-      } catch (error) {
-        console.error("删除库存项从数据库失败:", error);
-        dispatch({
-          type: ActionTypes.SET_ERROR,
-          payload: `删除库存项失败: ${error.message}`,
-        });
-      }
-    }, []),
-
-    setInventoryForm: useCallback((formData) => {
-      dispatch({ type: ActionTypes.SET_INVENTORY_FORM, payload: formData });
-    }, []),
-
-    resetInventoryForm: useCallback(() => {
-      dispatch({ type: ActionTypes.RESET_INVENTORY_FORM });
-    }, []),
-
-    setEditingInventoryId: useCallback((id) => {
-      dispatch({ type: ActionTypes.SET_EDITING_INVENTORY_ID, payload: id });
-    }, []),
-
-    clearInventoryData: useCallback(async () => {
-      // 先清空MySQL数据库
-      try {
-        const { clearInventoryInMySQL } = await import("@/lib/mysqlConnection");
-        const result = await clearInventoryInMySQL();
-
-        if (result.success) {
-          // 清空成功后，重新从数据库加载数据
-          const items = await getInventoryFromDatabase();
-          dispatch({
-            type: ActionTypes.LOAD_INVENTORY_FROM_DB,
-            payload: items,
-          });
-        } else {
-          console.error("清空库存数据失败:", result.message);
-          dispatch({
-            type: ActionTypes.SET_ERROR,
-            payload: `清空库存数据失败: ${result.message}`,
-          });
-        }
-      } catch (error) {
-        console.error("清空库存数据到数据库失败:", error);
-        dispatch({
-          type: ActionTypes.SET_ERROR,
-          payload: `清空库存数据失败: ${error.message}`,
-        });
-      }
     }, []),
 
     // SKU和批次号处理相关actions
