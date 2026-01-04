@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { useInventory } from "@/context/InventoryContext";
 import Button from "./ui/Button";
 import { BatchInventoryAdd } from "./BatchInventoryAdd";
@@ -364,6 +365,22 @@ export function InventoryManager() {
       addLog(`MySQL数据清空失败: ${error.message}`, "error");
     } finally {
       setIsMySqlProcessing(false);
+    }
+  };
+
+  // 处理复制物料名称
+  const handleCopyMaterialName = async (materialName, event) => {
+    // 阻止事件冒泡
+    if (event) {
+      event.stopPropagation();
+    }
+
+    try {
+      await navigator.clipboard.writeText(materialName);
+      toast.success(`物料名称 "${materialName}" 已复制到剪贴板`);
+    } catch (error) {
+      console.error("复制失败:", error);
+      toast.error(`复制物料名称失败: ${error.message}`);
     }
   };
 
@@ -812,7 +829,20 @@ export function InventoryManager() {
                             className="px-3 py-3 truncate"
                             title={item.materialName}
                           >
-                            {item.materialName}
+                            <div className="flex items-center gap-2">
+                              <span className="flex-1 truncate">
+                                {item.materialName}
+                              </span>
+                              <Button
+                                onClick={(e) =>
+                                  handleCopyMaterialName(item.materialName, e)
+                                }
+                                className="px-2 py-1 text-xs bg-gray-500 text-white hover:bg-gray-600 flex-shrink-0"
+                                title="复制物料名称"
+                              >
+                                复制
+                              </Button>
+                            </div>
                           </td>
                           <td className="px-3 py-3 text-center">
                             {item.quantity}
