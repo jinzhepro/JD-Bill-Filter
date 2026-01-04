@@ -3,7 +3,7 @@
 import React from "react";
 import { InventoryProvider } from "@/context/InventoryContext";
 import { InventoryManager } from "@/components/InventoryManager";
-import { ErrorModal } from "@/components/ui/Modal";
+import { ErrorModal } from "@/components/ui/modal";
 import { useInventory } from "@/context/InventoryContext";
 import { MainLayout } from "@/components/MainLayout";
 

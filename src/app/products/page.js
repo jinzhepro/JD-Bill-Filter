@@ -3,7 +3,7 @@
 import React from "react";
 import { ProductProvider } from "@/context/ProductContext";
 import { ProductManager } from "@/components/ProductManager";
-import { ErrorModal } from "@/components/ui/Modal";
+import { ErrorModal } from "@/components/ui/modal";
 import { useProduct } from "@/context/ProductContext";
 import { MainLayout } from "@/components/MainLayout";
 
