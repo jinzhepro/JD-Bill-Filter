@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Button } from "./ui/button.js";
+import { Button } from "./ui/button";
 import {
   getDeductionRecords,
   rollbackDeductionRecords,

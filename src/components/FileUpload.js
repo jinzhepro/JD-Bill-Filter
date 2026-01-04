@@ -9,7 +9,7 @@ import {
   downloadExcel,
 } from "@/lib/excelHandler";
 import { validateDataStructure, processOrderData } from "@/lib/dataProcessor";
-import { Button } from "./ui/button.js";
+import { Button } from "./ui/button";
 
 export default function FileUpload() {
   const {

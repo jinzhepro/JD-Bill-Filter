@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./dialog.js";
-import { Button } from "./button.js";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./dialog";
+import { Button } from "./button";
 
 export default function Modal({
   isOpen,

@@ -5,7 +5,7 @@ import { useApp } from "@/context/AppContext";
 import { useSupplier } from "@/context/SupplierContext";
 import { downloadExcel } from "@/lib/excelHandler";
 import { processWithSkuAndBatch } from "@/lib/dataProcessor";
-import { Button } from "./ui/button.js";
+import { Button } from "./ui/button";
 import { toast } from "sonner";
 
 export default function ResultDisplay() {

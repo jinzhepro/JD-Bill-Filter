@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useSupplier } from "@/context/SupplierContext";
-import { Button } from "./ui/button.js";
-import Modal, { ConfirmModal } from "./ui/Modal.js";
+import { Button } from "./ui/button";
+import Modal, { ConfirmModal } from "./ui/Modal";
 import { useToast } from "@/hooks/use-toast";
 
 export default function SupplierManager() {

@@ -12,7 +12,7 @@ import {
   validateProductDataStructure,
   processProductImportData,
 } from "@/lib/dataProcessor";
-import { Button } from "./ui/button.js";
+import { Button } from "./ui/button";
 
 export function ProductImport() {
   const { products, addProduct, setError, setLoading } = useProduct();

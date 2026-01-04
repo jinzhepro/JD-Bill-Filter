@@ -8,7 +8,7 @@ import {
   readFile,
 } from "@/lib/excelHandler";
 import { validateDataStructure } from "@/lib/dataProcessor";
-import { Button } from "./ui/button.js";
+import { Button } from "./ui/button";
 
 export default function MultiFileUpload() {
   const {

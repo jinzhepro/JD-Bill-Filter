@@ -7,7 +7,7 @@ import {
   processWithSkuAndBatch,
 } from "@/lib/dataProcessor";
 import { downloadExcel } from "@/lib/excelHandler";
-import { Button } from "./ui/button.js";
+import { Button } from "./ui/button";
 import { toast } from "sonner";
 
 export default function MergeProcessor() {
