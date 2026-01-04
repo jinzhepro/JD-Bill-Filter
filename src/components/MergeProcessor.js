@@ -396,6 +396,19 @@ export default function MergeProcessor() {
                       </span>
                     </div>
                     <div>
+                      <span className="text-blue-700">税率匹配:</span>
+                      <span className="ml-2 font-medium text-blue-900">
+                        {
+                          skuProcessedData.filter(
+                            (item) =>
+                              item["税率"] &&
+                              item["税率"].toString().trim() !== ""
+                          ).length
+                        }{" "}
+                        条
+                      </span>
+                    </div>
+                    <div>
                       <span className="text-blue-700">替换失败:</span>
                       <span className="ml-2 font-medium text-blue-900">
                         {
@@ -550,6 +563,10 @@ export default function MergeProcessor() {
                           ? `¥${parseFloat(value).toFixed(2)}`
                           : key === "批次号"
                           ? value || "未匹配"
+                          : key === "税率"
+                          ? value
+                            ? `${value}%`
+                            : "未匹配"
                           : value}
                       </td>
                     ))}

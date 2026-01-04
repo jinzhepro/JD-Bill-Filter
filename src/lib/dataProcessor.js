@@ -346,6 +346,8 @@ export function processWithSkuAndBatch(
       newItem["商品名称"] = matchedInventoryItem.materialName;
       // 添加批次号
       newItem["批次号"] = matchedInventoryItem.purchaseBatch;
+      // 添加税率
+      newItem["税率"] = matchedInventoryItem.taxRate || "";
 
       // 通过批次号匹配供应商
       let matchedSupplier = null;
@@ -393,8 +395,9 @@ export function processWithSkuAndBatch(
         }`
       );
     } else {
-      // 如果没有匹配的库存项，添加空批次号和供应商信息
+      // 如果没有匹配的库存项，添加空批次号、税率和供应商信息
       newItem["批次号"] = "";
+      newItem["税率"] = "";
       newItem["供应商ID"] = "";
       newItem["供应商名称"] = "";
       failedSkus.push(productNo);
