@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useSupplier } from "@/context/SupplierContext";
 import { Button } from "./ui/button.js";
-import Modal from "./ui/Modal";
+import Modal, { ConfirmModal } from "./ui/Modal";
+import { useToast } from "@/hooks/use-toast";
 
 export default function SupplierManager() {
   const {
@@ -19,9 +20,13 @@ export default function SupplierManager() {
     convertTextToSuppliers,
   } = useSupplier();
 
+  const { toast } = useToast();
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deletingSupplier, setDeletingSupplier] = useState(null);
   const [editingSupplier, setEditingSupplier] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -88,6 +93,8 @@ export default function SupplierManager() {
     setIsAddModalOpen(false);
     setIsEditModalOpen(false);
     setIsConvertModalOpen(false);
+    setIsDeleteModalOpen(false);
+    setDeletingSupplier(null);
     resetForm();
   }, [resetForm]);
 
@@ -125,17 +132,27 @@ export default function SupplierManager() {
       navigator.clipboard
         .writeText(supplierIds)
         .then(() => {
-          // 可以添加一个成功提示
-          alert("供应商ID已复制到剪贴板");
+          toast({
+            title: "复制成功",
+            description: "供应商ID已复制到剪贴板",
+          });
         })
         .catch((err) => {
           console.error("复制失败:", err);
-          alert("复制失败，请手动复制");
+          toast({
+            variant: "destructive",
+            title: "复制失败",
+            description: "请手动复制",
+          });
         });
     } else {
-      alert("没有可复制的供应商ID");
+      toast({
+        variant: "destructive",
+        title: "无数据",
+        description: "没有可复制的供应商ID",
+      });
     }
-  }, [convertResults]);
+  }, [convertResults, toast]);
 
   // 处理添加供应商
   const handleAddSupplier = useCallback(() => {
@@ -156,14 +173,22 @@ export default function SupplierManager() {
   }, [editingSupplier, updateSupplier, formData, handleCloseModal]);
 
   // 处理删除供应商
-  const handleDeleteSupplier = useCallback(
-    (supplier) => {
-      if (window.confirm(`确定要删除供应商 "${supplier.name}" 吗？`)) {
-        deleteSupplier(supplier.id);
-      }
-    },
-    [deleteSupplier]
-  );
+  const handleDeleteSupplier = useCallback((supplier) => {
+    setDeletingSupplier(supplier);
+    setIsDeleteModalOpen(true);
+  }, []);
+
+  // 确认删除供应商
+  const handleConfirmDelete = useCallback(() => {
+    if (deletingSupplier) {
+      deleteSupplier(deletingSupplier.id);
+      toast({
+        title: "删除成功",
+        description: `供应商 "${deletingSupplier.name}" 已删除`,
+      });
+      handleCloseModal();
+    }
+  }, [deletingSupplier, deleteSupplier, toast, handleCloseModal]);
 
   // 处理回车键提交
   const handleKeyPress = useCallback(
@@ -515,6 +540,18 @@ export default function SupplierManager() {
           )}
         </div>
       </Modal>
+
+      {/* 确认删除模态框 */}
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={handleCloseModal}
+        onConfirm={handleConfirmDelete}
+        title="删除供应商"
+        message={`确定要删除供应商 "${deletingSupplier?.name}" 吗？此操作不可撤销。`}
+        confirmText="删除"
+        cancelText="取消"
+        confirmVariant="destructive"
+      />
     </div>
   );
 }
