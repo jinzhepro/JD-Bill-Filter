@@ -6,8 +6,6 @@ import { Button } from "./ui/button";
 import Modal, { ConfirmModal } from "./ui/modal";
 import { TableImport } from "./TableImport";
 import { RecordsModal } from "./RecordsModal";
-import { BatchPdfUpload } from "./BatchPdfUpload";
-import { BatchPdfViewer } from "./BatchPdfViewer";
 import { useToast } from "@/hooks/use-toast";
 import {
   updateInventoryItem,
@@ -53,11 +51,6 @@ export function InventoryManager() {
   const [isRecordsModalOpen, setIsRecordsModalOpen] = useState(false);
   const [isMySqlProcessing, setIsMySqlProcessing] = useState(false);
   const [mySqlStatus, setMySqlStatus] = useState("");
-
-  // PDF相关状态
-  const [isPdfUploadModalOpen, setIsPdfUploadModalOpen] = useState(false);
-  const [isPdfViewerModalOpen, setIsPdfViewerModalOpen] = useState(false);
-  const [selectedBatchForPdf, setSelectedBatchForPdf] = useState("");
 
   // 确认对话框状态
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -579,37 +572,6 @@ export function InventoryManager() {
     }
   };
 
-  // PDF上传相关处理
-  const handlePdfUpload = (batchName) => {
-    setSelectedBatchForPdf(batchName);
-    setIsPdfUploadModalOpen(true);
-  };
-
-  const handlePdfUploadSuccess = (uploadedFile) => {
-    toast({
-      title: "上传成功",
-      description: `PDF文件 "${uploadedFile.fileName}" 已成功上传到批次 "${selectedBatchForPdf}"`,
-    });
-    setIsPdfUploadModalOpen(false);
-    setSelectedBatchForPdf("");
-  };
-
-  const handlePdfUploadClose = () => {
-    setIsPdfUploadModalOpen(false);
-    setSelectedBatchForPdf("");
-  };
-
-  // PDF查看相关处理
-  const handlePdfView = (batchName) => {
-    setSelectedBatchForPdf(batchName);
-    setIsPdfViewerModalOpen(true);
-  };
-
-  const handlePdfViewerClose = () => {
-    setIsPdfViewerModalOpen(false);
-    setSelectedBatchForPdf("");
-  };
-
   // 获取过滤后的库存项
   const filteredItems = searchInventoryItems(inventoryItems, searchTerm);
 
@@ -806,20 +768,6 @@ export function InventoryManager() {
                         title="删除整个批次"
                       >
                         删除批次
-                      </Button>
-                      <Button
-                        onClick={() => handlePdfUpload(batch)}
-                        className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700"
-                        title="上传PDF文件"
-                      >
-                        上传PDF
-                      </Button>
-                      <Button
-                        onClick={() => handlePdfView(batch)}
-                        className="px-2 py-1 text-xs bg-green-600 hover:bg-green-700"
-                        title="查看PDF文件"
-                      >
-                        查看PDF
                       </Button>
                     </div>
                     <div className="text-right text-sm text-gray-600">
@@ -1055,23 +1003,6 @@ export function InventoryManager() {
           onCancel={handleTableImportCancel}
         />
       </Modal>
-
-      {/* PDF上传模态框 */}
-      {isPdfUploadModalOpen && (
-        <BatchPdfUpload
-          batchName={selectedBatchForPdf}
-          onUploadSuccess={handlePdfUploadSuccess}
-          onClose={handlePdfUploadClose}
-        />
-      )}
-
-      {/* PDF查看模态框 */}
-      {isPdfViewerModalOpen && (
-        <BatchPdfViewer
-          batchName={selectedBatchForPdf}
-          onClose={handlePdfViewerClose}
-        />
-      )}
     </div>
   );
 }
