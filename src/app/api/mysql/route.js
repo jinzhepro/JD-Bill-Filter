@@ -1160,6 +1160,26 @@ export async function POST(request) {
         result = await getInboundRecords();
         break;
 
+      case "createPdfTable":
+        result = await createPdfTable();
+        break;
+
+      case "uploadBatchPdf":
+        result = await uploadBatchPdf(data);
+        break;
+
+      case "getBatchPdfs":
+        result = await getBatchPdfs(data);
+        break;
+
+      case "deleteBatchPdf":
+        result = await deleteBatchPdf(data);
+        break;
+
+      case "getBatchPdfById":
+        result = await getBatchPdfById(data);
+        break;
+
       default:
         result = { success: false, message: "未知的操作类型" };
     }
@@ -1305,6 +1325,245 @@ async function createUserTable() {
   } catch (error) {
     console.error("创建用户表失败:", error);
     return { success: false, message: `创建用户表失败: ${error.message}` };
+  }
+}
+
+// ========== PDF文件管理相关函数 ==========
+
+// 创建PDF文件表（如果不存在）
+async function createPdfTable() {
+  try {
+    const connection = await pool.getConnection();
+
+    // 创建表（如果不存在）
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS batch_pdfs (
+        id VARCHAR(255) PRIMARY KEY,
+        purchase_batch VARCHAR(255) NOT NULL COMMENT '采购批号',
+        file_name VARCHAR(500) NOT NULL COMMENT '文件名称',
+        file_content LONGBLOB NOT NULL COMMENT 'PDF文件内容',
+        file_size BIGINT DEFAULT 0 COMMENT '文件大小（字节）',
+        file_type VARCHAR(50) DEFAULT 'pdf' COMMENT '文件类型',
+        upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '上传时间',
+        description TEXT COMMENT '文件描述',
+        INDEX idx_purchase_batch (purchase_batch),
+        INDEX idx_upload_time (upload_time)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='批次PDF文件表'
+    `;
+
+    await connection.execute(createTableSQL);
+    connection.release();
+
+    return { success: true, message: "PDF文件表创建成功或已存在" };
+  } catch (error) {
+    console.error("创建PDF文件表失败:", error);
+    return { success: false, message: `创建PDF文件表失败: ${error.message}` };
+  }
+}
+
+// 上传批次PDF文件
+async function uploadBatchPdf(data) {
+  const { batchName, fileName, fileContent, fileSize, description } = data;
+
+  if (!batchName || !fileName || !fileContent) {
+    return { success: false, message: "缺少必要参数：批号、文件名或文件内容" };
+  }
+
+  try {
+    // 先确保PDF表存在
+    await createPdfTable();
+
+    const connection = await pool.getConnection();
+
+    // 生成唯一ID
+    const pdfId = `pdf-${Date.now()}-${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+
+    // 插入PDF文件记录
+    const insertSQL = `
+      INSERT INTO batch_pdfs (id, purchase_batch, file_name, file_content, file_size, description)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `;
+
+    // 将base64文件内容转换为Buffer
+    let fileBuffer;
+    if (typeof fileContent === "string") {
+      // 如果是base64字符串，先解码
+      fileBuffer = Buffer.from(fileContent, "base64");
+    } else {
+      // 如果已经是Buffer
+      fileBuffer = fileContent;
+    }
+
+    await connection.execute(insertSQL, [
+      pdfId,
+      batchName,
+      fileName,
+      fileBuffer,
+      fileSize || fileBuffer.length,
+      description || "",
+    ]);
+
+    connection.release();
+
+    return {
+      success: true,
+      message: `成功上传PDF文件 "${fileName}" 到批次 "${batchName}"`,
+      data: {
+        id: pdfId,
+        batchName,
+        fileName,
+        fileSize: fileSize || fileBuffer.length,
+        description,
+      },
+    };
+  } catch (error) {
+    console.error("上传PDF文件失败:", error);
+    return { success: false, message: `上传PDF文件失败: ${error.message}` };
+  }
+}
+
+// 获取批次PDF文件列表
+async function getBatchPdfs(batchName) {
+  if (!batchName) {
+    return { success: false, message: "缺少批号参数" };
+  }
+
+  try {
+    const connection = await pool.getConnection();
+
+    const [rows] = await connection.execute(
+      `
+      SELECT 
+        id, purchase_batch, file_name, file_size, 
+        file_type, upload_time, description
+      FROM batch_pdfs 
+      WHERE purchase_batch = ?
+      ORDER BY upload_time DESC
+    `,
+      [batchName]
+    );
+
+    connection.release();
+
+    const pdfs = rows.map((row) => ({
+      id: row.id,
+      batchName: row.purchase_batch,
+      fileName: row.file_name,
+      fileSize: row.file_size,
+      fileType: row.file_type,
+      uploadTime: row.upload_time,
+      description: row.description,
+      // 生成下载URL
+      downloadUrl: `/api/pdf/download/${row.id}`,
+    }));
+
+    return {
+      success: true,
+      data: pdfs,
+      message: `获取了批次 "${batchName}" 的 ${pdfs.length} 个PDF文件`,
+    };
+  } catch (error) {
+    console.error("获取批次PDF文件失败:", error);
+    return { success: false, message: `获取批次PDF文件失败: ${error.message}` };
+  }
+}
+
+// 删除批次PDF文件
+async function deleteBatchPdf(pdfId) {
+  if (!pdfId) {
+    return { success: false, message: "缺少PDF文件ID" };
+  }
+
+  try {
+    const connection = await pool.getConnection();
+
+    // 先查询文件信息
+    const [rows] = await connection.execute(
+      "SELECT file_name FROM batch_pdfs WHERE id = ?",
+      [pdfId]
+    );
+
+    if (rows.length === 0) {
+      connection.release();
+      return { success: false, message: "未找到要删除的PDF文件" };
+    }
+
+    const { file_name: fileName } = rows[0];
+
+    // 删除数据库记录
+    const [result] = await connection.execute(
+      "DELETE FROM batch_pdfs WHERE id = ?",
+      [pdfId]
+    );
+
+    connection.release();
+
+    if (result.affectedRows > 0) {
+      // 这里可以添加删除物理文件的逻辑
+      // 由于是在服务器环境中，我们暂时只删除数据库记录
+
+      return {
+        success: true,
+        message: `成功删除PDF文件 "${fileName}"`,
+      };
+    } else {
+      return { success: false, message: "未找到要删除的PDF文件" };
+    }
+  } catch (error) {
+    console.error("删除PDF文件失败:", error);
+    return { success: false, message: `删除PDF文件失败: ${error.message}` };
+  }
+}
+
+// 获取单个PDF文件信息
+async function getBatchPdfById(pdfId) {
+  if (!pdfId) {
+    return { success: false, message: "缺少PDF文件ID" };
+  }
+
+  try {
+    const connection = await pool.getConnection();
+
+    const [rows] = await connection.execute(
+      `
+      SELECT 
+        id, purchase_batch, file_name, file_size, 
+        file_type, upload_time, description
+      FROM batch_pdfs 
+      WHERE id = ?
+    `,
+      [pdfId]
+    );
+
+    connection.release();
+
+    if (rows.length === 0) {
+      return { success: false, message: "未找到指定的PDF文件" };
+    }
+
+    const row = rows[0];
+    const pdf = {
+      id: row.id,
+      batchName: row.purchase_batch,
+      fileName: row.file_name,
+      fileSize: row.file_size,
+      fileType: row.file_type,
+      uploadTime: row.upload_time,
+      description: row.description,
+      // 生成下载URL
+      downloadUrl: `/api/pdf/download/${row.id}`,
+    };
+
+    return {
+      success: true,
+      data: pdf,
+      message: `获取PDF文件 "${row.file_name}" 信息成功`,
+    };
+  } catch (error) {
+    console.error("获取PDF文件信息失败:", error);
+    return { success: false, message: `获取PDF文件信息失败: ${error.message}` };
   }
 }
 

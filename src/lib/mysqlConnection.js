@@ -592,3 +592,107 @@ export async function createUserTable() {
     };
   }
 }
+
+// ========== PDF文件管理相关函数 ==========
+
+// 创建PDF文件表
+export async function createPdfTable() {
+  try {
+    const response = await fetch("/api/mysql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "createPdfTable",
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("创建PDF文件表失败:", error);
+    return {
+      success: false,
+      message: `创建PDF文件表失败: ${error.message}`,
+    };
+  }
+}
+
+// 上传批次PDF文件
+export async function uploadBatchPdf(file, batchName, description = "") {
+  if (!file || !batchName) {
+    return { success: false, message: "缺少文件或批号参数" };
+  }
+
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("batchName", batchName);
+    formData.append("description", description);
+
+    const response = await fetch("/api/pdf/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("上传PDF文件失败:", error);
+    return {
+      success: false,
+      message: `上传PDF文件失败: ${error.message}`,
+    };
+  }
+}
+
+// 获取批次PDF文件列表
+export async function getBatchPdfs(batchName) {
+  try {
+    const response = await fetch("/api/mysql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "getBatchPdfs",
+        data: batchName,
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("获取批次PDF文件失败:", error);
+    return {
+      success: false,
+      message: `获取批次PDF文件失败: ${error.message}`,
+    };
+  }
+}
+
+// 删除批次PDF文件
+export async function deleteBatchPdf(pdfId) {
+  try {
+    const response = await fetch("/api/mysql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "deleteBatchPdf",
+        data: pdfId,
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("删除PDF文件失败:", error);
+    return {
+      success: false,
+      message: `删除PDF文件失败: ${error.message}`,
+    };
+  }
+}

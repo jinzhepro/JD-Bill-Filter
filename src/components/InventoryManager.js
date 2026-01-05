@@ -25,6 +25,7 @@ import {
   healthCheck,
   saveInboundRecords,
 } from "@/lib/mysqlConnection";
+import { BatchPdfUpload } from "./BatchPdfUpload";
 
 export function InventoryManager() {
   const {
@@ -61,6 +62,10 @@ export function InventoryManager() {
   const [isConfirmDeleteBatchModalOpen, setIsConfirmDeleteBatchModalOpen] =
     useState(false);
   const [deletingBatch, setDeletingBatch] = useState(null);
+
+  // PDF管理状态
+  const [expandedBatches, setExpandedBatches] = useState(new Set());
+  const [batchPdfCounts, setBatchPdfCounts] = useState({});
 
   // 在组件挂载时从数据库加载库存数据
   useEffect(() => {
@@ -645,6 +650,30 @@ export function InventoryManager() {
     setDeletingBatch(null);
   }, []);
 
+  // 切换批次PDF展开/折叠
+  const toggleBatchPdfExpansion = useCallback((batchName) => {
+    setExpandedBatches((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(batchName)) {
+        newSet.delete(batchName);
+      } else {
+        newSet.add(batchName);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // 处理PDF列表更新
+  const handlePdfListUpdate = useCallback((pdfs) => {
+    // 更新PDF数量统计
+    setBatchPdfCounts((prev) => ({
+      ...prev,
+      [expandedBatches.has(
+        Object.keys(prev).find((key) => prev[key] !== prev[key])
+      )]: pdfs.length,
+    }));
+  }, []);
+
   return (
     <div className="space-y-6">
       {/* 统计信息 */}
@@ -769,6 +798,14 @@ export function InventoryManager() {
                       >
                         删除批次
                       </Button>
+                      <Button
+                        onClick={() => toggleBatchPdfExpansion(batch)}
+                        variant="outline"
+                        className="px-2 py-1 text-xs"
+                        title="PDF文件管理"
+                      >
+                        📄 PDF ({batchPdfCounts[batch] || 0})
+                      </Button>
                     </div>
                     <div className="text-right text-sm text-gray-600">
                       <div>
@@ -788,6 +825,21 @@ export function InventoryManager() {
                     </div>
                   </div>
                 </div>
+
+                {/* PDF上传区域 */}
+                {expandedBatches.has(batch) && (
+                  <div className="p-4 bg-blue-50 border-b border-gray-200">
+                    <BatchPdfUpload
+                      batchName={batch}
+                      onPdfListUpdate={(pdfs) => {
+                        setBatchPdfCounts((prev) => ({
+                          ...prev,
+                          [batch]: pdfs.length,
+                        }));
+                      }}
+                    />
+                  </div>
+                )}
 
                 {/* 批号下的物品列表 */}
                 <div>
