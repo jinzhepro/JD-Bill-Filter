@@ -1180,6 +1180,18 @@ export async function POST(request) {
         result = await getBatchPdfById(data);
         break;
 
+      case "createBatchStatusTable":
+        result = await createBatchStatusTable();
+        break;
+
+      case "saveBatchStatus":
+        result = await saveBatchStatus(data);
+        break;
+
+      case "getBatchStatus":
+        result = await getBatchStatus();
+        break;
+
       default:
         result = { success: false, message: "未知的操作类型" };
     }
@@ -1728,6 +1740,112 @@ async function getInboundRecords() {
     return {
       success: false,
       message: `获取入库记录失败: ${error.message}`,
+    };
+  }
+}
+
+// ========== 批次状态管理相关函数 ==========
+
+// 创建批次状态表（如果不存在）
+async function createBatchStatusTable() {
+  try {
+    const connection = await pool.getConnection();
+
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS batch_entry_status (
+        batch_name VARCHAR(255) PRIMARY KEY COMMENT '采购批号',
+        is_entered BOOLEAN DEFAULT FALSE COMMENT '是否已录入',
+        update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+        INDEX idx_batch_name (batch_name)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='批次录入状态表'
+    `;
+
+    await connection.execute(createTableSQL);
+    connection.release();
+
+    return { success: true, message: "批次状态表创建成功或已存在" };
+  } catch (error) {
+    console.error("创建批次状态表失败:", error);
+    return {
+      success: false,
+      message: `创建批次状态表失败: ${error.message}`,
+    };
+  }
+}
+
+// 保存批次状态
+async function saveBatchStatus(batchData) {
+  const { batchName, isEntered, updateTime } = batchData;
+
+  if (!batchName) {
+    return { success: false, message: "缺少批次名称参数" };
+  }
+
+  try {
+    // 先确保批次状态表存在
+    await createBatchStatusTable();
+
+    const connection = await pool.getConnection();
+
+    // 使用 INSERT ... ON DUPLICATE KEY UPDATE，不显式设置update_time
+    const insertSQL = `
+      INSERT INTO batch_entry_status (batch_name, is_entered)
+      VALUES (?, ?)
+      ON DUPLICATE KEY UPDATE
+        is_entered = VALUES(is_entered)
+    `;
+
+    await connection.execute(insertSQL, [batchName, isEntered]);
+
+    connection.release();
+
+    return {
+      success: true,
+      message: `批次 "${batchName}" 状态已保存为 ${
+        isEntered ? "已录入" : "未录入"
+      }`,
+    };
+  } catch (error) {
+    console.error("保存批次状态失败:", error);
+    return {
+      success: false,
+      message: `保存批次状态失败: ${error.message}`,
+    };
+  }
+}
+
+// 获取所有批次状态
+async function getBatchStatus() {
+  try {
+    // 先确保批次状态表存在
+    await createBatchStatusTable();
+
+    const connection = await pool.getConnection();
+
+    const [rows] = await connection.execute(`
+      SELECT batch_name, is_entered, update_time
+      FROM batch_entry_status
+      ORDER BY update_time DESC
+    `);
+
+    connection.release();
+
+    // 转换为对象格式
+    const statusMap = {};
+    rows.forEach((row) => {
+      statusMap[row.batch_name] = row.is_entered;
+    });
+
+    return {
+      success: true,
+      data: statusMap,
+      message: `获取了 ${rows.length} 个批次的状态`,
+    };
+  } catch (error) {
+    console.error("获取批次状态失败:", error);
+    return {
+      success: false,
+      message: `获取批次状态失败: ${error.message}`,
     };
   }
 }

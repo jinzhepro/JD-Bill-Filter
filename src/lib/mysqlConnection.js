@@ -696,3 +696,85 @@ export async function deleteBatchPdf(pdfId) {
     };
   }
 }
+
+// ========== 批次状态管理相关函数 ==========
+
+// 创建批次状态表
+export async function createBatchStatusTable() {
+  try {
+    const response = await fetch("/api/mysql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "createBatchStatusTable",
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("创建批次状态表失败:", error);
+    return {
+      success: false,
+      message: `创建批次状态表失败: ${error.message}`,
+    };
+  }
+}
+
+// 保存批次状态
+export async function saveBatchStatus(batchName, isEntered) {
+  if (!batchName) {
+    return { success: false, message: "缺少批次名称参数" };
+  }
+
+  try {
+    const response = await fetch("/api/mysql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "saveBatchStatus",
+        data: {
+          batchName,
+          isEntered,
+        },
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("保存批次状态失败:", error);
+    return {
+      success: false,
+      message: `保存批次状态失败: ${error.message}`,
+    };
+  }
+}
+
+// 获取所有批次状态
+export async function getBatchStatus() {
+  try {
+    const response = await fetch("/api/mysql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "getBatchStatus",
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("获取批次状态失败:", error);
+    return {
+      success: false,
+      message: `获取批次状态失败: ${error.message}`,
+    };
+  }
+}

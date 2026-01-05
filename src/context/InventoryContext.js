@@ -30,6 +30,8 @@ const initialState = {
   isDbLoading: false, // 是否正在从数据库加载数据
   logs: [],
   error: null,
+  // 批次录入状态管理
+  batchEntryStatus: {}, // { batchName: boolean } - true表示已录入，false表示未录入
 };
 
 // Action 类型
@@ -50,6 +52,8 @@ const ActionTypes = {
   SET_ERROR: "SET_ERROR",
   CLEAR_ERROR: "CLEAR_ERROR",
   RESET: "RESET",
+  TOGGLE_BATCH_ENTRY_STATUS: "TOGGLE_BATCH_ENTRY_STATUS", // 切换批次录入状态
+  SET_BATCH_ENTRY_STATUS: "SET_BATCH_ENTRY_STATUS", // 设置批次录入状态
 };
 
 // Reducer
@@ -146,6 +150,24 @@ function inventoryReducer(state, action) {
     case ActionTypes.RESET:
       return initialState;
 
+    case ActionTypes.TOGGLE_BATCH_ENTRY_STATUS:
+      return {
+        ...state,
+        batchEntryStatus: {
+          ...state.batchEntryStatus,
+          [action.payload]: !state.batchEntryStatus[action.payload],
+        },
+      };
+
+    case ActionTypes.SET_BATCH_ENTRY_STATUS:
+      return {
+        ...state,
+        batchEntryStatus: {
+          ...state.batchEntryStatus,
+          ...action.payload,
+        },
+      };
+
     default:
       return state;
   }
@@ -165,6 +187,22 @@ export function InventoryProvider({ children }) {
       try {
         const items = await getInventoryFromDatabase();
         dispatch({ type: ActionTypes.LOAD_INVENTORY_FROM_DB, payload: items });
+
+        // 加载批次状态
+        try {
+          const { getBatchStatus } = await import("@/lib/mysqlConnection");
+          const statusResult = await getBatchStatus();
+          if (statusResult.success && statusResult.data) {
+            // 批量设置批次状态
+            dispatch({
+              type: ActionTypes.SET_BATCH_ENTRY_STATUS,
+              payload: statusResult.data,
+            });
+          }
+        } catch (statusError) {
+          console.error("加载批次状态失败:", statusError);
+          // 不影响主流程
+        }
       } catch (error) {
         console.error("初始化加载库存数据失败:", error);
         // 不设置错误状态，避免在应用启动时显示错误
@@ -565,6 +603,78 @@ export function InventoryProvider({ children }) {
     reset: useCallback(() => {
       dispatch({ type: ActionTypes.RESET });
     }, []),
+
+    toggleBatchEntryStatus: useCallback(
+      async (batchName) => {
+        const currentStatus = state.batchEntryStatus[batchName] || false;
+        const newStatus = !currentStatus;
+
+        // 先更新本地状态
+        dispatch({
+          type: ActionTypes.TOGGLE_BATCH_ENTRY_STATUS,
+          payload: batchName,
+        });
+
+        // 尝试保存到数据库
+        try {
+          const { saveBatchStatus } = await import("@/lib/mysqlConnection");
+          const result = await saveBatchStatus(batchName, newStatus);
+
+          if (result.success) {
+            dispatch({
+              type: ActionTypes.ADD_LOG,
+              payload: {
+                message: `批次 "${batchName}" 状态已保存为 ${
+                  newStatus ? "已录入" : "未录入"
+                }`,
+                type: LogType.SUCCESS,
+              },
+            });
+          } else {
+            // 如果数据库保存失败，显示错误信息并回滚状态
+            dispatch({
+              type: ActionTypes.TOGGLE_BATCH_ENTRY_STATUS,
+              payload: batchName,
+            }); // 状态回滚
+            dispatch({
+              type: ActionTypes.SET_ERROR,
+              payload: `保存批次状态失败: ${result.message}`,
+            });
+            toast({
+              variant: "destructive",
+              title: "保存失败",
+              description: `保存批次状态失败: ${result.message}`,
+            });
+            return;
+          }
+        } catch (error) {
+          // 如果数据库操作失败，回滚状态
+          dispatch({
+            type: ActionTypes.TOGGLE_BATCH_ENTRY_STATUS,
+            payload: batchName,
+          }); // 状态回滚
+          console.error("保存批次状态失败:", error);
+          dispatch({
+            type: ActionTypes.SET_ERROR,
+            payload: `保存批次状态失败: ${error.message}`,
+          });
+          toast({
+            variant: "destructive",
+            title: "保存失败",
+            description: `保存批次状态失败: ${error.message}`,
+          });
+          return;
+        }
+
+        toast({
+          title: newStatus ? "已录入" : "未录入",
+          description: `批次 "${batchName}" 状态已切换为${
+            newStatus ? "已录入" : "未录入"
+          }`,
+        });
+      },
+      [state.batchEntryStatus]
+    ),
   };
 
   const value = {

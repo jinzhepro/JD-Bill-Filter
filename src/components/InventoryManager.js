@@ -33,6 +33,7 @@ export function InventoryManager() {
     inventoryForm,
     editingInventoryId,
     isDbLoading,
+    batchEntryStatus,
     setInventoryItems,
     setInventoryForm,
     resetInventoryForm,
@@ -43,6 +44,7 @@ export function InventoryManager() {
     addLog,
     setError,
     loadInventoryFromDB,
+    toggleBatchEntryStatus,
   } = useInventory();
 
   const { toast } = useToast();
@@ -836,6 +838,22 @@ export function InventoryManager() {
                         title="查看PDF文件"
                       >
                         👁️ 查看PDF ({batchPdfCounts[batch] || 0})
+                      </Button>
+                      <Button
+                        onClick={() => toggleBatchEntryStatus(batch)}
+                        variant={
+                          batchEntryStatus[batch] ? "success" : "secondary"
+                        }
+                        className={`px-2 py-1 text-xs ${
+                          batchEntryStatus[batch]
+                            ? "bg-green-600 hover:bg-green-700 text-white"
+                            : "bg-gray-400 hover:bg-gray-500 text-white"
+                        }`}
+                        title={`点击切换为${
+                          batchEntryStatus[batch] ? "未录入" : "已录入"
+                        }`}
+                      >
+                        {batchEntryStatus[batch] ? "✅ 已录入" : "⚪ 未录入"}
                       </Button>
                     </div>
                     <div className="text-right text-sm text-gray-600">
