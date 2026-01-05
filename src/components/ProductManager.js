@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useProduct } from "@/context/ProductContext";
 import { Button } from "./ui/button";
+import Modal from "./ui/modal";
 import { ProductImport } from "./ProductImport";
 import {
   createProductTable,
@@ -34,7 +35,7 @@ export function ProductManager() {
   const { toast } = useToast();
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [isFormVisible, setIsFormVisible] = useState(false);
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [formErrors, setFormErrors] = useState([]);
   const [isMySqlProcessing, setIsMySqlProcessing] = useState(false);
   const [mySqlStatus, setMySqlStatus] = useState("");
@@ -191,7 +192,7 @@ export function ProductManager() {
       // 重置表单
       resetProductForm();
       setEditingProductId(null);
-      setIsFormVisible(false);
+      setIsFormModalOpen(false);
     } catch (error) {
       setError(`保存商品失败: ${error.message}`);
     }
@@ -206,7 +207,7 @@ export function ProductManager() {
       warehouse: item.warehouse || "",
     });
     setEditingProductId(item.id);
-    setIsFormVisible(true);
+    setIsFormModalOpen(true);
     setFormErrors([]);
   };
 
@@ -332,7 +333,7 @@ export function ProductManager() {
   const handleCancel = () => {
     resetProductForm();
     setEditingProductId(null);
-    setIsFormVisible(false);
+    setIsFormModalOpen(false);
     setFormErrors([]);
   };
 
@@ -591,7 +592,7 @@ export function ProductManager() {
           {activeTab === "manual" && (
             <div className="flex gap-3">
               <Button
-                onClick={() => setIsFormVisible(true)}
+                onClick={() => setIsFormModalOpen(true)}
                 className="w-full md:w-auto"
               >
                 添加商品
@@ -604,15 +605,16 @@ export function ProductManager() {
       {/* 批量导入区域 */}
       {activeTab === "import" && <ProductImport />}
 
-      {/* 添加/编辑表单 */}
-      {activeTab === "manual" && isFormVisible && (
-        <section className="bg-white rounded-xl shadow-lg p-6 animate-fade-in">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">
-            {editingProductId ? "编辑商品" : "添加商品"}
-          </h2>
-
+      {/* 添加/编辑商品模态框 */}
+      <Modal
+        isOpen={isFormModalOpen}
+        onClose={handleCancel}
+        title={editingProductId ? "编辑商品" : "添加商品"}
+        size="lg"
+      >
+        <div className="space-y-4">
           {formErrors.length > 0 && (
-            <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+            <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
               {formErrors.map((error, index) => (
                 <div key={index} className="text-gray-600 text-sm">
                   {error}
@@ -690,8 +692,8 @@ export function ProductManager() {
               </Button>
             </div>
           </form>
-        </section>
-      )}
+        </div>
+      </Modal>
 
       {/* 商品列表 */}
       <section className="bg-white rounded-xl shadow-lg p-6 animate-fade-in">
