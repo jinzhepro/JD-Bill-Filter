@@ -66,6 +66,7 @@ export function InventoryManager() {
 
   // PDF管理状态
   const [batchPdfCounts, setBatchPdfCounts] = useState({});
+  const [isLoadingPdfCounts, setIsLoadingPdfCounts] = useState(true);
 
   // PDF Modal状态
   const [uploadPdfModalOpen, setUploadPdfModalOpen] = useState(false);
@@ -74,10 +75,55 @@ export function InventoryManager() {
   const [currentPdfList, setCurrentPdfList] = useState([]);
   const [selectedPdf, setSelectedPdf] = useState(null);
 
+  // 加载所有批次的PDF数量
+  const loadAllBatchPdfCounts = useCallback(async () => {
+    try {
+      const { getInventoryBatches } = await import("@/lib/mysqlConnection");
+      const batchesResult = await getInventoryBatches();
+
+      if (batchesResult.success) {
+        const batches = batchesResult.data;
+        const { getBatchPdfs } = await import("@/lib/mysqlConnection");
+
+        // 并行加载所有批次的PDF数量
+        const pdfCountPromises = batches.map(async (batch) => {
+          try {
+            const pdfResult = await getBatchPdfs(batch.batchName);
+            return {
+              batchName: batch.batchName,
+              pdfCount: pdfResult.success ? pdfResult.data.length : 0,
+            };
+          } catch (error) {
+            console.error(`获取批次 ${batch.batchName} PDF数量失败:`, error);
+            return {
+              batchName: batch.batchName,
+              pdfCount: 0,
+            };
+          }
+        });
+
+        const pdfCounts = await Promise.all(pdfCountPromises);
+
+        // 更新PDF数量统计
+        const pdfCountMap = {};
+        pdfCounts.forEach((item) => {
+          pdfCountMap[item.batchName] = item.pdfCount;
+        });
+
+        setBatchPdfCounts(pdfCountMap);
+        console.log("PDF数量统计加载完成:", pdfCountMap);
+      }
+    } catch (error) {
+      console.error("加载PDF数量统计失败:", error);
+    }
+  }, []);
+
   // 在组件挂载时从数据库加载库存数据
   useEffect(() => {
     // 数据已经在AppContext中加载，这里不需要重复加载
-  }, []);
+    // 加载所有批次的PDF数量
+    loadAllBatchPdfCounts();
+  }, [loadAllBatchPdfCounts]);
 
   // 表格导入处理
   const handleTableImport = async (items) => {
@@ -731,6 +777,11 @@ export function InventoryManager() {
     },
     [currentBatchName]
   );
+
+  // 重新加载PDF数量统计
+  const refreshPdfCounts = useCallback(() => {
+    loadAllBatchPdfCounts();
+  }, [loadAllBatchPdfCounts]);
 
   return (
     <div className="space-y-6">
