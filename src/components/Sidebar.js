@@ -3,10 +3,12 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useApp } from "@/context/AppContext";
 
 export function Sidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { currentUser } = useApp();
 
   const menuItems = [
     {
@@ -85,6 +87,30 @@ export function Sidebar() {
         </svg>
       ),
     },
+    // 只有管理员才能看到用户管理
+    ...(currentUser?.role === "admin"
+      ? [
+          {
+            name: "用户管理",
+            href: "/users",
+            icon: (
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                />
+              </svg>
+            ),
+          },
+        ]
+      : []),
     {
       name: "连接测试",
       href: "/test",
@@ -182,12 +208,20 @@ export function Sidebar() {
       <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
         <div className="flex items-center">
           <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
-            <span className="text-white text-sm font-medium">管</span>
+            <span className="text-white text-sm font-medium">
+              {(currentUser?.realName || currentUser?.username || "用").charAt(
+                0
+              )}
+            </span>
           </div>
           {!isCollapsed && (
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-700">管理员</p>
-              <p className="text-xs text-gray-500">在线</p>
+              <p className="text-sm font-medium text-gray-700">
+                {currentUser?.realName || currentUser?.username || "用户"}
+              </p>
+              <p className="text-xs text-gray-500">
+                {currentUser?.role === "admin" ? "管理员" : "普通用户"}
+              </p>
             </div>
           )}
         </div>

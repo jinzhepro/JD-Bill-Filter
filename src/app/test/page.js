@@ -2,16 +2,18 @@
 
 import React, { useState } from "react";
 import {
-  healthCheck,
   testConnection,
-  getInventoryBatches,
   createInventoryTable,
+  createProductTable,
+  createSupplierTable,
+  createUserTable,
 } from "@/lib/mysqlConnection";
 import { MainLayout } from "@/components/MainLayout";
 
 export default function TestPage() {
   const [results, setResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [userInitLoading, setUserInitLoading] = useState(false);
 
   const addResult = (test, success, message, duration = 0) => {
     setResults((prev) => [
@@ -25,22 +27,6 @@ export default function TestPage() {
         timestamp: new Date().toLocaleTimeString(),
       },
     ]);
-  };
-
-  const runHealthCheck = async () => {
-    setIsLoading(true);
-    const startTime = Date.now();
-
-    try {
-      const result = await healthCheck();
-      const duration = Date.now() - startTime;
-      addResult("API健康检查", result.success, result.message, duration);
-    } catch (error) {
-      const duration = Date.now() - startTime;
-      addResult("API健康检查", false, error.message, duration);
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const runConnectionTest = async () => {
@@ -59,63 +45,81 @@ export default function TestPage() {
     }
   };
 
-  const runBatchTest = async () => {
-    setIsLoading(true);
-    const startTime = Date.now();
-
-    try {
-      const result = await getInventoryBatches();
-      const duration = Date.now() - startTime;
-
-      if (result.success) {
-        const batchInfo = result.data
-          .map(
-            (batch) =>
-              `${batch.batchName} (${batch.totalItems}项, ${batch.totalQuantity}件)`
-          )
-          .join(", ");
-        addResult(
-          "库存批次测试",
-          true,
-          `获取到 ${result.data.length} 个批次: ${batchInfo}`,
-          duration
-        );
-      } else {
-        addResult("库存批次测试", false, result.message, duration);
-      }
-    } catch (error) {
-      const duration = Date.now() - startTime;
-      addResult("库存批次测试", false, error.message, duration);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const runTableTest = async () => {
+  const runInventoryTableTest = async () => {
     setIsLoading(true);
     const startTime = Date.now();
 
     try {
       const result = await createInventoryTable();
       const duration = Date.now() - startTime;
-      addResult("表创建测试", result.success, result.message, duration);
+      addResult("库存表创建测试", result.success, result.message, duration);
     } catch (error) {
       const duration = Date.now() - startTime;
-      addResult("表创建测试", false, error.message, duration);
+      addResult("库存表创建测试", false, error.message, duration);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const runProductTableTest = async () => {
+    setIsLoading(true);
+    const startTime = Date.now();
+
+    try {
+      const result = await createProductTable();
+      const duration = Date.now() - startTime;
+      addResult("商品表创建测试", result.success, result.message, duration);
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      addResult("商品表创建测试", false, error.message, duration);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const runSupplierTableTest = async () => {
+    setIsLoading(true);
+    const startTime = Date.now();
+
+    try {
+      const result = await createSupplierTable();
+      const duration = Date.now() - startTime;
+      addResult("供应商表创建测试", result.success, result.message, duration);
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      addResult("供应商表创建测试", false, error.message, duration);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const runUserTableTest = async () => {
+    setUserInitLoading(true);
+    const startTime = Date.now();
+
+    try {
+      const result = await createUserTable();
+      const duration = Date.now() - startTime;
+      addResult("用户表创建测试", result.success, result.message, duration);
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      addResult("用户表创建测试", false, error.message, duration);
+    } finally {
+      setUserInitLoading(false);
+    }
+  };
+
   const runAllTests = async () => {
     setResults([]);
-    await runHealthCheck();
-    await new Promise((resolve) => setTimeout(resolve, 500));
     await runConnectionTest();
     await new Promise((resolve) => setTimeout(resolve, 500));
-    await runTableTest();
+    await runInventoryTableTest();
     await new Promise((resolve) => setTimeout(resolve, 500));
-    await runBatchTest();
+    await runProductTableTest();
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    await runSupplierTableTest();
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    await runUserTableTest();
   };
 
   const clearResults = () => {
@@ -127,11 +131,10 @@ export default function TestPage() {
       <div className="space-y-6">
         <div className="bg-white rounded-xl shadow-lg p-6">
           <h1 className="text-2xl font-bold text-gray-800 mb-4">
-            MySQL连接诊断工具
+            MySQL连接与表创建测试
           </h1>
           <p className="text-gray-600 mb-6">
-            使用此工具诊断MySQL
-            API连接问题。首先运行API健康检查，然后测试MySQL连接。
+            测试MySQL数据库连接并创建必要的表结构（库存表、商品表、供应商表和用户表）。
           </p>
 
           <div className="flex flex-wrap gap-3 mb-6">
@@ -143,13 +146,6 @@ export default function TestPage() {
               {isLoading ? "运行中..." : "运行所有测试"}
             </button>
             <button
-              onClick={runHealthCheck}
-              disabled={isLoading}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? "检查中..." : "API健康检查"}
-            </button>
-            <button
               onClick={runConnectionTest}
               disabled={isLoading}
               className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -157,18 +153,32 @@ export default function TestPage() {
               {isLoading ? "测试中..." : "MySQL连接测试"}
             </button>
             <button
-              onClick={runTableTest}
+              onClick={runInventoryTableTest}
               disabled={isLoading}
               className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? "测试中..." : "表创建测试"}
+              {isLoading ? "测试中..." : "库存表创建测试"}
             </button>
             <button
-              onClick={runBatchTest}
+              onClick={runProductTableTest}
               disabled={isLoading}
+              className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? "测试中..." : "商品表创建测试"}
+            </button>
+            <button
+              onClick={runSupplierTableTest}
+              disabled={isLoading}
+              className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? "测试中..." : "供应商表创建测试"}
+            </button>
+            <button
+              onClick={runUserTableTest}
+              disabled={isLoading || userInitLoading}
               className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? "测试中..." : "库存批次测试"}
+              {userInitLoading ? "初始化中..." : "用户表初始化"}
             </button>
             <button
               onClick={clearResults}
@@ -227,38 +237,21 @@ export default function TestPage() {
           </h2>
           <div className="space-y-3 text-sm text-gray-600">
             <div>
-              <strong>API健康检查失败：</strong>
-              <ul className="ml-4 mt-1 list-disc">
-                <li>检查Next.js开发服务器是否正在运行</li>
-                <li>检查浏览器控制台是否有网络错误</li>
-                <li>尝试重启开发服务器</li>
-              </ul>
-            </div>
-            <div>
               <strong>MySQL连接测试失败：</strong>
               <ul className="ml-4 mt-1 list-disc">
                 <li>确认MySQL服务正在运行</li>
                 <li>检查数据库连接配置（主机、用户名、密码、数据库名）</li>
-                <li>确认数据库&quot;testdb&quot;存在</li>
+                <li>确认数据库"testdb"存在</li>
                 <li>检查MySQL用户权限</li>
               </ul>
             </div>
             <div>
               <strong>表创建测试失败：</strong>
-              <ul className="ml-4  mt-1 list-disc">
+              <ul className="ml-4 mt-1 list-disc">
                 <li>检查MySQL用户权限</li>
-                <li>确认数据库&quot;testdb&quot;存在</li>
+                <li>确认数据库"testdb"存在</li>
                 <li>验证表创建SQL语法</li>
                 <li>检查字符集设置</li>
-              </ul>
-            </div>
-            <div>
-              <strong>库存批次测试失败：</strong>
-              <ul className="ml-4 mt-1 list-disc">
-                <li>检查inventory_batches表是否存在</li>
-                <li>确认批次名称不为空</li>
-                <li>检查批次统计信息更新是否正常</li>
-                <li>验证库存数据中的purchaseBatch字段</li>
               </ul>
             </div>
             <div>
@@ -267,10 +260,9 @@ export default function TestPage() {
                 <li>重启MySQL服务：`sudo systemctl restart mysql`</li>
                 <li>检查MySQL状态：`sudo systemctl status mysql`</li>
                 <li>创建数据库：`CREATE DATABASE testdb;`</li>
-                <li>检查端口：MySQL默认使用3306端口</li>
                 <li>
-                  手动创建表：`CREATE TABLE inventory (...)` 和 `CREATE TABLE
-                  inventory_batches (...)`
+                  手动创建表：`CREATE TABLE inventory (...)`、`CREATE TABLE
+                  inventory_batches (...)` 和 `CREATE TABLE suppliers (...)`
                 </li>
                 <li>检查表格导入数据中的采购批号字段</li>
               </ul>

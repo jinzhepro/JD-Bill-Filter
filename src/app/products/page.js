@@ -6,6 +6,7 @@ import { ProductManager } from "@/components/ProductManager";
 import { ErrorModal } from "@/components/ui/modal";
 import { useProduct } from "@/context/ProductContext";
 import { MainLayout } from "@/components/MainLayout";
+import { RouteGuard } from "@/components/RouteGuard";
 
 function ProductContent() {
   const { error, clearError } = useProduct();
@@ -27,12 +28,20 @@ function ProductContent() {
   );
 }
 
-export default function ProductPage() {
+function ProductWithGuard() {
   return (
-    <ProductProvider>
+    <RouteGuard>
       <MainLayout>
         <ProductContent />
       </MainLayout>
+    </RouteGuard>
+  );
+}
+
+export default function ProductPage() {
+  return (
+    <ProductProvider>
+      <ProductWithGuard />
     </ProductProvider>
   );
 }

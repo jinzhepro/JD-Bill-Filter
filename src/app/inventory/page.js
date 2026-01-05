@@ -6,6 +6,7 @@ import { InventoryManager } from "@/components/InventoryManager";
 import { ErrorModal } from "@/components/ui/modal";
 import { useInventory } from "@/context/InventoryContext";
 import { MainLayout } from "@/components/MainLayout";
+import { RouteGuard } from "@/components/RouteGuard";
 
 function InventoryContent() {
   const { error, clearError } = useInventory();
@@ -27,12 +28,20 @@ function InventoryContent() {
   );
 }
 
-export default function InventoryPage() {
+function InventoryWithGuard() {
   return (
-    <InventoryProvider>
+    <RouteGuard>
       <MainLayout>
         <InventoryContent />
       </MainLayout>
+    </RouteGuard>
+  );
+}
+
+export default function InventoryPage() {
+  return (
+    <InventoryProvider>
+      <InventoryWithGuard />
     </InventoryProvider>
   );
 }

@@ -443,3 +443,152 @@ export async function deleteBatch(batchName) {
     };
   }
 }
+
+// 创建供应商表（如果不存在）
+export async function createSupplierTable() {
+  try {
+    const response = await fetch("/api/mysql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "createSupplierTable",
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("创建供应商表失败:", error);
+    return {
+      success: false,
+      message: `创建供应商表失败: ${error.message}`,
+    };
+  }
+}
+
+// 从MySQL获取供应商数据
+export async function getSuppliersFromMySQL() {
+  try {
+    const response = await fetch("/api/mysql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "getSuppliers",
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("从MySQL获取供应商数据失败:", error);
+    return {
+      success: false,
+      message: `从MySQL获取供应商数据失败: ${error.message}`,
+    };
+  }
+}
+
+// 创建入库记录表（如果不存在）
+export async function createInboundRecordsTable() {
+  try {
+    const response = await fetch("/api/mysql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "createInboundRecordsTable",
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("创建入库记录表失败:", error);
+    return {
+      success: false,
+      message: `创建入库记录表失败: ${error.message}`,
+    };
+  }
+}
+
+// 保存入库记录
+export async function saveInboundRecords(inboundRecords) {
+  if (!inboundRecords || inboundRecords.length === 0) {
+    return { success: false, message: "没有入库记录需要保存" };
+  }
+
+  try {
+    const response = await fetch("/api/mysql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "saveInboundRecords",
+        data: inboundRecords,
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("保存入库记录失败:", error);
+    return {
+      success: false,
+      message: `保存入库记录失败: ${error.message}`,
+    };
+  }
+}
+
+// 获取入库记录
+export async function getInboundRecords() {
+  try {
+    const response = await fetch("/api/mysql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "getInboundRecords",
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("获取入库记录失败:", error);
+    return {
+      success: false,
+      message: `获取入库记录失败: ${error.message}`,
+    };
+  }
+}
+
+// 创建用户表（如果不存在）
+export async function createUserTable() {
+  try {
+    const response = await fetch("/api/mysql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "createUserTable",
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("创建用户表失败:", error);
+    return {
+      success: false,
+      message: `创建用户表失败: ${error.message}`,
+    };
+  }
+}

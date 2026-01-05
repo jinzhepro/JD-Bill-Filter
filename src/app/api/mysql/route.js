@@ -1144,6 +1144,22 @@ export async function POST(request) {
         result = await clearSuppliersInMySQL();
         break;
 
+      case "createUserTable":
+        result = await createUserTable();
+        break;
+
+      case "createInboundRecordsTable":
+        result = await createInboundRecordsTable();
+        break;
+
+      case "saveInboundRecords":
+        result = await saveInboundRecords(data);
+        break;
+
+      case "getInboundRecords":
+        result = await getInboundRecords();
+        break;
+
       default:
         result = { success: false, message: "未知的操作类型" };
     }
@@ -1238,6 +1254,60 @@ export async function GET(request) {
   }
 }
 
+// ========== 用户管理相关函数 ==========
+
+// 创建用户表（如果不存在）
+async function createUserTable() {
+  try {
+    const connection = await pool.getConnection();
+
+    // 创建用户表（如果不存在）
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS users (
+        id VARCHAR(255) PRIMARY KEY,
+        username VARCHAR(255) NOT NULL UNIQUE COMMENT '用户名',
+        password VARCHAR(255) NOT NULL COMMENT '密码（加密存储）',
+        real_name VARCHAR(255) DEFAULT '' COMMENT '真实姓名',
+        role ENUM('admin', 'user') DEFAULT 'user' COMMENT '用户角色',
+        is_active BOOLEAN DEFAULT TRUE COMMENT '是否激活',
+        last_login TIMESTAMP NULL COMMENT '最后登录时间',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+        INDEX idx_username (username),
+        INDEX idx_role (role)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表';
+    `;
+
+    await connection.execute(createTableSQL);
+
+    // 检查是否需要创建默认管理员用户
+    const [adminUsers] = await connection.execute(
+      "SELECT COUNT(*) as count FROM users WHERE role = 'admin'"
+    );
+
+    if (adminUsers[0].count === 0) {
+      // 创建默认管理员用户
+      const bcrypt = require("bcrypt");
+      const defaultPassword = await bcrypt.hash("admin123", 10);
+      const adminId = `user-${Date.now()}-${Math.random()
+        .toString(36)
+        .substr(2, 9)}`;
+
+      await connection.execute(
+        `INSERT INTO users (id, username, password, real_name, role) VALUES (?, ?, ?, ?, ?)`,
+        [adminId, "admin", defaultPassword, "系统管理员", "admin"]
+      );
+    }
+
+    connection.release();
+
+    return { success: true, message: "用户表创建成功或已存在" };
+  } catch (error) {
+    console.error("创建用户表失败:", error);
+    return { success: false, message: `创建用户表失败: ${error.message}` };
+  }
+}
+
 // ========== 供应商管理相关函数 ==========
 
 // 创建供应商表（如果不存在）
@@ -1245,12 +1315,9 @@ async function createSupplierTable() {
   try {
     const connection = await pool.getConnection();
 
-    // 先删除旧表（如果存在）
-    await connection.execute("DROP TABLE IF EXISTS suppliers");
-
-    // 创建新表
+    // 创建表（如果不存在）
     const createTableSQL = `
-      CREATE TABLE suppliers (
+      CREATE TABLE IF NOT EXISTS suppliers (
         id VARCHAR(255) PRIMARY KEY,
         name VARCHAR(255) NOT NULL COMMENT '供应商名称',
         supplier_id VARCHAR(255) NOT NULL UNIQUE COMMENT '供应商ID',
@@ -1265,7 +1332,7 @@ async function createSupplierTable() {
     await connection.execute(createTableSQL);
     connection.release();
 
-    return { success: true, message: "供应商表创建成功" };
+    return { success: true, message: "供应商表创建成功或已存在" };
   } catch (error) {
     console.error("创建供应商表失败:", error);
     return { success: false, message: `创建供应商表失败: ${error.message}` };
@@ -1279,9 +1346,6 @@ async function pushSuppliersToMySQL(suppliers) {
   }
 
   try {
-    // 先确保供应商表已创建
-    await createSupplierTable();
-
     const connection = await pool.getConnection();
 
     // 开始事务

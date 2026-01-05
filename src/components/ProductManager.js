@@ -50,23 +50,7 @@ export function ProductManager() {
   const loadProductsFromDB = async () => {
     setLoading(true);
     try {
-      let result = await getProductsFromMySQL();
-
-      // 如果获取失败且错误是表不存在，尝试创建表后重试
-      if (
-        !result.success &&
-        result.message &&
-        result.message.includes("doesn't exist")
-      ) {
-        console.log("商品表不存在，尝试创建表...");
-        const tableResult = await createProductTable();
-        if (tableResult.success) {
-          console.log("商品表创建成功，重新获取数据...");
-          result = await getProductsFromMySQL();
-        } else {
-          console.error("创建商品表失败:", tableResult.message);
-        }
-      }
+      const result = await getProductsFromMySQL();
 
       if (result.success) {
         setProducts(result.data);
@@ -390,12 +374,6 @@ export function ProductManager() {
     setMySqlStatus("正在推送数据到MySQL...");
 
     try {
-      // 先创建表（如果不存在）
-      const tableResult = await createProductTable();
-      if (!tableResult.success) {
-        throw new Error(tableResult.message);
-      }
-
       // 推送数据
       const pushResult = await pushProductsToMySQL(products);
       if (pushResult.success) {

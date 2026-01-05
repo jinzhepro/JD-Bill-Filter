@@ -4,18 +4,14 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useInventory } from "@/context/InventoryContext";
 import { Button } from "./ui/button";
 import Modal, { ConfirmModal } from "./ui/modal";
-import { BatchInventoryAdd } from "./BatchInventoryAdd";
 import { TableImport } from "./TableImport";
-import { DeductionRecords } from "./DeductionRecords";
+import { RecordsModal } from "./RecordsModal";
 import { useToast } from "@/hooks/use-toast";
 import {
-  createInventoryItem,
   updateInventoryItem,
-  validateInventoryForm,
   searchInventoryItems,
   getInventoryStats,
   groupInventoryByBatch,
-  validateMultipleInventoryForms,
   createMultipleInventoryItems,
 } from "@/lib/inventoryStorage";
 import {
@@ -27,6 +23,7 @@ import {
   getInventoryBatches,
   deleteBatch,
   healthCheck,
+  saveInboundRecords,
 } from "@/lib/mysqlConnection";
 
 export function InventoryManager() {
@@ -39,7 +36,6 @@ export function InventoryManager() {
     setInventoryForm,
     resetInventoryForm,
     setEditingInventoryId,
-    addInventoryItem,
     addMultipleInventoryItems,
     updateInventoryItem: updateItem,
     deleteInventoryItem,
@@ -51,12 +47,8 @@ export function InventoryManager() {
   const { toast } = useToast();
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
-  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [isTableImportModalOpen, setIsTableImportModalOpen] = useState(false);
-  const [isDeductionRecordsVisible, setIsDeductionRecordsVisible] =
-    useState(false);
-  const [formErrors, setFormErrors] = useState([]);
+  const [isRecordsModalOpen, setIsRecordsModalOpen] = useState(false);
   const [isMySqlProcessing, setIsMySqlProcessing] = useState(false);
   const [mySqlStatus, setMySqlStatus] = useState("");
 
@@ -75,88 +67,34 @@ export function InventoryManager() {
     // 数据已经在AppContext中加载，这里不需要重复加载
   }, []);
 
-  // 处理表单输入变化
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setInventoryForm({ [name]: value });
-  };
-
-  // 处理表单提交
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    // 验证表单
-    const validation = validateInventoryForm(inventoryForm);
-    if (!validation.isValid) {
-      setFormErrors(validation.errors);
-      return;
-    }
-
-    setFormErrors([]);
-
-    try {
-      if (editingInventoryId) {
-        // 更新现有项
-        const existingItem = inventoryItems.find(
-          (item) => item.id === editingInventoryId
-        );
-        const updatedItem = updateInventoryItem(existingItem, inventoryForm);
-        updateItem(updatedItem);
-        addLog(`库存项 "${inventoryForm.materialName}" 已更新`, "success");
-        toast({
-          title: "更新成功",
-          description: `库存项 "${inventoryForm.materialName}" 已更新`,
-        });
-      } else {
-        // 添加新项
-        const newItem = createInventoryItem(inventoryForm);
-        addInventoryItem(newItem);
-        addLog(`库存项 "${inventoryForm.materialName}" 已添加`, "success");
-        toast({
-          title: "添加成功",
-          description: `库存项 "${inventoryForm.materialName}" 已添加`,
-        });
-      }
-
-      // 重置表单
-      resetInventoryForm();
-      setEditingInventoryId(null);
-      setIsInventoryModalOpen(false);
-    } catch (error) {
-      setError(`保存库存项失败: ${error.message}`);
-    }
-  };
-
-  // 批量添加库存项处理
-  const handleBatchAdd = (items) => {
-    try {
-      addMultipleInventoryItems(items);
-      addLog(`成功批量添加 ${items.length} 个库存项`, "success");
-      toast({
-        title: "批量添加成功",
-        description: `成功添加 ${items.length} 个库存项`,
-      });
-      setIsBatchModalOpen(false);
-    } catch (error) {
-      setError(`批量添加库存项失败: ${error.message}`);
-      toast({
-        variant: "destructive",
-        title: "批量添加失败",
-        description: `批量添加库存项失败: ${error.message}`,
-      });
-    }
-  };
-
-  // 批量添加取消处理
-  const handleBatchCancel = () => {
-    setIsBatchModalOpen(false);
-  };
-
   // 表格导入处理
-  const handleTableImport = (items) => {
+  const handleTableImport = async (items) => {
     try {
+      // 添加到库存
       addMultipleInventoryItems(items);
       addLog(`成功通过表格导入 ${items.length} 个库存项`, "success");
+
+      // 保存入库记录
+      const inboundRecords = items.map((item) => ({
+        id: `inbound-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        sku: item.sku || "",
+        materialName: item.materialName,
+        purchaseBatch: item.purchaseBatch,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice || 0,
+        totalPrice: item.totalPrice || 0,
+        warehouse: item.warehouse || "",
+        timestamp: new Date().toISOString(),
+        operator: "系统导入",
+      }));
+
+      const inboundResult = await saveInboundRecords(inboundRecords);
+      if (inboundResult.success) {
+        addLog(`成功保存 ${inboundRecords.length} 条入库记录`, "success");
+      } else {
+        console.error("保存入库记录失败:", inboundResult.message);
+      }
+
       toast({
         title: "表格导入成功",
         description: `成功导入 ${items.length} 个库存项`,
@@ -229,7 +167,6 @@ export function InventoryManager() {
       warehouse: item.warehouse || "",
     });
     setEditingInventoryId(item.id);
-    setIsInventoryModalOpen(true);
     setFormErrors([]);
   };
 
@@ -403,7 +340,6 @@ export function InventoryManager() {
   const handleCancel = () => {
     resetInventoryForm();
     setEditingInventoryId(null);
-    setIsInventoryModalOpen(false);
     setFormErrors([]);
   };
 
@@ -466,12 +402,6 @@ export function InventoryManager() {
     setMySqlStatus("正在推送数据到MySQL...");
 
     try {
-      // 先创建表（如果不存在）
-      const tableResult = await createInventoryTable();
-      if (!tableResult.success) {
-        throw new Error(tableResult.message);
-      }
-
       // 推送数据
       const pushResult = await pushInventoryToMySQL(inventoryItems);
       if (pushResult.success) {
@@ -764,18 +694,6 @@ export function InventoryManager() {
           </div>
           <div className="flex gap-3">
             <Button
-              onClick={() => setIsInventoryModalOpen(true)}
-              className="w-full md:w-auto"
-            >
-              添加库存项
-            </Button>
-            <Button
-              onClick={() => setIsBatchModalOpen(true)}
-              className="w-full md:w-auto"
-            >
-              批量添加库存项
-            </Button>
-            <Button
               onClick={() => setIsTableImportModalOpen(true)}
               className="w-full md:w-auto"
             >
@@ -790,10 +708,10 @@ export function InventoryManager() {
               立即更新商品名称
             </Button>
             <Button
-              onClick={() => setIsDeductionRecordsVisible(true)}
+              onClick={() => setIsRecordsModalOpen(true)}
               className="w-full md:w-auto"
             >
-              查看扣减记录
+              查看记录
             </Button>
             <Button
               onClick={handleClearDatabase}
@@ -806,9 +724,9 @@ export function InventoryManager() {
         </div>
       </section>
 
-      {/* 库存扣减记录 */}
-      {isDeductionRecordsVisible && (
-        <DeductionRecords onClose={() => setIsDeductionRecordsVisible(false)} />
+      {/* 记录模态框 */}
+      {isRecordsModalOpen && (
+        <RecordsModal onClose={() => setIsRecordsModalOpen(false)} />
       )}
 
       {/* 库存列表 - 按采购批号分组 */}
@@ -826,7 +744,9 @@ export function InventoryManager() {
           </div>
         ) : filteredItems.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            {searchTerm ? "没有找到匹配的库存项" : "暂无库存数据，请添加库存项"}
+            {searchTerm
+              ? "没有找到匹配的库存项"
+              : "暂无库存数据，请通过表格导入功能添加库存"}
           </div>
         ) : (
           <div className="space-y-6">
@@ -1070,188 +990,6 @@ export function InventoryManager() {
         cancelText="取消"
         confirmVariant="destructive"
       />
-
-      {/* 添加/编辑库存项模态框 */}
-      <Modal
-        isOpen={isInventoryModalOpen}
-        onClose={handleCancel}
-        title={editingInventoryId ? "编辑库存项" : "添加库存项"}
-        size="xl"
-      >
-        <div className="space-y-4">
-          {formErrors.length > 0 && (
-            <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
-              {formErrors.map((error, index) => (
-                <div key={index} className="text-gray-600 text-sm">
-                  {error}
-                </div>
-              ))}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  物料名称 *
-                </label>
-                <input
-                  type="text"
-                  name="materialName"
-                  value={inventoryForm.materialName}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  数量 *
-                </label>
-                <input
-                  type="number"
-                  name="quantity"
-                  value={inventoryForm.quantity}
-                  onChange={handleInputChange}
-                  min="0"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  采购批号 *
-                </label>
-                <input
-                  type="text"
-                  name="purchaseBatch"
-                  value={inventoryForm.purchaseBatch}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  商品SKU
-                </label>
-                <input
-                  type="text"
-                  name="sku"
-                  value={inventoryForm.sku}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
-                  placeholder="可选，输入商品SKU"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  单价
-                </label>
-                <input
-                  type="number"
-                  name="unitPrice"
-                  value={inventoryForm.unitPrice}
-                  onChange={handleInputChange}
-                  min="0"
-                  step="0.01"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
-                  placeholder="可选，输入单价"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  总价
-                </label>
-                <input
-                  type="number"
-                  name="totalPrice"
-                  value={inventoryForm.totalPrice}
-                  onChange={handleInputChange}
-                  min="0"
-                  step="0.01"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
-                  placeholder="可选，输入总价"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  税率 (%)
-                </label>
-                <input
-                  type="number"
-                  name="taxRate"
-                  value={inventoryForm.taxRate}
-                  onChange={handleInputChange}
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
-                  placeholder="可选，输入税率"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  税额
-                </label>
-                <input
-                  type="number"
-                  name="taxAmount"
-                  value={inventoryForm.taxAmount}
-                  onChange={handleInputChange}
-                  min="0"
-                  step="0.01"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
-                  placeholder="可选，输入税额"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  仓库
-                </label>
-                <input
-                  type="text"
-                  name="warehouse"
-                  value={inventoryForm.warehouse}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
-                  placeholder="可选，输入仓库名称"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-3 pt-4">
-              <Button variant="secondary" onClick={handleCancel}>
-                取消
-              </Button>
-              <Button variant="primary" type="submit">
-                {editingInventoryId ? "更新" : "添加"}
-              </Button>
-            </div>
-          </form>
-        </div>
-      </Modal>
-
-      {/* 批量添加模态框 */}
-      <Modal
-        isOpen={isBatchModalOpen}
-        onClose={handleBatchCancel}
-        title="批量添加库存项"
-        size="3xl"
-      >
-        <BatchInventoryAdd
-          onAddItems={handleBatchAdd}
-          onCancel={handleBatchCancel}
-        />
-      </Modal>
 
       {/* 表格导入模态框 */}
       <Modal

@@ -26,6 +26,9 @@ const initialState = {
   isSkuProcessing: false, // 是否正在进行SKU处理
   // MySQL数据库相关状态
   isDbLoading: false, // 是否正在从数据库加载数据
+  // 用户认证相关状态
+  isAuthenticated: false, // 是否已登录
+  currentUser: null, // 当前登录用户信息
 };
 
 // Action 类型
@@ -50,6 +53,10 @@ const ActionTypes = {
   // MySQL数据库相关Action类型
   LOAD_INVENTORY_FROM_DB: "LOAD_INVENTORY_FROM_DB",
   SET_DB_LOADING: "SET_DB_LOADING",
+  // 用户认证相关Action类型
+  SET_AUTHENTICATED: "SET_AUTHENTICATED",
+  SET_CURRENT_USER: "SET_CURRENT_USER",
+  LOGOUT: "LOGOUT",
 };
 
 // Reducer
@@ -127,6 +134,20 @@ function appReducer(state, action) {
     case ActionTypes.SET_DB_LOADING:
       return { ...state, isDbLoading: action.payload };
 
+    // 用户认证相关处理
+    case ActionTypes.SET_AUTHENTICATED:
+      return { ...state, isAuthenticated: action.payload };
+
+    case ActionTypes.SET_CURRENT_USER:
+      return { ...state, currentUser: action.payload };
+
+    case ActionTypes.LOGOUT:
+      return {
+        ...state,
+        isAuthenticated: false,
+        currentUser: null,
+      };
+
     case ActionTypes.RESET:
       return initialState;
 
@@ -142,9 +163,23 @@ const AppContext = createContext();
 export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
-  // 在组件挂载时从数据库加载库存数据
+  // 在组件挂载时检查登录状态和加载库存数据
   useEffect(() => {
-    const loadInitialData = async () => {
+    const initializeApp = async () => {
+      // 检查本地存储中的用户信息
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        try {
+          const user = JSON.parse(storedUser);
+          dispatch({ type: ActionTypes.SET_AUTHENTICATED, payload: true });
+          dispatch({ type: ActionTypes.SET_CURRENT_USER, payload: user });
+        } catch (error) {
+          console.error("解析用户信息失败:", error);
+          localStorage.removeItem("user");
+        }
+      }
+
+      // 加载库存数据
       dispatch({ type: ActionTypes.SET_DB_LOADING, payload: true });
       try {
         const items = await getInventoryFromDatabase();
@@ -157,7 +192,7 @@ export function AppProvider({ children }) {
       }
     };
 
-    loadInitialData();
+    initializeApp();
   }, []);
 
   // Actions
@@ -244,6 +279,18 @@ export function AppProvider({ children }) {
 
     setDbLoading: useCallback((isLoading) => {
       dispatch({ type: ActionTypes.SET_DB_LOADING, payload: isLoading });
+    }, []),
+
+    // 用户认证相关actions
+    login: useCallback((user) => {
+      localStorage.setItem("user", JSON.stringify(user));
+      dispatch({ type: ActionTypes.SET_AUTHENTICATED, payload: true });
+      dispatch({ type: ActionTypes.SET_CURRENT_USER, payload: user });
+    }, []),
+
+    logout: useCallback(() => {
+      localStorage.removeItem("user");
+      dispatch({ type: ActionTypes.LOGOUT });
     }, []),
 
     reset: useCallback(() => {
