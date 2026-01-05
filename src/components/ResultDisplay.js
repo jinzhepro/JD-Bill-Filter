@@ -447,7 +447,7 @@ export default function ResultDisplay() {
                 disabled={isSkuProcessing}
                 className="bg-purple-600 hover:bg-purple-700 text-white"
               >
-                {isSkuProcessing ? "处理中..." : "物料名称替换"}
+                {isSkuProcessing ? "处理中..." : "处理"}
               </Button>
               {skuProcessedData && skuProcessedData.length > 0 && (
                 <Button

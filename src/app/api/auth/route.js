@@ -314,19 +314,21 @@ async function deleteUser(userId) {
   try {
     const connection = await pool.getConnection();
 
-    // 检查用户是否存在
+    // 检查用户是否存在并获取角色
     const [existingUsers] = await connection.execute(
-      "SELECT COUNT(*) as count, role FROM users WHERE id = ?",
+      "SELECT role FROM users WHERE id = ?",
       [userId]
     );
 
-    if (existingUsers[0].count === 0) {
+    if (existingUsers.length === 0) {
       connection.release();
       return { success: false, message: "用户不存在" };
     }
 
+    const userRole = existingUsers[0].role;
+
     // 防止删除最后一个管理员
-    if (existingUsers[0].role === "admin") {
+    if (userRole === "admin") {
       const [adminCount] = await connection.execute(
         "SELECT COUNT(*) as count FROM users WHERE role = 'admin' AND is_active = TRUE"
       );
