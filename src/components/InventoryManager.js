@@ -5,7 +5,7 @@ import { useInventory } from "@/context/InventoryContext";
 import { Button } from "./ui/button";
 import Modal, { ConfirmModal } from "./ui/modal";
 import { TableImport } from "./TableImport";
-import { RecordsModal } from "./RecordsModal";
+import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import {
   updateInventoryItem,
@@ -50,7 +50,7 @@ export function InventoryManager() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isTableImportModalOpen, setIsTableImportModalOpen] = useState(false);
-  const [isRecordsModalOpen, setIsRecordsModalOpen] = useState(false);
+
   const [isMySqlProcessing, setIsMySqlProcessing] = useState(false);
   const [mySqlStatus, setMySqlStatus] = useState("");
 
@@ -142,7 +142,10 @@ export function InventoryManager() {
         unitPrice: item.unitPrice || 0,
         totalPrice: item.totalPrice || 0,
         warehouse: item.warehouse || "",
-        timestamp: new Date().toISOString(),
+        timestamp: new Date()
+          .toISOString()
+          .replace("T", " ")
+          .replace(/\.\d{3}Z$/, ""),
         operator: "系统导入",
       }));
 
@@ -845,12 +848,9 @@ export function InventoryManager() {
             >
               立即更新商品名称
             </Button>
-            <Button
-              onClick={() => setIsRecordsModalOpen(true)}
-              className="w-full md:w-auto"
-            >
-              查看记录
-            </Button>
+            <Link href="/inventory/records">
+              <Button className="w-full md:w-auto">查看记录</Button>
+            </Link>
             <Button
               onClick={handleClearDatabase}
               className="w-full md:w-auto"
@@ -862,15 +862,10 @@ export function InventoryManager() {
         </div>
       </section>
 
-      {/* 记录模态框 */}
-      {isRecordsModalOpen && (
-        <RecordsModal onClose={() => setIsRecordsModalOpen(false)} />
-      )}
-
       {/* 库存列表 - 按采购批号分组 */}
       <section className="bg-white rounded-xl shadow-lg p-6 animate-fade-in">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">
-          库存列表 ({filteredItems.length}) - 按采购批号分组
+          库存列表 ({Object.keys(groupedItems).length} 批次) - 按采购批号分组
         </h2>
 
         {isDbLoading ? (

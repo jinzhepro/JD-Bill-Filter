@@ -1567,6 +1567,171 @@ async function getBatchPdfById(pdfId) {
   }
 }
 
+// 创建入库记录表（如果不存在）
+async function createInboundRecordsTable() {
+  try {
+    const connection = await pool.getConnection();
+
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS inbound_records (
+        id VARCHAR(255) PRIMARY KEY,
+        sku VARCHAR(255) NOT NULL COMMENT '商品SKU',
+        material_name VARCHAR(500) NOT NULL COMMENT '物料名称',
+        purchase_batch VARCHAR(255) NOT NULL COMMENT '采购批号',
+        quantity INT NOT NULL COMMENT '入库数量',
+        unit_price DECIMAL(10, 2) DEFAULT 0.00 COMMENT '单价',
+        total_price DECIMAL(10, 2) DEFAULT 0.00 COMMENT '总价',
+        warehouse VARCHAR(255) DEFAULT '' COMMENT '仓库',
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '入库时间',
+        operator VARCHAR(255) DEFAULT '' COMMENT '操作员',
+        INDEX idx_sku (sku),
+        INDEX idx_timestamp (timestamp),
+        INDEX idx_purchase_batch (purchase_batch)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='入库记录表';
+    `;
+
+    await connection.execute(createTableSQL);
+    connection.release();
+
+    return { success: true, message: "入库记录表创建成功或已存在" };
+  } catch (error) {
+    console.error("创建入库记录表失败:", error);
+    return {
+      success: false,
+      message: `创建入库记录表失败: ${error.message}`,
+    };
+  }
+}
+
+// 保存入库记录
+async function saveInboundRecords(inboundRecords) {
+  if (!inboundRecords || inboundRecords.length === 0) {
+    return { success: false, message: "没有入库记录需要保存" };
+  }
+
+  try {
+    // 先确保入库记录表存在
+    await createInboundRecordsTable();
+
+    const connection = await pool.getConnection();
+
+    // 开始事务
+    await connection.beginTransaction();
+
+    try {
+      // 准备插入语句
+      const insertSQL = `
+        INSERT INTO inbound_records (
+          id, sku, material_name, purchase_batch, quantity, unit_price, total_price,
+          warehouse, timestamp, operator
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+
+      // 批量插入数据
+      for (const record of inboundRecords) {
+        await connection.execute(insertSQL, [
+          record.id,
+          record.sku,
+          record.materialName,
+          record.purchaseBatch,
+          record.quantity,
+          record.unitPrice || 0,
+          record.totalPrice || 0,
+          record.warehouse || "",
+          record.timestamp,
+          record.operator || "",
+        ]);
+      }
+
+      // 提交事务
+      await connection.commit();
+      connection.release();
+
+      return {
+        success: true,
+        message: `成功保存 ${inboundRecords.length} 条入库记录`,
+      };
+    } catch (error) {
+      // 回滚事务
+      await connection.rollback();
+      connection.release();
+      throw error;
+    }
+  } catch (error) {
+    console.error("保存入库记录失败:", error);
+    return {
+      success: false,
+      message: `保存入库记录失败: ${error.message}`,
+    };
+  }
+}
+
+// 获取入库记录
+async function getInboundRecords() {
+  try {
+    const connection = await pool.getConnection();
+
+    // 先尝试创建表（如果不存在）
+    try {
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS inbound_records (
+          id VARCHAR(255) PRIMARY KEY,
+          sku VARCHAR(255) NOT NULL COMMENT '商品SKU',
+          material_name VARCHAR(500) NOT NULL COMMENT '物料名称',
+          purchase_batch VARCHAR(255) NOT NULL COMMENT '采购批号',
+          quantity INT NOT NULL COMMENT '入库数量',
+          unit_price DECIMAL(10, 2) DEFAULT 0.00 COMMENT '单价',
+          total_price DECIMAL(10, 2) DEFAULT 0.00 COMMENT '总价',
+          warehouse VARCHAR(255) DEFAULT '' COMMENT '仓库',
+          timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '入库时间',
+          operator VARCHAR(255) DEFAULT '' COMMENT '操作员',
+          INDEX idx_sku (sku),
+          INDEX idx_timestamp (timestamp),
+          INDEX idx_purchase_batch (purchase_batch)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='入库记录表'
+      `);
+    } catch (tableError) {
+      console.log("入库记录表创建或已存在:", tableError.message);
+    }
+
+    const [rows] = await connection.execute(`
+      SELECT 
+        id, sku, material_name, purchase_batch, quantity, unit_price, total_price,
+        warehouse, timestamp, operator
+      FROM inbound_records 
+      ORDER BY timestamp DESC
+    `);
+
+    connection.release();
+
+    // 转换字段名为前端使用的格式
+    const records = rows.map((row) => ({
+      id: row.id,
+      sku: row.sku,
+      materialName: row.material_name,
+      purchaseBatch: row.purchase_batch,
+      quantity: row.quantity,
+      unitPrice: row.unit_price,
+      totalPrice: row.total_price,
+      warehouse: row.warehouse,
+      timestamp: row.timestamp,
+      operator: row.operator,
+    }));
+
+    return {
+      success: true,
+      data: records,
+      message: `获取了 ${records.length} 条入库记录`,
+    };
+  } catch (error) {
+    console.error("获取入库记录失败:", error);
+    return {
+      success: false,
+      message: `获取入库记录失败: ${error.message}`,
+    };
+  }
+}
+
 // ========== 供应商管理相关函数 ==========
 
 // 创建供应商表（如果不存在）

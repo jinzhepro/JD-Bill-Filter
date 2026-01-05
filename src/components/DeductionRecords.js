@@ -6,54 +6,145 @@ import {
   getDeductionRecords,
   rollbackDeductionRecords,
 } from "@/lib/mysqlConnection";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 
 export function DeductionRecords({ onClose }) {
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRollingBack, setIsRollingBack] = useState(false);
   const [error, setError] = useState("");
+  const { toast } = useToast();
+
+  // 按完整时间戳分组记录（精确到秒）
+  const groupedRecords = records.reduce((groups, record) => {
+    const timestamp = formatFullTimestamp(record.timestamp);
+    if (!groups[timestamp]) {
+      groups[timestamp] = [];
+    }
+    groups[timestamp].push(record);
+    return groups;
+  }, {});
 
   // 复制列数据功能
   const handleCopyColumn = (columnName, timestamp) => {
-    const recordsToCopy = timestamp ? groupedRecords[timestamp] : records;
-    const dataToCopy = recordsToCopy
-      .map((record) => {
-        switch (columnName) {
-          case "商品SKU":
-            return record.sku;
-          case "物料名称":
-            return record.materialName;
-          case "采购批号":
-            return record.purchaseBatch;
-          case "原始库存":
-            return record.originalQuantity;
-          case "扣减数量":
-            return record.deductedQuantity;
-          case "剩余库存":
-            return record.remainingQuantity;
-          case "订单数量":
-            return record.orderCount;
-          default:
-            return "";
-        }
-      })
-      .filter((value) => value !== null && value !== undefined);
+    try {
+      const recordsToCopy = timestamp ? groupedRecords[timestamp] : records;
 
-    const textToCopy = dataToCopy.join("\n");
+      if (!recordsToCopy || recordsToCopy.length === 0) {
+        toast({
+          variant: "destructive",
+          title: "复制失败",
+          description: "没有可复制的数据",
+        });
+        return;
+      }
 
-    navigator.clipboard
-      .writeText(textToCopy)
-      .then(() => {
-        const groupName = timestamp ? `${timestamp} 的` : "所有";
-        toast.success(
-          `已复制${groupName}"${columnName}"列的 ${dataToCopy.length} 条数据到剪贴板`
+      const dataToCopy = recordsToCopy
+        .map((record) => {
+          switch (columnName) {
+            case "商品SKU":
+              return record.sku;
+            case "物料名称":
+              return record.materialName;
+            case "采购批号":
+              return record.purchaseBatch;
+            case "原始库存":
+              return record.originalQuantity;
+            case "扣减数量":
+              return record.deductedQuantity;
+            case "剩余库存":
+              return record.remainingQuantity;
+            case "订单数量":
+              return record.orderCount;
+            default:
+              return "";
+          }
+        })
+        .filter(
+          (value) => value !== null && value !== undefined && value !== ""
         );
-      })
-      .catch((err) => {
-        console.error("复制失败:", err);
-        toast.error(`复制"${columnName}"列失败`);
+
+      const textToCopy = dataToCopy.join("\n");
+
+      if (!textToCopy.trim()) {
+        toast({
+          variant: "destructive",
+          title: "复制失败",
+          description: "没有找到可复制的有效数据",
+        });
+        return;
+      }
+
+      // 优先使用现代API，如果失败则使用备用方法
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard
+          .writeText(textToCopy)
+          .then(() => {
+            const groupName = timestamp ? `${timestamp} 的` : "所有";
+            toast({
+              title: "复制成功",
+              description: `已复制${groupName}"${columnName}"列的 ${dataToCopy.length} 条数据到剪贴板`,
+            });
+          })
+          .catch((err) => {
+            console.error("复制失败:", err);
+            fallbackCopyToClipboard(
+              textToCopy,
+              columnName,
+              timestamp,
+              dataToCopy.length
+            );
+          });
+      } else {
+        fallbackCopyToClipboard(
+          textToCopy,
+          columnName,
+          timestamp,
+          dataToCopy.length
+        );
+      }
+    } catch (err) {
+      console.error("复制过程中发生错误:", err);
+      toast({
+        variant: "destructive",
+        title: "复制失败",
+        description: `复制"${columnName}"列时发生错误`,
       });
+    }
+  };
+
+  // 备用复制方法
+  const fallbackCopyToClipboard = (text, columnName, timestamp, count) => {
+    try {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      textArea.style.top = "-999999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+
+      const successful = document.execCommand("copy");
+      document.body.removeChild(textArea);
+
+      if (successful) {
+        const groupName = timestamp ? `${timestamp} 的` : "所有";
+        toast({
+          title: "复制成功",
+          description: `已复制${groupName}"${columnName}"列的 ${count} 条数据到剪贴板`,
+        });
+      } else {
+        throw new Error("execCommand failed");
+      }
+    } catch (err) {
+      console.error("备用复制方法也失败:", err);
+      toast({
+        variant: "destructive",
+        title: "复制失败",
+        description: `复制"${columnName}"列失败，请手动选择并复制`,
+      });
+    }
   };
 
   // 加载库存扣减记录
@@ -115,16 +206,6 @@ export function DeductionRecords({ onClose }) {
       return timestamp;
     }
   };
-
-  // 按完整时间戳分组记录（精确到秒）
-  const groupedRecords = records.reduce((groups, record) => {
-    const timestamp = formatFullTimestamp(record.timestamp);
-    if (!groups[timestamp]) {
-      groups[timestamp] = [];
-    }
-    groups[timestamp].push(record);
-    return groups;
-  }, {});
 
   // 按时间戳倒序排列
   const sortedTimestamps = Object.keys(groupedRecords).sort((a, b) => {
