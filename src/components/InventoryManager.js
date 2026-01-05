@@ -50,6 +50,7 @@ export function InventoryManager() {
   const { toast } = useToast();
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all"); // all, entered, not-entered
   const [isTableImportModalOpen, setIsTableImportModalOpen] = useState(false);
 
   const [isMySqlProcessing, setIsMySqlProcessing] = useState(false);
@@ -365,6 +366,65 @@ export function InventoryManager() {
     setEditingInventoryId(null);
   };
 
+  // 处理保存编辑
+  const handleSaveEdit = async () => {
+    if (!editingInventoryId) {
+      setError("没有正在编辑的库存项");
+      return;
+    }
+
+    if (
+      !inventoryForm.materialName ||
+      !inventoryForm.quantity ||
+      !inventoryForm.purchaseBatch
+    ) {
+      setError("请填写必要的字段：物料名称、数量、采购批号");
+      return;
+    }
+
+    const quantity = parseInt(inventoryForm.quantity);
+    if (isNaN(quantity) || quantity < 0) {
+      setError("数量必须是大于等于0的整数");
+      return;
+    }
+
+    const unitPrice = inventoryForm.unitPrice
+      ? parseFloat(inventoryForm.unitPrice)
+      : 0;
+    const totalPrice = inventoryForm.totalPrice
+      ? parseFloat(inventoryForm.totalPrice)
+      : 0;
+    const taxRate = inventoryForm.taxRate
+      ? parseFloat(inventoryForm.taxRate)
+      : 13;
+    const taxAmount = inventoryForm.taxAmount
+      ? parseFloat(inventoryForm.taxAmount)
+      : 0;
+
+    const updatedItem = {
+      id: editingInventoryId,
+      materialName: inventoryForm.materialName,
+      quantity: quantity,
+      purchaseBatch: inventoryForm.purchaseBatch,
+      sku: inventoryForm.sku || "",
+      unitPrice: unitPrice,
+      totalPrice: totalPrice,
+      taxRate: taxRate,
+      taxAmount: taxAmount,
+      warehouse: inventoryForm.warehouse || "",
+    };
+
+    try {
+      await updateItem(updatedItem);
+      addLog(`库存项 "${updatedItem.materialName}" 已更新`, "success");
+      resetInventoryForm();
+      setEditingInventoryId(null);
+    } catch (error) {
+      console.error("更新库存项失败:", error);
+      setError(`更新库存项失败: ${error.message}`);
+    }
+  };
+
   // API健康检查
   const handleHealthCheck = async () => {
     setIsMySqlProcessing(true);
@@ -570,6 +630,24 @@ export function InventoryManager() {
   // 按采购批号分组
   const groupedItems = groupInventoryByBatch(filteredItems);
 
+  // 根据状态过滤器过滤批次
+  const filteredGroupedItems = Object.keys(groupedItems).reduce(
+    (acc, batchName) => {
+      const batchStatus = batchEntryStatus[batchName] || false;
+      const shouldInclude =
+        statusFilter === "all" ||
+        (statusFilter === "entered" && batchStatus) ||
+        (statusFilter === "not-entered" && !batchStatus);
+
+      if (shouldInclude) {
+        acc[batchName] = groupedItems[batchName];
+      }
+
+      return acc;
+    },
+    {}
+  );
+
   // 获取统计信息
   const stats = getInventoryStats(inventoryItems);
 
@@ -754,31 +832,94 @@ export function InventoryManager() {
 
       {/* 搜索和添加按钮 */}
       <section className="bg-white rounded-xl shadow-lg p-6 animate-fade-in">
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-          <div className="w-full md:w-1/2">
-            <input
-              type="text"
-              placeholder="搜索物料名称、采购批号、仓库或SKU..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
-            />
+        <div className="space-y-4">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="w-full md:w-1/2">
+              <input
+                type="text"
+                placeholder="搜索物料名称、采购批号、仓库或SKU..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => setIsTableImportModalOpen(true)}
+                className="w-full md:w-auto"
+              >
+                表格导入
+              </Button>
+              <Button
+                onClick={handleUpdateProductNames}
+                className="w-full md:w-auto"
+                disabled={inventoryItems.length === 0}
+                title="从数据库商品表拉取最新的商品名称并更新库存项"
+              >
+                立即更新商品名称
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-3">
-            <Button
-              onClick={() => setIsTableImportModalOpen(true)}
-              className="w-full md:w-auto"
-            >
-              表格导入
-            </Button>
-            <Button
-              onClick={handleUpdateProductNames}
-              className="w-full md:w-auto"
-              disabled={inventoryItems.length === 0}
-              title="从数据库商品表拉取最新的商品名称并更新库存项"
-            >
-              立即更新商品名称
-            </Button>
+
+          {/* 状态过滤器 */}
+          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-gray-700">
+                按状态过滤：
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant={statusFilter === "all" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setStatusFilter("all")}
+                  className={
+                    statusFilter === "all"
+                      ? "bg-blue-600 hover:bg-blue-700 text-white"
+                      : ""
+                  }
+                >
+                  全部 ({Object.keys(groupedItems).length})
+                </Button>
+                <Button
+                  variant={statusFilter === "entered" ? "success" : "outline"}
+                  size="sm"
+                  onClick={() => setStatusFilter("entered")}
+                  className={
+                    statusFilter === "entered"
+                      ? "bg-green-600 hover:bg-green-700 text-white"
+                      : ""
+                  }
+                >
+                  已录入 (
+                  {
+                    Object.keys(groupedItems).filter(
+                      (batchName) => batchEntryStatus[batchName] || false
+                    ).length
+                  }
+                  )
+                </Button>
+                <Button
+                  variant={
+                    statusFilter === "not-entered" ? "warning" : "outline"
+                  }
+                  size="sm"
+                  onClick={() => setStatusFilter("not-entered")}
+                  className={
+                    statusFilter === "not-entered"
+                      ? "bg-orange-600 hover:bg-orange-700 text-white"
+                      : ""
+                  }
+                >
+                  未录入 (
+                  {
+                    Object.keys(groupedItems).filter(
+                      (batchName) => !(batchEntryStatus[batchName] || false)
+                    ).length
+                  }
+                  )
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -786,7 +927,13 @@ export function InventoryManager() {
       {/* 库存列表 - 按采购批号分组 */}
       <section className="bg-white rounded-xl shadow-lg p-6 animate-fade-in">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">
-          库存列表 ({Object.keys(groupedItems).length} 批次) - 按采购批号分组
+          库存列表 ({Object.keys(filteredGroupedItems).length} 批次) -
+          按采购批号分组
+          {statusFilter !== "all" && (
+            <span className="ml-2 text-sm font-normal text-gray-600">
+              （{statusFilter === "entered" ? "已录入" : "未录入"}）
+            </span>
+          )}
         </h2>
 
         {isDbLoading ? (
@@ -796,15 +943,15 @@ export function InventoryManager() {
               <div className="text-lg text-gray-600">正在加载库存数据...</div>
             </div>
           </div>
-        ) : filteredItems.length === 0 ? (
+        ) : Object.keys(filteredGroupedItems).length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            {searchTerm
+            {searchTerm || statusFilter !== "all"
               ? "没有找到匹配的库存项"
               : "暂无库存数据，请通过表格导入功能添加库存"}
           </div>
         ) : (
           <div className="space-y-6">
-            {Object.entries(groupedItems).map(([batch, items]) => (
+            {Object.entries(filteredGroupedItems).map(([batch, items]) => (
               <div
                 key={batch}
                 className="border border-gray-200 rounded-lg overflow-hidden"
@@ -1202,6 +1349,207 @@ export function InventoryManager() {
         isOpen={!!selectedPdf}
         onClose={() => setSelectedPdf(null)}
       />
+
+      {/* 编辑库存项模态框 */}
+      <Modal
+        isOpen={!!editingInventoryId}
+        onClose={handleCancel}
+        title="编辑库存项"
+        size="lg"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              物料名称 *
+            </label>
+            <input
+              type="text"
+              value={inventoryForm.materialName}
+              onChange={(e) =>
+                setInventoryForm({
+                  ...inventoryForm,
+                  materialName: e.target.value,
+                })
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="请输入物料名称"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                数量 *
+              </label>
+              <input
+                type="number"
+                value={inventoryForm.quantity}
+                onChange={(e) =>
+                  setInventoryForm({
+                    ...inventoryForm,
+                    quantity: e.target.value,
+                  })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="请输入数量"
+                min="0"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                采购批号 *
+              </label>
+              <input
+                type="text"
+                value={inventoryForm.purchaseBatch}
+                onChange={(e) =>
+                  setInventoryForm({
+                    ...inventoryForm,
+                    purchaseBatch: e.target.value,
+                  })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="请输入采购批号"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              商品SKU
+            </label>
+            <input
+              type="text"
+              value={inventoryForm.sku}
+              onChange={(e) =>
+                setInventoryForm({ ...inventoryForm, sku: e.target.value })
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="请输入商品SKU"
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                单价
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={inventoryForm.unitPrice}
+                onChange={(e) =>
+                  setInventoryForm({
+                    ...inventoryForm,
+                    unitPrice: e.target.value,
+                  })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="请输入单价"
+                min="0"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                总价
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={inventoryForm.totalPrice}
+                onChange={(e) =>
+                  setInventoryForm({
+                    ...inventoryForm,
+                    totalPrice: e.target.value,
+                  })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="请输入总价"
+                min="0"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                税率 (%)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={inventoryForm.taxRate}
+                onChange={(e) =>
+                  setInventoryForm({
+                    ...inventoryForm,
+                    taxRate: e.target.value,
+                  })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="请输入税率"
+                min="0"
+                max="100"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                税额
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={inventoryForm.taxAmount}
+                onChange={(e) =>
+                  setInventoryForm({
+                    ...inventoryForm,
+                    taxAmount: e.target.value,
+                  })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="请输入税额"
+                min="0"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                仓库
+              </label>
+              <input
+                type="text"
+                value={inventoryForm.warehouse}
+                onChange={(e) =>
+                  setInventoryForm({
+                    ...inventoryForm,
+                    warehouse: e.target.value,
+                  })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="请输入仓库"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button onClick={handleCancel} variant="outline">
+              取消
+            </Button>
+            <Button
+              onClick={handleSaveEdit}
+              disabled={
+                !inventoryForm.materialName ||
+                !inventoryForm.quantity ||
+                !inventoryForm.purchaseBatch
+              }
+            >
+              保存
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* 表格导入模态框 */}
       <Modal
