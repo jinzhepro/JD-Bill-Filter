@@ -47,10 +47,6 @@ export default function ResultDisplay() {
   const uploadedFile = uploadedFiles.length > 0 ? uploadedFiles[0] : null;
 
   const [hasFailedReplacements, setHasFailedReplacements] = useState(false);
-  const [isDeductingInventory, setIsDeductingInventory] = useState(false);
-  const [inventoryDeducted, setInventoryDeducted] = useState(false);
-
-  // 提取文件名中的日期部分
   const extractDateFromFileName = (fileName) => {
     if (!fileName) {
       console.log("文件名为空，返回空字符串");
@@ -239,55 +235,6 @@ export default function ResultDisplay() {
     }
   };
 
-  // 库存扣减处理
-  const handleInventoryDeduction = async () => {
-    if (!skuProcessedData || skuProcessedData.length === 0) {
-      setError("没有可进行库存扣减的数据");
-      return;
-    }
-
-    try {
-      setIsDeductingInventory(true);
-      addLog("开始执行库存扣减...", "info");
-
-      // 从数据库获取最新的库存数据
-      const { getInventoryFromDatabase } = await import(
-        "@/lib/inventoryStorage"
-      );
-      const dbInventoryItems = await getInventoryFromDatabase();
-
-      if (!dbInventoryItems || dbInventoryItems.length === 0) {
-        setError("数据库中没有库存数据");
-        return;
-      }
-
-      const { deductInventory } = await import("@/lib/dataProcessor");
-      const deductionResult = await deductInventory(
-        skuProcessedData,
-        dbInventoryItems
-      );
-
-      if (deductionResult.success) {
-        addLog(
-          `库存扣减成功：共扣减 ${deductionResult.totalDeducted} 件商品，创建 ${deductionResult.deductionRecords.length} 条扣减记录`,
-          "success"
-        );
-        setInventoryDeducted(true);
-      } else {
-        addLog(
-          `库存扣减部分失败：${deductionResult.errors.join(", ")}`,
-          "warning"
-        );
-      }
-    } catch (error) {
-      console.error("库存扣减失败:", error);
-      setError(`库存扣减失败: ${error.message}`);
-      addLog(`库存扣减失败: ${error.message}`, "error");
-    } finally {
-      setIsDeductingInventory(false);
-    }
-  };
-
   const handleDownloadSkuExcel = () => {
     if (!skuProcessedData || skuProcessedData.length === 0) return;
 
@@ -449,39 +396,7 @@ export default function ResultDisplay() {
               >
                 {isSkuProcessing ? "处理中..." : "处理"}
               </Button>
-              {skuProcessedData && skuProcessedData.length > 0 && (
-                <Button
-                  variant="warning"
-                  onClick={handleInventoryDeduction}
-                  disabled={
-                    isDeductingInventory ||
-                    hasFailedReplacements ||
-                    inventoryDeducted
-                  }
-                  className={`${
-                    isDeductingInventory ||
-                    hasFailedReplacements ||
-                    inventoryDeducted
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-orange-600 hover:bg-orange-700"
-                  } text-white`}
-                  title={
-                    hasFailedReplacements
-                      ? "存在替换失败的记录，无法扣减库存"
-                      : inventoryDeducted
-                      ? "库存已扣减"
-                      : "扣减库存"
-                  }
-                >
-                  {isDeductingInventory
-                    ? "扣减中..."
-                    : hasFailedReplacements
-                    ? "存在替换失败，无法扣减"
-                    : inventoryDeducted
-                    ? "库存已扣减"
-                    : "扣减库存"}
-                </Button>
-              )}
+
               {skuProcessedData && skuProcessedData.length > 0 && (
                 <Button
                   variant="success"

@@ -20,7 +20,6 @@ import {
   createInventoryTable,
   pushInventoryToMySQL,
   getInventoryFromMySQL,
-  clearInventoryInMySQL,
   getInventoryBatches,
   deleteBatch,
   healthCheck,
@@ -176,44 +175,6 @@ export function InventoryManager() {
     setIsTableImportModalOpen(false);
   };
 
-  // 清空数据库处理
-  const handleClearDatabase = async () => {
-    if (inventoryItems.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "无数据",
-        description: "没有库存数据可以清空",
-      });
-      return;
-    }
-
-    // 这里可以添加确认对话框，但为了简化，暂时直接处理
-    try {
-      // 清空数据库中的数据
-      const { clearInventoryInMySQL } = await import("@/lib/mysqlConnection");
-      const result = await clearInventoryInMySQL();
-
-      if (result.success) {
-        // 清空状态中的数据
-        setInventoryItems([]);
-        addLog("所有库存数据已清空", "warning");
-        toast({
-          title: "清空成功",
-          description: `已清空 ${inventoryItems.length} 条库存记录`,
-        });
-      } else {
-        throw new Error(result.message);
-      }
-    } catch (error) {
-      setError(`清空数据库失败: ${error.message}`);
-      toast({
-        variant: "destructive",
-        title: "清空失败",
-        description: `清空数据库失败: ${error.message}`,
-      });
-    }
-  };
-
   // 处理编辑
   const handleEdit = (item) => {
     setInventoryForm({
@@ -228,7 +189,6 @@ export function InventoryManager() {
       warehouse: item.warehouse || "",
     });
     setEditingInventoryId(item.id);
-    setFormErrors([]);
   };
 
   // 处理删除
@@ -401,7 +361,6 @@ export function InventoryManager() {
   const handleCancel = () => {
     resetInventoryForm();
     setEditingInventoryId(null);
-    setFormErrors([]);
   };
 
   // API健康检查
@@ -508,36 +467,6 @@ export function InventoryManager() {
         variant: "destructive",
         title: "拉取失败",
         description: `数据拉取失败: ${error.message}`,
-      });
-    } finally {
-      setIsMySqlProcessing(false);
-    }
-  };
-
-  // 清空MySQL数据
-  const handleClearMySQL = async () => {
-    setIsMySqlProcessing(true);
-    setMySqlStatus("正在清空MySQL数据...");
-
-    try {
-      const result = await clearInventoryInMySQL();
-      if (result.success) {
-        setMySqlStatus("MySQL数据清空成功");
-        addLog(result.message, "warning");
-        toast({
-          title: "清空成功",
-          description: result.message,
-        });
-      } else {
-        throw new Error(result.message);
-      }
-    } catch (error) {
-      setMySqlStatus("MySQL数据清空失败");
-      addLog(`MySQL数据清空失败: ${error.message}`, "error");
-      toast({
-        variant: "destructive",
-        title: "清空失败",
-        description: `MySQL数据清空失败: ${error.message}`,
       });
     } finally {
       setIsMySqlProcessing(false);
@@ -847,16 +776,6 @@ export function InventoryManager() {
               title="从数据库商品表拉取最新的商品名称并更新库存项"
             >
               立即更新商品名称
-            </Button>
-            <Link href="/inventory/records">
-              <Button className="w-full md:w-auto">查看记录</Button>
-            </Link>
-            <Button
-              onClick={handleClearDatabase}
-              className="w-full md:w-auto"
-              disabled={inventoryItems.length === 0 || isDbLoading}
-            >
-              清空数据库
             </Button>
           </div>
         </div>
