@@ -26,33 +26,11 @@ export function PdfViewer({ pdf, isOpen, onClose }) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl h-[90vh] p-0">
+      <DialogContent className="max-w-6xl h-[95vh] p-0">
         <DialogHeader className="p-4 border-b">
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-lg font-medium truncate pr-4">
-              📄 {pdf.fileName}
-            </DialogTitle>
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={() => {
-                  const link = document.createElement("a");
-                  link.href = pdf.downloadUrl;
-                  link.download = pdf.fileName;
-                  link.target = "_blank";
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                }}
-                variant="outline"
-                size="sm"
-              >
-                ⬇️ 下载
-              </Button>
-              <Button onClick={handleClose} variant="outline" size="sm">
-                ✕ 关闭
-              </Button>
-            </div>
-          </div>
+          <DialogTitle className="text-lg font-medium truncate">
+            📄 {pdf.fileName}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 relative">
@@ -105,7 +83,7 @@ export function PdfViewer({ pdf, isOpen, onClose }) {
           <iframe
             id="pdf-viewer-iframe"
             src={downloadUrl}
-            className="w-full h-full border-0"
+            className="w-full h-[calc(95vh-200px)] border-0"
             title={pdf.fileName}
             onLoad={() => {
               setIsLoading(false);
@@ -125,11 +103,29 @@ export function PdfViewer({ pdf, isOpen, onClose }) {
                 📅 上传时间: {new Date(pdf.uploadTime).toLocaleString("zh-CN")}
               </span>
             </div>
-            {pdf.description && (
-              <div className="text-right">
-                <span className="font-medium">📝 描述:</span> {pdf.description}
-              </div>
-            )}
+            <div className="flex items-center gap-3">
+              {pdf.description && (
+                <div className="text-right">
+                  <span className="font-medium">📝 描述:</span>{" "}
+                  {pdf.description}
+                </div>
+              )}
+              <Button
+                onClick={() => {
+                  const link = document.createElement("a");
+                  link.href = pdf.downloadUrl;
+                  link.download = pdf.fileName;
+                  link.target = "_blank";
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }}
+                variant="outline"
+                size="sm"
+              >
+                ⬇️ 下载
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>

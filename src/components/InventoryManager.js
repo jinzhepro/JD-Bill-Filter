@@ -14,6 +14,7 @@ import {
   groupInventoryByBatch,
   createMultipleInventoryItems,
 } from "@/lib/inventoryStorage";
+import { PdfViewer } from "./PdfViewer";
 import {
   testConnection,
   createInventoryTable,
@@ -64,8 +65,14 @@ export function InventoryManager() {
   const [deletingBatch, setDeletingBatch] = useState(null);
 
   // PDF管理状态
-  const [expandedBatches, setExpandedBatches] = useState(new Set());
   const [batchPdfCounts, setBatchPdfCounts] = useState({});
+
+  // PDF Modal状态
+  const [uploadPdfModalOpen, setUploadPdfModalOpen] = useState(false);
+  const [viewPdfModalOpen, setViewPdfModalOpen] = useState(false);
+  const [currentBatchName, setCurrentBatchName] = useState(null);
+  const [currentPdfList, setCurrentPdfList] = useState([]);
+  const [selectedPdf, setSelectedPdf] = useState(null);
 
   // 在组件挂载时从数据库加载库存数据
   useEffect(() => {
@@ -650,29 +657,80 @@ export function InventoryManager() {
     setDeletingBatch(null);
   }, []);
 
-  // 切换批次PDF展开/折叠
-  const toggleBatchPdfExpansion = useCallback((batchName) => {
-    setExpandedBatches((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(batchName)) {
-        newSet.delete(batchName);
-      } else {
-        newSet.add(batchName);
+  // 处理PDF列表更新（保留以兼容现有代码）
+  const handlePdfListUpdate = useCallback((pdfs) => {
+    // 这个函数现在主要用于兼容性，不需要实际实现
+    console.log("PDF列表更新:", pdfs.length);
+  }, []);
+
+  // 打开PDF上传Modal
+  const handleOpenUploadPdf = useCallback((batchName) => {
+    setCurrentBatchName(batchName);
+    setUploadPdfModalOpen(true);
+  }, []);
+
+  // 关闭PDF上传Modal
+  const handleCloseUploadPdf = useCallback(() => {
+    setUploadPdfModalOpen(false);
+    setCurrentBatchName(null);
+  }, []);
+
+  // 打开PDF查看Modal
+  const handleOpenViewPdf = useCallback(
+    async (batchName) => {
+      try {
+        // 获取该批次的PDF列表
+        const { getBatchPdfs } = await import("@/lib/mysqlConnection");
+        const result = await getBatchPdfs(batchName);
+
+        if (result.success) {
+          setCurrentBatchName(batchName);
+          setCurrentPdfList(result.data);
+          setViewPdfModalOpen(true);
+        } else {
+          toast({
+            variant: "destructive",
+            title: "获取PDF列表失败",
+            description: result.message,
+          });
+        }
+      } catch (error) {
+        console.error("获取PDF列表失败:", error);
+        toast({
+          variant: "destructive",
+          title: "获取PDF列表失败",
+          description: error.message,
+        });
       }
-      return newSet;
-    });
+    },
+    [toast]
+  );
+
+  // 关闭PDF查看Modal
+  const handleCloseViewPdf = useCallback(() => {
+    setViewPdfModalOpen(false);
+    setCurrentBatchName(null);
+    setCurrentPdfList([]);
+    setSelectedPdf(null);
+  }, []);
+
+  // 处理PDF查看
+  const handleViewPdf = useCallback((pdf) => {
+    setSelectedPdf(pdf);
   }, []);
 
   // 处理PDF列表更新
-  const handlePdfListUpdate = useCallback((pdfs) => {
-    // 更新PDF数量统计
-    setBatchPdfCounts((prev) => ({
-      ...prev,
-      [expandedBatches.has(
-        Object.keys(prev).find((key) => prev[key] !== prev[key])
-      )]: pdfs.length,
-    }));
-  }, []);
+  const handlePdfUploadUpdate = useCallback(
+    (pdfs) => {
+      setBatchPdfCounts((prev) => ({
+        ...prev,
+        [currentBatchName]: pdfs.length,
+      }));
+      // 同时更新当前Modal中的列表
+      setCurrentPdfList(pdfs);
+    },
+    [currentBatchName]
+  );
 
   return (
     <div className="space-y-6">
@@ -799,12 +857,20 @@ export function InventoryManager() {
                         删除批次
                       </Button>
                       <Button
-                        onClick={() => toggleBatchPdfExpansion(batch)}
+                        onClick={() => handleOpenUploadPdf(batch)}
                         variant="outline"
                         className="px-2 py-1 text-xs"
-                        title="PDF文件管理"
+                        title="上传PDF文件"
                       >
-                        📄 PDF ({batchPdfCounts[batch] || 0})
+                        ⬆️ 上传PDF
+                      </Button>
+                      <Button
+                        onClick={() => handleOpenViewPdf(batch)}
+                        variant="outline"
+                        className="px-2 py-1 text-xs"
+                        title="查看PDF文件"
+                      >
+                        👁️ 查看PDF ({batchPdfCounts[batch] || 0})
                       </Button>
                     </div>
                     <div className="text-right text-sm text-gray-600">
@@ -825,21 +891,6 @@ export function InventoryManager() {
                     </div>
                   </div>
                 </div>
-
-                {/* PDF上传区域 */}
-                {expandedBatches.has(batch) && (
-                  <div className="p-4 bg-blue-50 border-b border-gray-200">
-                    <BatchPdfUpload
-                      batchName={batch}
-                      onPdfListUpdate={(pdfs) => {
-                        setBatchPdfCounts((prev) => ({
-                          ...prev,
-                          [batch]: pdfs.length,
-                        }));
-                      }}
-                    />
-                  </div>
-                )}
 
                 {/* 批号下的物品列表 */}
                 <div>
@@ -1041,6 +1092,132 @@ export function InventoryManager() {
         confirmText="确认删除"
         cancelText="取消"
         confirmVariant="destructive"
+      />
+
+      {/* PDF上传模态框 */}
+      <Modal
+        isOpen={uploadPdfModalOpen}
+        onClose={handleCloseUploadPdf}
+        title={`上传PDF文件 - ${currentBatchName}`}
+        size="xl"
+      >
+        {currentBatchName && (
+          <BatchPdfUpload
+            batchName={currentBatchName}
+            onPdfListUpdate={handlePdfUploadUpdate}
+          />
+        )}
+      </Modal>
+
+      {/* PDF查看模态框 */}
+      <Modal
+        isOpen={viewPdfModalOpen}
+        onClose={handleCloseViewPdf}
+        title={`查看PDF文件 - ${currentBatchName}`}
+        size="xl"
+        className="h-[90vh]"
+      >
+        {viewPdfModalOpen && (
+          <div className="space-y-4">
+            {currentPdfList.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">暂无PDF文件</div>
+            ) : (
+              <div className="space-y-3">
+                {currentPdfList.map((pdf) => (
+                  <div
+                    key={pdf.id}
+                    className="p-4 border rounded-lg hover:bg-gray-50"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900">
+                          {pdf.fileName}
+                        </h4>
+                        <p className="text-sm text-gray-500 mt-1">
+                          大小: {(pdf.fileSize / 1024).toFixed(2)} KB •
+                          上传时间:{" "}
+                          {new Date(pdf.uploadTime).toLocaleString("zh-CN")}
+                        </p>
+                        {pdf.description && (
+                          <p className="text-sm text-gray-600 mt-1">
+                            {pdf.description}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex gap-2 ml-4">
+                        <Button
+                          onClick={() => handleViewPdf(pdf)}
+                          variant="outline"
+                          size="sm"
+                        >
+                          👁️ 查看
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            const link = document.createElement("a");
+                            link.href = pdf.downloadUrl;
+                            link.download = pdf.fileName;
+                            link.target = "_blank";
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                          }}
+                          variant="outline"
+                          size="sm"
+                        >
+                          ⬇️ 下载
+                        </Button>
+                        <Button
+                          onClick={async () => {
+                            if (
+                              window.confirm(
+                                `确定要删除PDF文件 "${pdf.fileName}" 吗？`
+                              )
+                            ) {
+                              try {
+                                const { deleteBatchPdf } = await import(
+                                  "@/lib/mysqlConnection"
+                                );
+                                const result = await deleteBatchPdf(pdf.id);
+                                if (result.success) {
+                                  toast({
+                                    title: "删除成功",
+                                    description: `PDF文件 "${pdf.fileName}" 已删除`,
+                                  });
+                                  // 重新加载PDF列表
+                                  handleOpenViewPdf(currentBatchName);
+                                } else {
+                                  throw new Error(result.message);
+                                }
+                              } catch (error) {
+                                toast({
+                                  variant: "destructive",
+                                  title: "删除失败",
+                                  description: `删除PDF文件失败: ${error.message}`,
+                                });
+                              }
+                            }
+                          }}
+                          variant="destructive"
+                          size="sm"
+                        >
+                          🗑️ 删除
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {/* PDF查看器模态框 */}
+      <PdfViewer
+        pdf={selectedPdf}
+        isOpen={!!selectedPdf}
+        onClose={() => setSelectedPdf(null)}
       />
 
       {/* 表格导入模态框 */}

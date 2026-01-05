@@ -7,6 +7,7 @@ import {
   createProductTable,
   createSupplierTable,
   createUserTable,
+  createPdfTable,
 } from "@/lib/mysqlConnection";
 import { MainLayout } from "@/components/MainLayout";
 
@@ -14,6 +15,7 @@ export default function TestPage() {
   const [results, setResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [userInitLoading, setUserInitLoading] = useState(false);
+  const [pdfTableLoading, setPdfTableLoading] = useState(false);
 
   const addResult = (test, success, message, duration = 0) => {
     setResults((prev) => [
@@ -109,6 +111,22 @@ export default function TestPage() {
     }
   };
 
+  const runPdfTableTest = async () => {
+    setPdfTableLoading(true);
+    const startTime = Date.now();
+
+    try {
+      const result = await createPdfTable();
+      const duration = Date.now() - startTime;
+      addResult("PDF表创建测试", result.success, result.message, duration);
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      addResult("PDF表创建测试", false, error.message, duration);
+    } finally {
+      setPdfTableLoading(false);
+    }
+  };
+
   const runAllTests = async () => {
     setResults([]);
     await runConnectionTest();
@@ -120,6 +138,8 @@ export default function TestPage() {
     await runSupplierTableTest();
     await new Promise((resolve) => setTimeout(resolve, 500));
     await runUserTableTest();
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    await runPdfTableTest();
   };
 
   const clearResults = () => {
@@ -179,6 +199,13 @@ export default function TestPage() {
               className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {userInitLoading ? "初始化中..." : "用户表初始化"}
+            </button>
+            <button
+              onClick={runPdfTableTest}
+              disabled={isLoading || pdfTableLoading}
+              className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {pdfTableLoading ? "测试中..." : "PDF表创建测试"}
             </button>
             <button
               onClick={clearResults}
