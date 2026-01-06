@@ -10,6 +10,7 @@ This file provides guidance to agents when working with code in this repository.
 - **订单数据必须按"订单编号"分组处理** - 使用 mergeGroup 函数，这是业务逻辑的核心
 - **合并记录时必须同时检查商品编号和单价** - 确保数据准确性，避免错误合并
 - **CSV 文件读取需要先尝试 UTF-8，失败后自动切换到 GBK 编码** - 处理中文编码问题
+- **"合流共配回收运费"特殊处理逻辑** - 会替换对应商品的货款金额，需要在 groupedData 生成后处理
 
 ### 文件处理规范
 
@@ -44,3 +45,9 @@ This file provides guidance to agents when working with code in this repository.
 - **错误信息必须用户友好，避免技术术语** - 提升用户体验
 - **文件处理错误必须包含文件名和具体原因** - 便于调试
 - **数据验证错误必须指出缺失的字段名称** - 用户友好提示
+
+### Toast 提示系统规范
+
+- **必须使用统一的 useToast hook，不允许使用其他 toast 库** - 确保界面一致性
+- **Toast 调用格式：toast({ title: "消息" }) 用于成功，toast({ variant: "destructive", title: "错误" }) 用于错误** - 项目标准化格式
+- **所有关键操作都需要添加用户反馈提示** - 提升用户体验
