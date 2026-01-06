@@ -264,7 +264,9 @@ export default function ResultDisplay() {
       const fileName = `物料名称替换订单结果_${datePart}.xlsx`;
       console.log("生成的SKU文件名:", fileName); // 调试信息
       downloadExcel(skuProcessedData, fileName);
-      toast.success(`Excel文件已保存: ${fileName}`);
+      toast({
+        title: `Excel文件已保存: ${fileName}`,
+      });
     } catch (error) {
       console.error("物料名称替换Excel下载失败:", error);
       toast({
