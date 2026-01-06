@@ -62,6 +62,86 @@ export function processOrderData(data) {
 
   console.log(mergedAfterSalesData);
 
+  // 处理非销售单金额逻辑
+  // 筛选出所有单据类型为"非销售单"的数据
+  const nonSalesOrders = data.filter((row) => row["单据类型"] === "非销售单");
+
+  console.log("找到非销售单数量:", nonSalesOrders.length);
+  console.log("非销售单列表:", nonSalesOrders);
+
+  // 记录已处理的非销售单，确保每个非销售单只处理一次
+  const processedNonSalesOrders = new Set();
+
+  // 对每一条非销售单进行处理
+  nonSalesOrders.forEach((nonSalesRow) => {
+    const rowId = `${nonSalesRow["订单编号"]}_${nonSalesRow["商品编号"]}`;
+
+    console.log("处理非销售单:", {
+      订单编号: nonSalesRow["订单编号"],
+      商品编号: nonSalesRow["商品编号"],
+      单据类型: nonSalesRow["单据类型"],
+      金额: nonSalesRow["金额"],
+    });
+
+    // 如果这个非销售单已经处理过，跳过
+    if (processedNonSalesOrders.has(rowId)) {
+      console.log("该非销售单已处理过，跳过");
+      return;
+    }
+
+    const nonSalesAmount = new Decimal(nonSalesRow["金额"] || 0);
+    const orderNo = nonSalesRow["订单编号"];
+    const nonSalesAbsAmount = nonSalesAmount.abs();
+
+    console.log("非销售单金额信息:", {
+      原始金额: nonSalesAmount.toNumber(),
+      绝对值: nonSalesAbsAmount.toNumber(),
+    });
+
+    // 查询所有数据，找到第一条符合条件的就停止
+    let matchCount = 0;
+    for (const row of data) {
+      const rowAmount = new Decimal(row["金额"] || 0);
+
+      console.log("检查订单记录:", {
+        订单编号: row["订单编号"],
+        商品编号: row["商品编号"],
+        单据类型: row["单据类型"],
+        金额: rowAmount.toNumber(),
+        是否大于绝对值: rowAmount.greaterThan(nonSalesAbsAmount),
+      });
+
+      // 如果金额大于非销售单金额的绝对值
+      if (rowAmount.greaterThan(nonSalesAbsAmount)) {
+        // 将非销售单的金额加到这个记录上（如果是负数就减去）
+        const newAmount = rowAmount.plus(nonSalesAmount);
+
+        // 更新金额
+        row["金额"] = newAmount.toNumber();
+        matchCount++;
+
+        console.log("非销售单金额调整:", {
+          非销售单订单编号: nonSalesRow["订单编号"],
+          非销售单商品编号: nonSalesRow["商品编号"],
+          非销售单金额: nonSalesAmount.toNumber(),
+          非销售单金额绝对值: nonSalesAbsAmount.toNumber(),
+          调整记录订单编号: row["订单编号"],
+          调整记录商品编号: row["商品编号"],
+          原始金额: rowAmount.toNumber(),
+          调整后金额: newAmount.toNumber(),
+        });
+
+        // 找到第一条符合条件的记录后停止
+        break;
+      }
+    }
+
+    console.log("该非销售单调整了", matchCount, "条记录");
+
+    // 标记这个非销售单已处理
+    processedNonSalesOrders.add(rowId);
+  });
+
   // 筛选单据类型为"订单"的数据
   let orderData = data
     .filter(
@@ -227,7 +307,7 @@ export function processOrderData(data) {
   return mergedProcessedData;
 }
 
-// 合并相同商品编码和单价的记录
+// 合并相同商品编码的记录
 export function mergeSameSKU(processedData) {
   // 先过滤掉总价为0或未定义的记录
   const filteredData = processedData.filter(
@@ -237,9 +317,7 @@ export function mergeSameSKU(processedData) {
 
   const mergedData = filteredData.reduce((acc, current) => {
     const existingItem = acc.find(
-      (item) =>
-        item["商品编号"] === current["商品编号"] &&
-        item["单价"] === current["单价"]
+      (item) => item["商品编号"] === current["商品编号"]
     );
 
     if (existingItem) {
@@ -307,7 +385,6 @@ export function processWithSkuAndBatch(
   // 统计信息
   let successCount = 0;
   let failedSkus = [];
-  let supplierMatchCount = 0;
 
   // 处理每条订单数据
   const enhancedData = processedData.map((orderItem) => {
@@ -344,47 +421,8 @@ export function processWithSkuAndBatch(
     if (matchedInventoryItem) {
       // 用库存中对应的物料名称替换商品名称
       newItem["商品名称"] = matchedInventoryItem.materialName;
-      // 添加批次号
-      newItem["批次号"] = matchedInventoryItem.purchaseBatch;
       // 添加税率
       newItem["税率"] = matchedInventoryItem.taxRate || "";
-
-      // 通过批次号匹配供应商
-      let matchedSupplier = null;
-      if (
-        matchedInventoryItem.purchaseBatch &&
-        matchedInventoryItem.purchaseBatch.trim() !== ""
-      ) {
-        const batchNumber = matchedInventoryItem.purchaseBatch.trim();
-
-        // 遍历所有供应商，检查匹配字符串是否包含批次号
-        for (const supplier of suppliers) {
-          if (supplier.matchString && supplier.matchString.trim() !== "") {
-            const matchString = supplier.matchString.trim();
-            // 检查批次号是否包含供应商的匹配字符串，或者匹配字符串是否包含批次号
-            if (
-              batchNumber.includes(matchString) ||
-              matchString.includes(batchNumber)
-            ) {
-              matchedSupplier = supplier;
-              break;
-            }
-          }
-        }
-      }
-
-      // 添加供应商信息
-      if (matchedSupplier) {
-        newItem["供应商ID"] = matchedSupplier.supplierId;
-        newItem["供应商名称"] = matchedSupplier.name;
-        supplierMatchCount++;
-        console.log(
-          `供应商匹配成功: 批次号 ${matchedInventoryItem.purchaseBatch} -> 供应商 ${matchedSupplier.name} (ID: ${matchedSupplier.supplierId})`
-        );
-      } else {
-        newItem["供应商ID"] = "";
-        newItem["供应商名称"] = "";
-      }
 
       successCount++;
       console.log(
@@ -395,11 +433,8 @@ export function processWithSkuAndBatch(
         }`
       );
     } else {
-      // 如果没有匹配的库存项，添加空批次号、税率和供应商信息
-      newItem["批次号"] = "";
+      // 如果没有匹配的库存项，添加空税率
       newItem["税率"] = "";
-      newItem["供应商ID"] = "";
-      newItem["供应商名称"] = "";
       failedSkus.push(productNo);
       console.log(
         `未匹配: 商品编号 ${productNo}, 商品名称 ${originalProductName}`
@@ -409,10 +444,7 @@ export function processWithSkuAndBatch(
     return newItem;
   });
 
-  console.log(
-    `SKU、批次号和供应商处理完成，生成 ${enhancedData.length} 条增强数据`
-  );
-  console.log(`供应商匹配统计: 成功匹配 ${supplierMatchCount} 条记录`);
+  console.log(`SKU和税率处理完成，生成 ${enhancedData.length} 条增强数据`);
 
   // 返回处理后的数据和统计信息
   return {
@@ -422,7 +454,6 @@ export function processWithSkuAndBatch(
       success: successCount,
       failed: failedSkus.length,
       failedSkus: failedSkus,
-      supplierMatches: supplierMatchCount,
     },
   };
 }

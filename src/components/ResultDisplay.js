@@ -6,7 +6,7 @@ import { useSupplier } from "@/context/SupplierContext";
 import { downloadExcel } from "@/lib/excelHandler";
 import { processWithSkuAndBatch } from "@/lib/dataProcessor";
 import { Button } from "./ui/button";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ResultDisplay() {
   const {
@@ -25,6 +25,7 @@ export default function ResultDisplay() {
   } = useApp();
 
   const { suppliers, loadSuppliers } = useSupplier();
+  const { toast } = useToast();
   const [suppliersLoaded, setSuppliersLoaded] = useState(false);
   const hasLoadedSuppliers = useRef(false);
 
@@ -82,28 +83,44 @@ export default function ResultDisplay() {
   };
 
   // 复制列数据功能
-  const handleCopyColumn = (columnName) => {
-    const dataToCopy = processedData
-      .map((row) => row[columnName])
-      .filter((value) => value !== null && value !== undefined);
-    const textToCopy = dataToCopy.join("\n");
+  const handleCopyColumn = async (columnName) => {
+    try {
+      const dataToCopy = processedData
+        .map((row) => row[columnName])
+        .filter((value) => value !== null && value !== undefined);
+      const textToCopy = dataToCopy.join("\n");
 
-    navigator.clipboard
-      .writeText(textToCopy)
-      .then(() => {
-        addLog(
-          `已复制列 "${columnName}" 的 ${dataToCopy.length} 条数据到剪贴板`,
-          "success"
-        );
-        toast.success(
-          `已复制列 "${columnName}" 的 ${dataToCopy.length} 条数据到剪贴板`
-        );
-      })
-      .catch((err) => {
-        console.error("复制失败:", err);
-        addLog(`复制列 "${columnName}" 失败`, "error");
-        toast.error(`复制列 "${columnName}" 失败`);
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(textToCopy);
+      } else {
+        // 降级方案：使用 textarea
+        const textArea = document.createElement("textarea");
+        textArea.value = textToCopy;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+      }
+
+      addLog(
+        `已复制列 "${columnName}" 的 ${dataToCopy.length} 条数据到剪贴板`,
+        "success"
+      );
+      toast({
+        title: `已复制列 "${columnName}" 的 ${dataToCopy.length} 条数据到剪贴板`,
       });
+    } catch (err) {
+      console.error("复制失败:", err);
+      addLog(`复制列 "${columnName}" 失败`, "error");
+      toast({
+        variant: "destructive",
+        title: `复制列 "${columnName}" 失败`,
+      });
+    }
   };
 
   if (!originalData || originalData.length === 0) {
@@ -155,8 +172,15 @@ export default function ResultDisplay() {
       const fileName = `订单处理结果_${datePart}.xlsx`;
       console.log("生成的文件名:", fileName); // 调试信息
       downloadExcel(processedData, fileName);
+      toast({
+        title: `Excel文件已保存: ${fileName}`,
+      });
     } catch (error) {
       console.error("Excel下载失败:", error);
+      toast({
+        variant: "destructive",
+        title: "Excel下载失败",
+      });
     }
   };
 
@@ -188,7 +212,7 @@ export default function ResultDisplay() {
 
       addLog(`从数据库加载了 ${dbInventoryItems.length} 条库存数据`, "info");
       addLog(`使用 ${suppliers.length} 个供应商数据进行匹配`, "info");
-      addLog("开始物料名称替换、批次号和供应商信息添加处理...", "info");
+      addLog("开始物料名称替换和税率添加处理...", "info");
 
       const result = processWithSkuAndBatch(
         processedData,
@@ -206,24 +230,17 @@ export default function ResultDisplay() {
       setHasFailedReplacements(stats.failed > 0);
 
       addLog(
-        `物料名称替换、批次号和供应商信息处理完成，生成 ${enhancedData.length} 条增强数据`,
+        `物料名称替换和税率处理完成，生成 ${enhancedData.length} 条增强数据`,
         "success"
       );
+      toast({
+        title: `物料名称替换和税率处理完成，生成 ${enhancedData.length} 条增强数据`,
+      });
 
       // 显示替换统计信息
       addLog(
         `替换统计: 成功 ${stats.success} 条，失败 ${stats.failed} 条`,
         stats.failed > 0 ? "warning" : "success"
-      );
-
-      // 统计供应商信息匹配情况
-      const supplierMatchedCount = enhancedData.filter(
-        (item) => item["供应商ID"] && item["供应商ID"].trim() !== ""
-      ).length;
-
-      addLog(
-        `供应商信息匹配: ${supplierMatchedCount} 条记录包含供应商信息`,
-        "info"
       );
 
       if (stats.failed > 0) {
@@ -247,8 +264,13 @@ export default function ResultDisplay() {
       const fileName = `物料名称替换订单结果_${datePart}.xlsx`;
       console.log("生成的SKU文件名:", fileName); // 调试信息
       downloadExcel(skuProcessedData, fileName);
+      toast.success(`Excel文件已保存: ${fileName}`);
     } catch (error) {
       console.error("物料名称替换Excel下载失败:", error);
+      toast({
+        variant: "destructive",
+        title: "Excel下载失败",
+      });
     }
   };
 
@@ -307,14 +329,15 @@ export default function ResultDisplay() {
                 <h4 className="text-sm font-medium text-blue-900 mb-2">
                   物料名称替换统计
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-blue-700">替换成功:</span>
                     <span className="ml-2 font-medium text-blue-900">
                       {
                         skuProcessedData.filter(
                           (item) =>
-                            item["批次号"] && item["批次号"].trim() !== ""
+                            item["税率"] &&
+                            item["税率"].toString().trim() !== ""
                         ).length
                       }{" "}
                       条
@@ -326,34 +349,8 @@ export default function ResultDisplay() {
                       {
                         skuProcessedData.filter(
                           (item) =>
-                            !item["批次号"] || item["批次号"].trim() === ""
-                        ).length
-                      }{" "}
-                      条
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-blue-700">供应商匹配:</span>
-                    <span className="ml-2 font-medium text-blue-900">
-                      {
-                        skuProcessedData.filter(
-                          (item) =>
-                            item["供应商ID"] && item["供应商ID"].trim() !== ""
-                        ).length
-                      }{" "}
-                      条
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-blue-700">批次号匹配:</span>
-                    <span className="ml-2 font-medium text-blue-900">
-                      {
-                        skuProcessedData.filter(
-                          (item) =>
-                            item["供应商ID"] &&
-                            item["供应商ID"].trim() !== "" &&
-                            item["批次号"] &&
-                            item["批次号"].trim() !== ""
+                            !item["税率"] ||
+                            item["税率"].toString().trim() === ""
                         ).length
                       }{" "}
                       条
@@ -363,7 +360,8 @@ export default function ResultDisplay() {
 
                 {/* 显示失败的SKU列表 */}
                 {skuProcessedData.filter(
-                  (item) => !item["批次号"] || item["批次号"].trim() === ""
+                  (item) =>
+                    !item["税率"] || item["税率"].toString().trim() === ""
                 ).length > 0 && (
                   <div className="mt-3">
                     <span className="text-blue-700 text-sm">未匹配的SKU:</span>
@@ -371,7 +369,8 @@ export default function ResultDisplay() {
                       {skuProcessedData
                         .filter(
                           (item) =>
-                            !item["批次号"] || item["批次号"].trim() === ""
+                            !item["税率"] ||
+                            item["税率"].toString().trim() === ""
                         )
                         .map((item) => item["商品编号"])
                         .join(", ")}

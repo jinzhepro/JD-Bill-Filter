@@ -8,7 +8,7 @@ import {
 } from "@/lib/dataProcessor";
 import { downloadExcel } from "@/lib/excelHandler";
 import { Button } from "./ui/button";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 
 export default function MergeProcessor() {
   const {
@@ -29,6 +29,7 @@ export default function MergeProcessor() {
   const [isSkuProcessing, setIsSkuProcessing] = useState(false);
   const [skuProcessedData, setSkuProcessedData] = useState([]);
   const [hasFailedReplacements, setHasFailedReplacements] = useState(false);
+  const { toast } = useToast();
 
   // 提取文件名中的日期部分
   const extractDateFromFileName = (fileName) => {
@@ -54,28 +55,44 @@ export default function MergeProcessor() {
   };
 
   // 复制列数据功能
-  const handleCopyColumn = (columnName) => {
-    const dataToCopy = mergedData
-      .map((row) => row[columnName])
-      .filter((value) => value !== null && value !== undefined);
-    const textToCopy = dataToCopy.join("\n");
+  const handleCopyColumn = async (columnName) => {
+    try {
+      const dataToCopy = mergedData
+        .map((row) => row[columnName])
+        .filter((value) => value !== null && value !== undefined);
+      const textToCopy = dataToCopy.join("\n");
 
-    navigator.clipboard
-      .writeText(textToCopy)
-      .then(() => {
-        addLog(
-          `已复制列 "${columnName}" 的 ${dataToCopy.length} 条数据到剪贴板`,
-          "success"
-        );
-        toast.success(
-          `已复制列 "${columnName}" 的 ${dataToCopy.length} 条数据到剪贴板`
-        );
-      })
-      .catch((err) => {
-        console.error("复制失败:", err);
-        addLog(`复制列 "${columnName}" 失败`, "error");
-        toast.error(`复制列 "${columnName}" 失败`);
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(textToCopy);
+      } else {
+        // 降级方案：使用 textarea
+        const textArea = document.createElement("textarea");
+        textArea.value = textToCopy;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+      }
+
+      addLog(
+        `已复制列 "${columnName}" 的 ${dataToCopy.length} 条数据到剪贴板`,
+        "success"
+      );
+      toast({
+        title: `已复制列 "${columnName}" 的 ${dataToCopy.length} 条数据到剪贴板`,
       });
+    } catch (err) {
+      console.error("复制失败:", err);
+      addLog(`复制列 "${columnName}" 失败`, "error");
+      toast({
+        variant: "destructive",
+        title: `复制列 "${columnName}" 失败`,
+      });
+    }
   };
 
   // 处理多文件合并
@@ -162,7 +179,7 @@ export default function MergeProcessor() {
       }
 
       addLog(`从数据库加载了 ${dbInventoryItems.length} 条库存数据`, "info");
-      addLog("开始物料名称替换和批次号添加处理...", "info");
+      addLog("开始物料名称替换和税率添加处理...", "info");
 
       const result = processWithSkuAndBatch(mergedData, dbInventoryItems);
       const enhancedData = result.data;
@@ -176,9 +193,12 @@ export default function MergeProcessor() {
       setHasFailedReplacements(stats.failed > 0);
 
       addLog(
-        `物料名称替换和批次号处理完成，生成 ${enhancedData.length} 条增强数据`,
+        `物料名称替换和税率处理完成，生成 ${enhancedData.length} 条增强数据`,
         "success"
       );
+      toast({
+        title: `物料名称替换和税率处理完成，生成 ${enhancedData.length} 条增强数据`,
+      });
 
       // 显示替换统计信息
       addLog(
@@ -222,9 +242,16 @@ export default function MergeProcessor() {
       const fileName = `多文件合并结果_${datePart}.xlsx`;
       downloadExcel(mergedData, fileName);
       addLog(`合并结果已下载: ${fileName}`, "success");
+      toast({
+        title: `Excel文件已保存: ${fileName}`,
+      });
     } catch (error) {
       console.error("下载合并结果失败:", error);
       setError(`下载失败: ${error.message}`);
+      toast({
+        variant: "destructive",
+        title: "Excel下载失败",
+      });
     }
   }, [mergedData, addLog, setError, uploadedFiles]);
 
@@ -338,18 +365,6 @@ export default function MergeProcessor() {
                         {
                           skuProcessedData.filter(
                             (item) =>
-                              item["批次号"] && item["批次号"].trim() !== ""
-                          ).length
-                        }{" "}
-                        条
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-blue-700">税率匹配:</span>
-                      <span className="ml-2 font-medium text-blue-900">
-                        {
-                          skuProcessedData.filter(
-                            (item) =>
                               item["税率"] &&
                               item["税率"].toString().trim() !== ""
                           ).length
@@ -363,7 +378,8 @@ export default function MergeProcessor() {
                         {
                           skuProcessedData.filter(
                             (item) =>
-                              !item["批次号"] || item["批次号"].trim() === ""
+                              !item["税率"] ||
+                              item["税率"].toString().trim() === ""
                           ).length
                         }{" "}
                         条
@@ -373,7 +389,8 @@ export default function MergeProcessor() {
 
                   {/* 显示失败的SKU列表 */}
                   {skuProcessedData.filter(
-                    (item) => !item["批次号"] || item["批次号"].trim() === ""
+                    (item) =>
+                      !item["税率"] || item["税率"].toString().trim() === ""
                   ).length > 0 && (
                     <div className="mt-3">
                       <span className="text-blue-700 text-sm">
@@ -383,7 +400,8 @@ export default function MergeProcessor() {
                         {skuProcessedData
                           .filter(
                             (item) =>
-                              !item["批次号"] || item["批次号"].trim() === ""
+                              !item["税率"] ||
+                              item["税率"].toString().trim() === ""
                           )
                           .map((item) => item["商品编号"])
                           .join(", ")}
@@ -476,8 +494,6 @@ export default function MergeProcessor() {
                       <td key={key}>
                         {key === "单价" || key === "总价"
                           ? `¥${parseFloat(value).toFixed(2)}`
-                          : key === "批次号"
-                          ? value || "未匹配"
                           : key === "税率"
                           ? value
                             ? `${value}%`
