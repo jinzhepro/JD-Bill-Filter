@@ -959,6 +959,100 @@ async function getProductsFromMySQL() {
   }
 }
 
+// 更新商品批次号
+async function updateProductBatchNumbers(batchUpdates, mode = "replace") {
+  if (!batchUpdates || batchUpdates.length === 0) {
+    return { success: false, message: "没有批次号更新数据" };
+  }
+
+  try {
+    // 确保商品表和所有必需的字段都存在
+    await createProductTable();
+
+    const connection = await pool.getConnection();
+
+    // 开始事务
+    await connection.beginTransaction();
+
+    try {
+      let updateCount = 0;
+
+      // 批量更新每个商品的批次号
+      for (const update of batchUpdates) {
+        const { sku, batchNumber } = update;
+
+        if (!sku) {
+          console.warn("跳过缺少SKU的更新项:", update);
+          continue;
+        }
+
+        if (mode === "push" && batchNumber) {
+          // push模式：先查询现有批次号，然后追加
+          const [existingRows] = await connection.execute(
+            "SELECT batch_number FROM products WHERE sku = ?",
+            [sku]
+          );
+
+          let newBatchNumber = batchNumber;
+          if (existingRows.length > 0 && existingRows[0].batch_number) {
+            // 如果已有批次号，追加新的批次号
+            const existingBatchNumber = existingRows[0].batch_number.trim();
+            if (
+              existingBatchNumber &&
+              !existingBatchNumber.includes(batchNumber)
+            ) {
+              newBatchNumber = existingBatchNumber + "\n" + batchNumber;
+            } else {
+              newBatchNumber = existingBatchNumber || batchNumber;
+            }
+          }
+
+          const [result] = await connection.execute(
+            "UPDATE products SET batch_number = ?, updated_at = CURRENT_TIMESTAMP WHERE sku = ?",
+            [newBatchNumber, sku]
+          );
+
+          if (result.affectedRows > 0) {
+            updateCount++;
+          }
+        } else {
+          // replace模式：直接替换
+          const [result] = await connection.execute(
+            "UPDATE products SET batch_number = ?, updated_at = CURRENT_TIMESTAMP WHERE sku = ?",
+            [batchNumber || "", sku]
+          );
+
+          if (result.affectedRows > 0) {
+            updateCount++;
+          }
+        }
+      }
+
+      // 提交事务
+      await connection.commit();
+      connection.release();
+
+      return {
+        success: true,
+        message: `成功更新了 ${updateCount} 个商品的批次号`,
+        updatedCount: updateCount,
+        mode: mode,
+      };
+    } catch (error) {
+      // 回滚事务
+      await connection.rollback();
+      connection.release();
+      throw error;
+    }
+  } catch (error) {
+    console.error("更新商品批次号失败:", error);
+    return {
+      success: false,
+      message: `更新商品批次号失败: ${error.message}`,
+    };
+  }
+}
+
 // 删除商品数据
 async function deleteProductFromMySQL(id) {
   if (!id) {
@@ -1096,11 +1190,15 @@ export async function POST(request) {
     });
 
     const bodyPromise = request.json();
-    const { action, data } = await Promise.race([bodyPromise, timeoutPromise]);
+    const { action, data, mode } = await Promise.race([
+      bodyPromise,
+      timeoutPromise,
+    ]);
 
     clearTimeout(timeoutId);
     console.log(`MySQL API请求: ${action}`, {
       data: data ? "received" : "none",
+      mode: mode || "default",
     });
 
     let result;
@@ -1252,6 +1350,10 @@ export async function POST(request) {
 
       case "getAllBatchesPdfCounts":
         result = await getAllBatchesPdfCounts();
+        break;
+
+      case "updateProductBatchNumbers":
+        result = await updateProductBatchNumbers(data, mode || "push");
         break;
 
       default:

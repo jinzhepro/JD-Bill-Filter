@@ -10,6 +10,7 @@ import {
 } from "@/lib/excelHandler";
 import { createMultipleInventoryItems } from "@/lib/inventoryStorage";
 import { updateProductNamesBySku } from "@/data/jdSkuMapping";
+import { updateProductBatchNumbers } from "@/lib/mysqlConnection";
 
 export function TableImport({ onImportItems, onCancel }) {
   const { toast } = useToast();
@@ -274,13 +275,54 @@ export function TableImport({ onImportItems, onCancel }) {
         throw new Error("创建库存项失败，数据验证未通过");
       }
 
+      setImportProgress("正在更新商品批次号...");
+      // 从导入的数据中提取SKU和批次号的对应关系
+      const batchUpdates = [];
+      const skuBatchMap = new Map(); // SKU -> 批次号Set（用于去重）
+
+      // 遍历导入的数据，收集每个SKU的所有唯一批次号
+      for (const item of updatedItems) {
+        if (item.sku && item.purchaseBatch) {
+          if (!skuBatchMap.has(item.sku)) {
+            skuBatchMap.set(item.sku, new Set());
+          }
+          skuBatchMap.get(item.sku).add(item.purchaseBatch);
+        }
+      }
+
+      // 转换为更新数组，每个SKU的批次号用逗号连接
+      for (const [sku, batchNumbers] of skuBatchMap) {
+        const combinedBatchNumber = Array.from(batchNumbers).join(", ");
+        batchUpdates.push({ sku, batchNumber: combinedBatchNumber });
+      }
+
+      // 批量更新商品批次号（push模式：追加到现有批次号）
+      if (batchUpdates.length > 0) {
+        const batchUpdateResult = await updateProductBatchNumbers(
+          batchUpdates,
+          "push"
+        );
+        if (!batchUpdateResult.success) {
+          console.warn("更新商品批次号时出现警告:", batchUpdateResult.message);
+          // 不抛出错误，继续导入流程
+        } else {
+          console.log(
+            `成功更新了 ${batchUpdateResult.updatedCount} 个商品的批次号`
+          );
+        }
+      }
+
       setImportProgress(
         `成功导入 ${newItems.length} 条库存数据，正在添加到系统...`
       );
 
       toast({
         title: "导入成功",
-        description: `成功导入 ${newItems.length} 条库存数据`,
+        description: `成功导入 ${newItems.length} 条库存数据${
+          batchUpdates.length > 0
+            ? `，更新了 ${batchUpdates.length} 个商品的批次号`
+            : ""
+        }`,
       });
 
       // 延迟一下让用户看到成功消息
