@@ -9,7 +9,7 @@ import { ErrorModal } from "./ui/modal";
 import Link from "next/link";
 
 export function AppContent() {
-  const { error, clearError, reset, originalData, mergeMode } = useApp();
+  const { error, clearError, resetOrder, originalData, mergeMode } = useApp();
 
   return (
     <div className="space-y-8">
@@ -32,7 +32,7 @@ export function AppContent() {
         onClose={() => {
           clearError();
           if (error?.includes("文件")) {
-            reset();
+            resetOrder();
           }
         }}
         message={error || ""}

@@ -44,6 +44,7 @@ const ActionTypes = {
   SET_ERROR: "SET_ERROR",
   CLEAR_ERROR: "CLEAR_ERROR",
   RESET: "RESET",
+  RESET_ORDER: "RESET_ORDER", // 新增：只重置订单处理相关状态，保留用户认证状态
   SET_MERGE_MODE: "SET_MERGE_MODE", // 新增：设置合并模式
   SET_MERGED_DATA: "SET_MERGED_DATA", // 新增：设置合并后的数据
   SET_FILE_DATA_ARRAY: "SET_FILE_DATA_ARRAY", // 新增：设置文件数据数组
@@ -150,6 +151,20 @@ function appReducer(state, action) {
 
     case ActionTypes.RESET:
       return initialState;
+
+    case ActionTypes.RESET_ORDER:
+      return {
+        ...state,
+        uploadedFiles: [],
+        originalData: [],
+        processedData: [],
+        isProcessing: false,
+        mergeMode: false,
+        mergedData: [],
+        fileDataArray: [],
+        skuProcessedData: [],
+        isSkuProcessing: false,
+      };
 
     default:
       return state;
@@ -295,6 +310,10 @@ export function AppProvider({ children }) {
 
     reset: useCallback(() => {
       dispatch({ type: ActionTypes.RESET });
+    }, []),
+
+    resetOrder: useCallback(() => {
+      dispatch({ type: ActionTypes.RESET_ORDER });
     }, []),
   };
 

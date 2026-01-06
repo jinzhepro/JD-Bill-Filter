@@ -22,7 +22,7 @@ export default function MergeProcessor() {
     setError,
     clearError,
     setProcessing,
-    reset,
+    resetOrder,
   } = useApp();
 
   const [isProcessing, setIsProcessing] = useState(false);
@@ -232,8 +232,8 @@ export default function MergeProcessor() {
   const handleResetMerge = useCallback(() => {
     setMergeMode(false);
     setMergedData([]);
-    reset();
-  }, [setMergeMode, setMergedData, reset]);
+    resetOrder();
+  }, [setMergeMode, setMergedData, resetOrder]);
 
   // 当进入合并模式时自动开始处理
   useEffect(() => {

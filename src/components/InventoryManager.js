@@ -574,7 +574,7 @@ export function InventoryManager() {
           break;
         case "taxRate":
           columnData = batchItems.map((item) =>
-            item.taxRate ? `${item.taxRate}%` : ""
+            item.taxRate ? item.taxRate.toString() : ""
           );
           break;
         case "sku":
@@ -590,13 +590,14 @@ export function InventoryManager() {
           columnData = batchItems.map((item) => item[columnName] || "");
       }
 
-      // 将数据格式化为列形式（每行一个值）
+      // 将数据格式化为列形式（每行一个值，使用换行符分隔）
+      // 这种格式可以直接粘贴到 Excel/Google Sheets 等表格软件的一列中
       const columnText = columnData.join("\n");
 
       await navigator.clipboard.writeText(columnText);
       toast({
         title: "复制成功",
-        description: `已复制批次 "${batchName}" 的 ${columnName} 列数据 (${columnData.length} 行)`,
+        description: `已复制批次 "${batchName}" 的 ${columnName} 列数据 (${columnData.length} 行)，可直接粘贴到表格中`,
       });
     } catch (error) {
       console.error("复制批次列数据失败:", error);
@@ -604,6 +605,81 @@ export function InventoryManager() {
         variant: "destructive",
         title: "复制失败",
         description: `复制批次列数据失败: ${error.message}`,
+      });
+    }
+  };
+
+  // 复制整个批次的所有列数据（多列一起复制）
+  const handleCopyBatchAllColumns = async (batchName, event) => {
+    // 阻止事件冒泡
+    if (event) {
+      event.stopPropagation();
+    }
+
+    try {
+      // 获取当前批次的数据
+      const batchItems = groupedItems[batchName] || [];
+      if (batchItems.length === 0) {
+        toast({
+          variant: "destructive",
+          title: "无数据",
+          description: `批次 "${batchName}" 没有数据可以复制`,
+        });
+        return;
+      }
+
+      // 定义列的顺序和对应的字段名
+      const columns = [
+        { name: "物料名称", key: "materialName" },
+        { name: "数量", key: "quantity" },
+        { name: "单价", key: "unitPrice" },
+        { name: "总价", key: "totalPrice" },
+        { name: "税率", key: "taxRate" },
+        { name: "SKU", key: "sku" },
+        { name: "仓库", key: "warehouse" },
+        { name: "采购批号", key: "purchaseBatch" },
+      ];
+
+      // 构建表头行
+      const headerRow = columns.map((col) => col.name).join("\t");
+
+      // 构建数据行
+      const dataRows = batchItems.map((item) => {
+        return columns
+          .map((col) => {
+            const value = item[col.key];
+            if (value === undefined || value === null) return "";
+            
+            // 根据字段类型格式化值
+            switch (col.key) {
+              case "quantity":
+                return value.toString();
+              case "unitPrice":
+              case "totalPrice":
+                return parseFloat(value).toFixed(2);
+              case "taxRate":
+                return value.toString();
+              default:
+                return value.toString();
+            }
+          })
+          .join("\t");
+      });
+
+      // 组合所有行（表头 + 数据行）
+      const allText = [headerRow, ...dataRows].join("\n");
+
+      await navigator.clipboard.writeText(allText);
+      toast({
+        title: "复制成功",
+        description: `已复制批次 "${batchName}" 的所有数据 (${batchItems.length} 行)，可直接粘贴到表格中`,
+      });
+    } catch (error) {
+      console.error("复制批次所有数据失败:", error);
+      toast({
+        variant: "destructive",
+        title: "复制失败",
+        description: `复制批次所有数据失败: ${error.message}`,
       });
     }
   };
@@ -973,6 +1049,14 @@ export function InventoryManager() {
                         title="查看PDF文件"
                       >
                         👁️ 查看PDF ({batchPdfCounts[batch] || 0})
+                      </Button>
+                      <Button
+                        onClick={(e) => handleCopyBatchAllColumns(batch, e)}
+                        variant="outline"
+                        className="px-2 py-1 text-xs"
+                        title="复制批次所有数据到剪贴板"
+                      >
+                        📋 复制全部
                       </Button>
                       <Button
                         onClick={() => toggleBatchEntryStatus(batch)}

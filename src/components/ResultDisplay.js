@@ -13,7 +13,7 @@ export default function ResultDisplay() {
     originalData,
     processedData,
     uploadedFiles,
-    reset,
+    resetOrder,
     inventoryItems,
     skuProcessedData,
     isSkuProcessing,
@@ -111,7 +111,7 @@ export default function ResultDisplay() {
   }
 
   const handleReset = () => {
-    reset();
+    resetOrder();
   };
 
   const handleDownloadCSV = () => {
