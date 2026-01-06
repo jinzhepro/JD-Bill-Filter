@@ -1192,6 +1192,10 @@ export async function POST(request) {
         result = await getBatchStatus();
         break;
 
+      case "getAllBatchesPdfCounts":
+        result = await getAllBatchesPdfCounts();
+        break;
+
       default:
         result = { success: false, message: "未知的操作类型" };
     }
@@ -1526,6 +1530,42 @@ async function deleteBatchPdf(pdfId) {
   } catch (error) {
     console.error("删除PDF文件失败:", error);
     return { success: false, message: `删除PDF文件失败: ${error.message}` };
+  }
+}
+
+// 批量获取所有批次的PDF数量统计
+async function getAllBatchesPdfCounts() {
+  try {
+    const connection = await pool.getConnection();
+
+    const [rows] = await connection.execute(`
+      SELECT 
+        purchase_batch as batchName,
+        COUNT(*) as pdfCount
+      FROM batch_pdfs 
+      GROUP BY purchase_batch
+      ORDER BY purchase_batch
+    `);
+
+    connection.release();
+
+    // 转换为对象格式
+    const pdfCountMap = {};
+    rows.forEach((row) => {
+      pdfCountMap[row.batchName] = row.pdfCount;
+    });
+
+    return {
+      success: true,
+      data: pdfCountMap,
+      message: `获取了 ${rows.length} 个批次的PDF数量统计`,
+    };
+  } catch (error) {
+    console.error("获取所有批次PDF数量统计失败:", error);
+    return {
+      success: false,
+      message: `获取所有批次PDF数量统计失败: ${error.message}`,
+    };
   }
 }
 

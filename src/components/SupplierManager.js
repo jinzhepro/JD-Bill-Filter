@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useSupplier } from "@/context/SupplierContext";
 import { Button } from "./ui/button";
 import Modal, { ConfirmModal } from "./ui/modal";
@@ -38,8 +38,12 @@ export default function SupplierManager() {
   const [convertText, setConvertText] = useState("");
   const [convertResults, setConvertResults] = useState([]);
 
+  const hasLoadedSuppliers = useRef(false);
+
   // 组件挂载时加载数据
   useEffect(() => {
+    if (hasLoadedSuppliers.current) return;
+    hasLoadedSuppliers.current = true;
     loadSuppliers();
   }, [loadSuppliers]);
 

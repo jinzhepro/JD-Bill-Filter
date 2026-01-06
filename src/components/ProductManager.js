@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useProduct } from "@/context/ProductContext";
 import { Button } from "./ui/button";
@@ -41,8 +41,12 @@ export function ProductManager() {
   const [mySqlStatus, setMySqlStatus] = useState("");
   const [activeTab, setActiveTab] = useState("manual"); // "manual" 或 "import"
 
+  const hasLoadedProducts = useRef(false);
+
   // 在组件挂载时从数据库加载商品数据
   useEffect(() => {
+    if (hasLoadedProducts.current) return;
+    hasLoadedProducts.current = true;
     loadProductsFromDB();
   }, []);
 

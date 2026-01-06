@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useInventory } from "@/context/InventoryContext";
 import { Button } from "./ui/button";
 import Modal, { ConfirmModal } from "./ui/modal";
@@ -77,46 +77,30 @@ export function InventoryManager() {
   const [currentPdfList, setCurrentPdfList] = useState([]);
   const [selectedPdf, setSelectedPdf] = useState(null);
 
+  const hasLoadedPdfCounts = useRef(false);
+
   // 加载所有批次的PDF数量
   const loadAllBatchPdfCounts = useCallback(async () => {
+    if (hasLoadedPdfCounts.current) return;
+    hasLoadedPdfCounts.current = true;
+
     try {
-      const { getInventoryBatches } = await import("@/lib/mysqlConnection");
-      const batchesResult = await getInventoryBatches();
+      // 使用新的批量接口一次性获取所有批次的PDF数量
+      const { getAllBatchesPdfCounts } = await import("@/lib/mysqlConnection");
+      const result = await getAllBatchesPdfCounts();
 
-      if (batchesResult.success) {
-        const batches = batchesResult.data;
-        const { getBatchPdfs } = await import("@/lib/mysqlConnection");
-
-        // 并行加载所有批次的PDF数量
-        const pdfCountPromises = batches.map(async (batch) => {
-          try {
-            const pdfResult = await getBatchPdfs(batch.batchName);
-            return {
-              batchName: batch.batchName,
-              pdfCount: pdfResult.success ? pdfResult.data.length : 0,
-            };
-          } catch (error) {
-            console.error(`获取批次 ${batch.batchName} PDF数量失败:`, error);
-            return {
-              batchName: batch.batchName,
-              pdfCount: 0,
-            };
-          }
-        });
-
-        const pdfCounts = await Promise.all(pdfCountPromises);
-
-        // 更新PDF数量统计
-        const pdfCountMap = {};
-        pdfCounts.forEach((item) => {
-          pdfCountMap[item.batchName] = item.pdfCount;
-        });
-
-        setBatchPdfCounts(pdfCountMap);
-        console.log("PDF数量统计加载完成:", pdfCountMap);
+      if (result.success) {
+        setBatchPdfCounts(result.data);
+        console.log("PDF数量统计加载完成:", result.data);
+      } else {
+        console.error("获取PDF数量统计失败:", result.message);
+        // 如果失败，设置空对象
+        setBatchPdfCounts({});
       }
     } catch (error) {
       console.error("加载PDF数量统计失败:", error);
+      // 发生错误时，设置空对象
+      setBatchPdfCounts({});
     }
   }, []);
 
@@ -125,7 +109,7 @@ export function InventoryManager() {
     // 数据已经在AppContext中加载，这里不需要重复加载
     // 加载所有批次的PDF数量
     loadAllBatchPdfCounts();
-  }, [loadAllBatchPdfCounts]);
+  }, []); // 空依赖数组，只在组件挂载时执行一次
 
   // 表格导入处理
   const handleTableImport = async (items) => {
@@ -737,21 +721,27 @@ export function InventoryManager() {
   const handleOpenViewPdf = useCallback(
     async (batchName) => {
       try {
-        // 获取该批次的PDF列表
-        const { getBatchPdfs } = await import("@/lib/mysqlConnection");
-        const result = await getBatchPdfs(batchName);
+        // 先设置批次名称和显示模态框
+        setCurrentBatchName(batchName);
+        setCurrentPdfList([]);
+        setViewPdfModalOpen(true);
 
-        if (result.success) {
-          setCurrentBatchName(batchName);
-          setCurrentPdfList(result.data);
-          setViewPdfModalOpen(true);
-        } else {
-          toast({
-            variant: "destructive",
-            title: "获取PDF列表失败",
-            description: result.message,
-          });
+        // 如果该批次有PDF文件，才去获取列表
+        if (batchPdfCounts[batchName] > 0) {
+          const { getBatchPdfs } = await import("@/lib/mysqlConnection");
+          const result = await getBatchPdfs(batchName);
+
+          if (result.success) {
+            setCurrentPdfList(result.data);
+          } else {
+            toast({
+              variant: "destructive",
+              title: "获取PDF列表失败",
+              description: result.message,
+            });
+          }
         }
+        // 如果没有PDF文件，保持空列表即可
       } catch (error) {
         console.error("获取PDF列表失败:", error);
         toast({
@@ -761,7 +751,7 @@ export function InventoryManager() {
         });
       }
     },
-    [toast]
+    [toast, batchPdfCounts]
   );
 
   // 关闭PDF查看Modal
@@ -780,14 +770,12 @@ export function InventoryManager() {
   // 处理PDF列表更新
   const handlePdfUploadUpdate = useCallback(
     (pdfs) => {
-      setBatchPdfCounts((prev) => ({
-        ...prev,
-        [currentBatchName]: pdfs.length,
-      }));
+      // 重新加载所有批次的PDF数量统计
+      loadAllBatchPdfCounts();
       // 同时更新当前Modal中的列表
       setCurrentPdfList(pdfs);
     },
-    [currentBatchName]
+    [loadAllBatchPdfCounts]
   );
 
   // 重新加载PDF数量统计
@@ -1314,7 +1302,9 @@ export function InventoryManager() {
                                     title: "删除成功",
                                     description: `PDF文件 "${pdf.fileName}" 已删除`,
                                   });
-                                  // 重新加载PDF列表
+                                  // 重新加载所有批次的PDF数量统计
+                                  loadAllBatchPdfCounts();
+                                  // 重新加载当前批次的PDF列表
                                   handleOpenViewPdf(currentBatchName);
                                 } else {
                                   throw new Error(result.message);

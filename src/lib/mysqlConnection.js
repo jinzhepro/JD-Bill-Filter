@@ -778,3 +778,27 @@ export async function getBatchStatus() {
     };
   }
 }
+
+// 批量获取所有批次的PDF数量统计
+export async function getAllBatchesPdfCounts() {
+  try {
+    const response = await fetch("/api/mysql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "getAllBatchesPdfCounts",
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("批量获取所有批次PDF数量统计失败:", error);
+    return {
+      success: false,
+      message: `批量获取所有批次PDF数量统计失败: ${error.message}`,
+    };
+  }
+}

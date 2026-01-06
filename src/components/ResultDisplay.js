@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useApp } from "@/context/AppContext";
 import { useSupplier } from "@/context/SupplierContext";
 import { downloadExcel } from "@/lib/excelHandler";
@@ -26,9 +26,13 @@ export default function ResultDisplay() {
 
   const { suppliers, loadSuppliers } = useSupplier();
   const [suppliersLoaded, setSuppliersLoaded] = useState(false);
+  const hasLoadedSuppliers = useRef(false);
 
   // 组件挂载时加载供应商数据
   useEffect(() => {
+    if (hasLoadedSuppliers.current) return;
+    hasLoadedSuppliers.current = true;
+
     const loadSupplierData = async () => {
       try {
         await loadSuppliers();

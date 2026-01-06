@@ -6,6 +6,7 @@ import {
   useReducer,
   useCallback,
   useEffect,
+  useRef,
 } from "react";
 import { LogType } from "@/types";
 import { getInventoryFromDatabase } from "@/lib/inventoryStorage";
@@ -179,9 +180,13 @@ const InventoryContext = createContext();
 // Provider 组件
 export function InventoryProvider({ children }) {
   const [state, dispatch] = useReducer(inventoryReducer, initialState);
+  const hasInitialized = useRef(false);
 
   // 在组件挂载时从数据库加载库存数据
   useEffect(() => {
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
+
     const loadInitialData = async () => {
       dispatch({ type: ActionTypes.SET_DB_LOADING, payload: true });
       try {

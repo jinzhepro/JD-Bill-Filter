@@ -65,18 +65,11 @@ export function BatchPdfUpload({ batchName, onPdfListUpdate }) {
           // 清空文件输入
           event.target.value = "";
 
-          // 通知父组件更新PDF列表
+          // 通知父组件更新PDF数量
           if (onPdfListUpdate) {
-            // 重新加载PDF列表
-            try {
-              const { getBatchPdfs } = await import("@/lib/mysqlConnection");
-              const listResult = await getBatchPdfs(batchName);
-              if (listResult.success) {
-                onPdfListUpdate(listResult.data);
-              }
-            } catch (error) {
-              console.error("更新PDF列表失败:", error);
-            }
+            // 不需要重新获取完整的PDF列表，只更新数量
+            // 父组件会通过批量接口重新获取所有批次的PDF数量
+            onPdfListUpdate([]);
           }
         } else {
           throw new Error(result.message);
