@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -27,6 +27,8 @@ export function UserManager() {
     role: "user",
     isActive: true,
   });
+
+  const hasLoadedUsers = useRef(false);
 
   // 获取用户列表
   const fetchUsers = async () => {
@@ -296,6 +298,8 @@ export function UserManager() {
   };
 
   useEffect(() => {
+    if (hasLoadedUsers.current) return;
+    hasLoadedUsers.current = true;
     fetchUsers();
   }, []);
 
