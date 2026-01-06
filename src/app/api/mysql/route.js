@@ -744,6 +744,55 @@ async function ensureWarehouseColumn() {
   }
 }
 
+// 检查并添加商品表的batch_number字段
+async function ensureBatchNumberColumn() {
+  let connection;
+  try {
+    console.log("检查商品表batch_number字段...");
+    connection = await pool.getConnection();
+
+    // 检查batch_number字段是否存在
+    const [columns] = await connection.execute(
+      `
+      SELECT COLUMN_NAME
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = ?
+      AND TABLE_NAME = 'products'
+      AND COLUMN_NAME = 'batch_number'
+    `,
+      [process.env.DB_DATABASE || "testdb"]
+    );
+
+    if (columns.length === 0) {
+      console.log("batch_number字段不存在，正在添加...");
+      // 添加batch_number字段
+      await connection.execute(`
+        ALTER TABLE products
+        ADD COLUMN batch_number TEXT COMMENT '批次号'
+      `);
+
+      console.log("batch_number字段添加成功");
+    } else {
+      console.log("batch_number字段已存在");
+    }
+
+    if (connection) {
+      connection.release();
+    }
+
+    return { success: true, message: "batch_number字段检查完成" };
+  } catch (error) {
+    console.error("检查batch_number字段失败:", error);
+    if (connection) {
+      connection.release();
+    }
+    return {
+      success: false,
+      message: `检查batch_number字段失败: ${error.message}`,
+    };
+  }
+}
+
 // 创建商品表（如果不存在）
 async function createProductTable() {
   let connection;
@@ -757,12 +806,11 @@ async function createProductTable() {
         id VARCHAR(255) PRIMARY KEY,
         sku VARCHAR(255) NOT NULL UNIQUE COMMENT '京东SKU',
         product_name VARCHAR(500) NOT NULL COMMENT '商品名称',
-        brand VARCHAR(255) DEFAULT '' COMMENT '品牌',
         warehouse VARCHAR(255) DEFAULT '' COMMENT '仓库',
+        batch_number TEXT COMMENT '批次号',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
         INDEX idx_sku (sku),
-        INDEX idx_brand (brand),
         INDEX idx_warehouse (warehouse)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='商品表';
     `;
@@ -773,6 +821,9 @@ async function createProductTable() {
 
     // 确保warehouse字段存在
     await ensureWarehouseColumn();
+
+    // 确保batch_number字段存在
+    await ensureBatchNumberColumn();
 
     if (connection) {
       connection.release();
@@ -797,6 +848,9 @@ async function pushProductsToMySQL(products) {
   }
 
   try {
+    // 确保商品表和所有必需的字段都存在
+    await createProductTable();
+
     const connection = await pool.getConnection();
 
     // 开始事务
@@ -806,12 +860,12 @@ async function pushProductsToMySQL(products) {
       // 准备插入语句
       const insertSQL = `
         INSERT INTO products (
-          id, sku, product_name, brand, warehouse
+          id, sku, product_name, warehouse, batch_number
         ) VALUES (?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
           product_name = VALUES(product_name),
-          brand = VALUES(brand),
           warehouse = VALUES(warehouse),
+          batch_number = VALUES(batch_number),
           updated_at = CURRENT_TIMESTAMP
       `;
 
@@ -821,8 +875,8 @@ async function pushProductsToMySQL(products) {
           product.id,
           product.sku,
           product.productName,
-          product.brand || "",
           product.warehouse || "",
+          product.batchNumber || "",
         ]);
       }
 
@@ -854,12 +908,16 @@ async function getProductsFromMySQL() {
   let connection;
   try {
     console.log("开始获取商品数据...");
+
+    // 确保商品表和所有必需的字段都存在
+    await createProductTable();
+
     connection = await pool.getConnection();
     console.log("获取数据库连接成功");
 
     const [rows] = await connection.execute(`
       SELECT
-        id, sku, product_name, brand, warehouse,
+        id, sku, product_name, warehouse, batch_number,
         created_at, updated_at
       FROM products
       ORDER BY sku
@@ -876,8 +934,8 @@ async function getProductsFromMySQL() {
       id: row.id,
       sku: row.sku,
       productName: row.product_name,
-      brand: row.brand,
       warehouse: row.warehouse,
+      batchNumber: row.batch_number,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }));

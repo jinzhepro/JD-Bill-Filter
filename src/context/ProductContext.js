@@ -27,8 +27,8 @@ export const ProductActionTypes = {
 const initialProductForm = {
   sku: "",
   productName: "",
-  brand: "",
   warehouse: "",
+  batchNumber: "",
 };
 
 // 商品状态reducer

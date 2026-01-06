@@ -106,8 +106,8 @@ export function ProductManager() {
       id: `product-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       sku: form.sku.trim(),
       productName: form.productName.trim(),
-      brand: form.brand.trim(),
       warehouse: form.warehouse.trim(),
+      batchNumber: form.batchNumber ? form.batchNumber.trim() : "",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -119,8 +119,8 @@ export function ProductManager() {
       ...existingItem,
       sku: form.sku.trim(),
       productName: form.productName.trim(),
-      brand: form.brand.trim(),
       warehouse: form.warehouse.trim(),
+      batchNumber: form.batchNumber ? form.batchNumber.trim() : "",
       updatedAt: new Date().toISOString(),
     };
   };
@@ -191,8 +191,8 @@ export function ProductManager() {
     setProductForm({
       sku: item.sku,
       productName: item.productName,
-      brand: item.brand || "",
       warehouse: item.warehouse || "",
+      batchNumber: item.batchNumber || "",
     });
     setEditingProductId(item.id);
     setIsFormModalOpen(true);
@@ -285,12 +285,14 @@ export function ProductManager() {
             (product) => product.productName || ""
           );
           break;
-        case "brand":
-          columnData = filteredProducts.map((product) => product.brand || "");
-          break;
         case "warehouse":
           columnData = filteredProducts.map(
             (product) => product.warehouse || ""
+          );
+          break;
+        case "batchNumber":
+          columnData = filteredProducts.map(
+            (product) => product.batchNumber || ""
           );
           break;
         default:
@@ -501,9 +503,10 @@ export function ProductManager() {
     return (
       product.sku.toLowerCase().includes(searchLower) ||
       product.productName.toLowerCase().includes(searchLower) ||
-      (product.brand && product.brand.toLowerCase().includes(searchLower)) ||
       (product.warehouse &&
-        product.warehouse.toLowerCase().includes(searchLower))
+        product.warehouse.toLowerCase().includes(searchLower)) ||
+      (product.batchNumber &&
+        product.batchNumber.toLowerCase().includes(searchLower))
     );
   });
 
@@ -524,12 +527,6 @@ export function ProductManager() {
               {new Set(products.map((p) => p.warehouse).filter(Boolean)).size}
             </div>
             <div className="text-sm text-gray-600">仓库数</div>
-          </div>
-          <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <div className="text-2xl font-bold text-gray-800">
-              {new Set(products.map((p) => p.brand).filter(Boolean)).size}
-            </div>
-            <div className="text-sm text-gray-600">品牌数</div>
           </div>
         </div>
       </section>
@@ -638,20 +635,6 @@ export function ProductManager() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  品牌
-                </label>
-                <input
-                  type="text"
-                  name="brand"
-                  value={productForm.brand}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
-                  placeholder="可选，输入品牌"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
                   仓库
                 </label>
                 <input
@@ -663,6 +646,20 @@ export function ProductManager() {
                   placeholder="可选，输入仓库"
                 />
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                批次号
+              </label>
+              <textarea
+                name="batchNumber"
+                value={productForm.batchNumber || ""}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 resize-vertical"
+                placeholder="可选，输入批次号"
+                rows="3"
+              />
             </div>
 
             <div className="flex gap-3 justify-end">
@@ -715,17 +712,17 @@ export function ProductManager() {
                   </th>
                   <th
                     className="px-3 py-3 text-left font-semibold text-gray-700 cursor-pointer hover:bg-gray-50"
-                    onClick={(e) => handleCopyColumn("brand", e)}
-                    title="点击复制整列数据"
-                  >
-                    品牌 📋
-                  </th>
-                  <th
-                    className="px-3 py-3 text-left font-semibold text-gray-700 cursor-pointer hover:bg-gray-50"
                     onClick={(e) => handleCopyColumn("warehouse", e)}
                     title="点击复制整列数据"
                   >
                     仓库 📋
+                  </th>
+                  <th
+                    className="px-3 py-3 text-left font-semibold text-gray-700 cursor-pointer hover:bg-gray-50"
+                    onClick={(e) => handleCopyColumn("batchNumber", e)}
+                    title="点击复制整列数据"
+                  >
+                    批次号 📋
                   </th>
                   <th className="px-3 py-3 text-left font-semibold text-gray-700">
                     操作
@@ -771,14 +768,17 @@ export function ProductManager() {
                         </Button>
                       </div>
                     </td>
-                    <td className="px-3 py-3 truncate" title={product.brand}>
-                      {product.brand || "-"}
-                    </td>
                     <td
                       className="px-3 py-3 truncate"
                       title={product.warehouse}
                     >
                       {product.warehouse || "-"}
+                    </td>
+                    <td
+                      className="px-3 py-3 truncate"
+                      title={product.batchNumber}
+                    >
+                      {product.batchNumber || "-"}
                     </td>
                     <td className="px-3 py-3">
                       <div className="flex gap-1">
