@@ -7,13 +7,12 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useApp } from "@/context/AppContext";
 import { useRouter } from "next/navigation";
-import { createUserTable } from "@/lib/mysqlConnection";
 
 export function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isInitLoading, setIsInitLoading] = useState(false);
+
   const { toast } = useToast();
   const { login } = useApp();
   const router = useRouter();
@@ -79,36 +78,6 @@ export function LoginPage() {
     }
   };
 
-  const handleInitUserTable = async () => {
-    setIsInitLoading(true);
-
-    try {
-      const result = await createUserTable();
-
-      if (result.success) {
-        toast({
-          title: "用户表初始化成功",
-          description: result.message,
-        });
-      } else {
-        toast({
-          title: "用户表初始化失败",
-          description: result.message,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("用户表初始化请求失败:", error);
-      toast({
-        title: "用户表初始化失败",
-        description: "网络错误，请稍后重试",
-        variant: "destructive",
-      });
-    } finally {
-      setIsInitLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -169,20 +138,6 @@ export function LoginPage() {
               </Button>
             </div>
           </form>
-
-          <div className="mt-4">
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={handleInitUserTable}
-              disabled={isInitLoading || isLoading}
-            >
-              {isInitLoading ? "初始化中..." : "初始化用户表"}
-            </Button>
-            <p className="mt-2 text-xs text-gray-500 text-center">
-              首次使用系统时，请点击此按钮创建用户表和默认管理员账户
-            </p>
-          </div>
         </Card>
       </div>
     </div>
