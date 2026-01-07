@@ -863,7 +863,17 @@ export function InventoryManager() {
     <div className="space-y-6">
       {/* 统计信息 */}
       <section className="bg-white rounded-xl shadow-lg p-6 animate-fade-in">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">库存统计</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold text-gray-800">库存统计</h2>
+          <Link href="/outbound-records">
+            <Button
+              variant="outline"
+              className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-300"
+            >
+              出库记录 📊
+            </Button>
+          </Link>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="text-center p-3 bg-gray-50 rounded-lg">
             <div className="text-2xl font-bold text-gray-800">

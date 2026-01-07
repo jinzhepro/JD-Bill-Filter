@@ -9,11 +9,30 @@ import {
 import { useToast } from "@/hooks/use-toast";
 
 export function DeductionRecords({ onClose }) {
+  const isModal = !!onClose;
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRollingBack, setIsRollingBack] = useState(false);
   const [error, setError] = useState("");
   const { toast } = useToast();
+
+  // 格式化完整时间戳（用于分组标题）
+  const formatFullTimestamp = (timestamp) => {
+    if (!timestamp) return "-";
+    try {
+      const date = new Date(timestamp);
+      return date.toLocaleString("zh-CN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+    } catch (error) {
+      return timestamp;
+    }
+  };
 
   // 按完整时间戳分组记录（精确到秒）
   const groupedRecords = records.reduce((groups, record) => {
@@ -189,24 +208,6 @@ export function DeductionRecords({ onClose }) {
     }
   };
 
-  // 格式化完整时间戳（用于分组标题）
-  const formatFullTimestamp = (timestamp) => {
-    if (!timestamp) return "-";
-    try {
-      const date = new Date(timestamp);
-      return date.toLocaleString("zh-CN", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      });
-    } catch (error) {
-      return timestamp;
-    }
-  };
-
   // 按时间戳倒序排列
   const sortedTimestamps = Object.keys(groupedRecords).sort((a, b) => {
     return new Date(b) - new Date(a);
@@ -255,12 +256,14 @@ export function DeductionRecords({ onClose }) {
           >
             {isLoading ? "刷新中..." : "刷新"}
           </Button>
-          <Button
-            onClick={onClose}
-            className="bg-gray-200 text-gray-700 hover:bg-gray-300"
-          >
-            关闭
-          </Button>
+          {isModal && (
+            <Button
+              onClick={onClose}
+              className="bg-gray-200 text-gray-700 hover:bg-gray-300"
+            >
+              关闭
+            </Button>
+          )}
         </div>
       </div>
 

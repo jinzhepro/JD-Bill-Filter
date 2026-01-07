@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useApp } from "@/context/AppContext";
 import { useSupplier } from "@/context/SupplierContext";
 import { downloadExcel } from "@/lib/excelHandler";
-import { processWithSkuAndBatch } from "@/lib/dataProcessor";
+import { processWithSkuAndBatch, deductInventory } from "@/lib/dataProcessor";
 import { Button } from "./ui/button";
 import { useToast } from "@/hooks/use-toast";
 
@@ -28,6 +28,7 @@ export default function ResultDisplay() {
   const { toast } = useToast();
   const [suppliersLoaded, setSuppliersLoaded] = useState(false);
   const hasLoadedSuppliers = useRef(false);
+  const [isDeductingInventory, setIsDeductingInventory] = useState(false);
 
   // 组件挂载时加载供应商数据
   useEffect(() => {
@@ -262,6 +263,77 @@ export default function ResultDisplay() {
     }
   };
 
+  const handleDeductInventory = async () => {
+    if (!skuProcessedData || skuProcessedData.length === 0) {
+      setError("没有可扣减的订单数据，请先进行处理");
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `确定要扣减库存吗？此操作将从库存中扣减 ${skuProcessedData.length} 条订单的商品数量，且无法撤销！`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setIsDeductingInventory(true);
+      addLog("正在扣减库存...", "info");
+
+      // 从数据库获取最新的库存数据
+      const { getInventoryFromDatabase } = await import(
+        "@/lib/inventoryStorage"
+      );
+      const dbInventoryItems = await getInventoryFromDatabase();
+
+      if (!dbInventoryItems || dbInventoryItems.length === 0) {
+        setError("数据库中没有库存数据，无法扣减库存");
+        return;
+      }
+
+      addLog(`从数据库加载了 ${dbInventoryItems.length} 条库存数据`, "info");
+
+      // 执行库存扣减
+      const result = await deductInventory(skuProcessedData, dbInventoryItems);
+
+      if (result.success) {
+        addLog(
+          `库存扣减成功，共扣减 ${result.totalDeducted} 件商品`,
+          "success"
+        );
+        addLog(
+          `创建了 ${result.deductionRecords.length} 条扣减记录`,
+          "success"
+        );
+        toast({
+          title: "扣减成功",
+          description: `库存扣减成功，共扣减 ${result.totalDeducted} 件商品`,
+        });
+      } else {
+        const errors = result.errors.join("; ");
+        setError(`库存扣减失败: ${errors}`);
+        addLog(`库存扣减失败: ${errors}`, "error");
+        toast({
+          variant: "destructive",
+          title: "扣减失败",
+          description: `库存扣减失败: ${errors}`,
+        });
+      }
+    } catch (error) {
+      console.error("库存扣减失败:", error);
+      setError(`库存扣减失败: ${error.message}`);
+      addLog(`库存扣减失败: ${error.message}`, "error");
+      toast({
+        variant: "destructive",
+        title: "扣减失败",
+        description: `库存扣减失败: ${error.message}`,
+      });
+    } finally {
+      setIsDeductingInventory(false);
+    }
+  };
+
   const handleDownloadSkuExcel = () => {
     if (!skuProcessedData || skuProcessedData.length === 0) return;
 
@@ -409,25 +481,35 @@ export default function ResultDisplay() {
               </Button>
 
               {skuProcessedData && skuProcessedData.length > 0 && (
-                <Button
-                  variant="success"
-                  onClick={handleDownloadSkuExcel}
-                  disabled={hasFailedReplacements}
-                  className={`${
-                    hasFailedReplacements
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-green-600 hover:bg-green-700"
-                  } text-white`}
-                  title={
-                    hasFailedReplacements
-                      ? "存在替换失败的记录，无法下载"
-                      : "下载Excel结果"
-                  }
-                >
-                  {hasFailedReplacements
-                    ? "存在替换失败，无法下载"
-                    : "下载Excel结果"}
-                </Button>
+                <>
+                  <Button
+                    onClick={handleDeductInventory}
+                    disabled={isDeductingInventory}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                    title="从库存中扣减订单商品数量"
+                  >
+                    {isDeductingInventory ? "扣减中..." : "扣减库存 📦"}
+                  </Button>
+                  <Button
+                    variant="success"
+                    onClick={handleDownloadSkuExcel}
+                    disabled={hasFailedReplacements}
+                    className={`${
+                      hasFailedReplacements
+                        ? "bg-gray-400 cursor-not-allowed"
+                        : "bg-green-600 hover:bg-green-700"
+                    } text-white`}
+                    title={
+                      hasFailedReplacements
+                        ? "存在替换失败的记录，无法下载"
+                        : "下载Excel结果"
+                    }
+                  >
+                    {hasFailedReplacements
+                      ? "存在替换失败，无法下载"
+                      : "下载Excel结果"}
+                  </Button>
+                </>
               )}
               <Button variant="destructive" onClick={handleReset}>
                 重新上传

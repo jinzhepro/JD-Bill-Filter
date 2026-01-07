@@ -674,17 +674,32 @@ export async function deductInventory(enhancedData, inventoryItems) {
 
     // 创建扣减记录
     deductionResult.deductionDetails.forEach((detail) => {
+      // 获取物料名称
+      const inventoryItem = inventoryItems.find(
+        (item) => item.sku && item.sku.trim() === sku.trim()
+      );
+      const materialName = inventoryItem
+        ? inventoryItem.materialName
+        : "未知物料";
+
+      // 获取原始库存数量
+      const originalQuantity = detail.batchItem
+        ? parseInt(detail.batchItem.quantity)
+        : 0;
+
       const deductionRecord = {
         id: `deduction-${Date.now()}-${Math.random()
           .toString(36)
           .substr(2, 9)}`,
         sku: sku,
+        materialName: materialName,
         purchaseBatch: detail.batchName,
+        originalQuantity: originalQuantity,
         deductedQuantity: detail.deductedQuantity,
         remainingQuantity: detail.remainingInBatch,
-        timestamp: new Date().toISOString().slice(0, 19).replace("T", " "),
         orderCount: enhancedData.filter((item) => item["商品编号"] === sku)
           .length,
+        timestamp: new Date().toISOString().slice(0, 19).replace("T", " "),
       };
 
       deductionRecords.push(deductionRecord);
