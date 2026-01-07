@@ -66,6 +66,9 @@ export function InventoryManager() {
     useState(false);
   const [deletingBatch, setDeletingBatch] = useState(null);
 
+  // 更新商品名称按钮loading状态
+  const [isUpdatingNames, setIsUpdatingNames] = useState(false);
+
   // PDF管理状态
   const [batchPdfCounts, setBatchPdfCounts] = useState({});
   const [isLoadingPdfCounts, setIsLoadingPdfCounts] = useState(true);
@@ -239,6 +242,8 @@ export function InventoryManager() {
       return;
     }
 
+    setIsUpdatingNames(true);
+
     try {
       // 从数据库获取商品数据
       const { getProductsFromMySQL } = await import("@/lib/mysqlConnection");
@@ -341,6 +346,8 @@ export function InventoryManager() {
         title: "更新失败",
         description: `从数据库更新商品名称失败: ${error.message}`,
       });
+    } finally {
+      setIsUpdatingNames(false);
     }
   };
 
@@ -927,10 +934,10 @@ export function InventoryManager() {
               <Button
                 onClick={handleUpdateProductNames}
                 className="w-full md:w-auto"
-                disabled={inventoryItems.length === 0}
+                disabled={inventoryItems.length === 0 || isUpdatingNames}
                 title="从数据库商品表拉取最新的商品名称并更新库存项"
               >
-                立即更新商品名称
+                {isUpdatingNames ? "更新中..." : "立即更新商品名称"}
               </Button>
             </div>
           </div>

@@ -9,7 +9,6 @@ import {
   validateFileSize,
 } from "@/lib/excelHandler";
 import { createMultipleInventoryItems } from "@/lib/inventoryStorage";
-import { updateProductNamesBySku } from "@/data/jdSkuMapping";
 
 export function TableImport({ onImportItems, onCancel }) {
   const { toast } = useToast();
@@ -261,13 +260,9 @@ export function TableImport({ onImportItems, onCancel }) {
         throw new Error("没有找到有效的库存数据，请检查文件格式和字段名称");
       }
 
-      setImportProgress("正在更新商品名称...");
-      // 使用SKU映射更新商品名称
-      const updatedItems = updateProductNamesBySku(convertedData);
-
       setImportProgress("正在创建库存项...");
       // 创建库存项
-      const newItems = createMultipleInventoryItems(updatedItems);
+      const newItems = createMultipleInventoryItems(convertedData);
 
       // 验证创建的库存项
       if (!newItems || newItems.length === 0) {

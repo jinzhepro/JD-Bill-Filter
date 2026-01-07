@@ -64,85 +64,106 @@ export function ProductImport() {
         setImportStatus("正在处理商品数据...");
         const processedProducts = processProductImportData(data);
 
-        // 检查SKU重复
-        setImportStatus("正在检查SKU重复...");
-        const existingSkus = new Set(products.map((p) => p.sku));
-        const duplicateSkus = [];
+        // 检查SKU重复并处理覆盖逻辑
+        setImportStatus("正在处理SKU...");
+        // 创建SKU到现有商品的映射
+        const existingSkuMap = new Map(products.map((p) => [p.sku, p]));
+        const updatedProducts = [];
         const newProducts = [];
+        const updatedSkus = [];
 
         processedProducts.forEach((product) => {
-          if (existingSkus.has(product.sku)) {
-            duplicateSkus.push(product.sku);
+          if (existingSkuMap.has(product.sku)) {
+            // SKU已存在，更新现有商品
+            updatedSkus.push(product.sku);
           } else {
+            // 新SKU，添加到新商品列表
             newProducts.push(product);
           }
         });
 
-        // 批量添加商品
+        // 合并所有商品（已存在的SKU使用导入的数据覆盖）
+        const allProducts = [...products];
+
+        // 更新已存在的商品
+        processedProducts.forEach((product) => {
+          const existingIndex = allProducts.findIndex(
+            (p) => p.sku === product.sku
+          );
+          if (existingIndex !== -1) {
+            // 覆盖更新
+            allProducts[existingIndex] = {
+              ...product,
+              createdAt: allProducts[existingIndex].createdAt, // 保留原始创建时间
+            };
+            updatedProducts.push(allProducts[existingIndex]);
+          }
+        });
+
+        // 添加新商品
+        const productsWithNew = [...allProducts, ...newProducts];
+
+        // 批量添加新商品到本地状态
         if (newProducts.length > 0) {
           setImportStatus(`正在导入 ${newProducts.length} 个新商品...`);
-
           for (const product of newProducts) {
             addProduct(product);
           }
+        }
 
-          // 推送到数据库
-          try {
-            const { createProductTable, pushProductsToMySQL } = await import(
-              "@/lib/mysqlConnection"
-            );
+        // 推送到数据库
+        try {
+          const { createProductTable, pushProductsToMySQL } = await import(
+            "@/lib/mysqlConnection"
+          );
 
-            // 先创建表（如果不存在）
-            setImportStatus("正在创建商品表...");
-            const tableResult = await createProductTable();
-            if (!tableResult.success) {
-              throw new Error(tableResult.message);
-            }
-
-            // 推送数据
-            setImportStatus("正在同步数据到数据库...");
-            const updatedProducts = [...products, ...newProducts];
-            const pushResult = await pushProductsToMySQL(updatedProducts);
-
-            if (!pushResult.success) {
-              throw new Error(pushResult.message);
-            }
-
-            toast({
-              title: "同步成功",
-              description: "商品数据已同步到数据库",
-            });
-          } catch (error) {
-            console.error("同步到数据库失败:", error);
-            toast({
-              variant: "destructive",
-              title: "同步失败",
-              description: `同步到数据库失败: ${error.message}`,
-            });
+          // 先创建表（如果不存在）
+          setImportStatus("正在创建商品表...");
+          const tableResult = await createProductTable();
+          if (!tableResult.success) {
+            throw new Error(tableResult.message);
           }
+
+          // 推送数据
+          setImportStatus("正在同步数据到数据库...");
+          const pushResult = await pushProductsToMySQL(productsWithNew);
+
+          if (!pushResult.success) {
+            throw new Error(pushResult.message);
+          }
+
+          toast({
+            title: "同步成功",
+            description: "商品数据已同步到数据库",
+          });
+        } catch (error) {
+          console.error("同步到数据库失败:", error);
+          toast({
+            variant: "destructive",
+            title: "同步失败",
+            description: `同步到数据库失败: ${error.message}`,
+          });
         }
 
         // 设置导入结果
         setImportResults({
           total: processedProducts.length,
           imported: newProducts.length,
-          duplicates: duplicateSkus.length,
-          duplicateSkus: duplicateSkus,
+          updated: updatedSkus.length,
+          updatedSkus: updatedSkus,
         });
 
         setImportStatus("导入完成");
 
-        if (newProducts.length > 0) {
+        if (newProducts.length > 0 || updatedSkus.length > 0) {
           toast({
             title: "导入成功",
-            description: `成功导入 ${newProducts.length} 个商品`,
+            description: `成功导入 ${newProducts.length} 个商品，更新 ${updatedSkus.length} 个商品`,
           });
-        }
-
-        if (duplicateSkus.length > 0) {
+        } else {
           toast({
-            title: "跳过重复",
-            description: `跳过 ${duplicateSkus.length} 个重复SKU`,
+            title: "无需更新",
+            description: "所有商品数据已是最新",
           });
         }
       } catch (error) {
@@ -220,16 +241,17 @@ export function ProductImport() {
           <h3 className="text-green-800 font-medium mb-2">导入结果</h3>
           <div className="text-sm text-green-700 space-y-1">
             <div>• 总记录数: {importResults.total}</div>
-            <div>• 成功导入: {importResults.imported}</div>
-            <div>• 跳过重复: {importResults.duplicates}</div>
-            {importResults.duplicateSkus.length > 0 && (
-              <div className="mt-2">
-                <div className="font-medium">重复的SKU:</div>
-                <div className="text-xs mt-1 max-h-20 overflow-y-auto">
-                  {importResults.duplicateSkus.join(", ")}
+            <div>• 新增商品: {importResults.imported}</div>
+            <div>• 更新商品: {importResults.updated}</div>
+            {importResults.updatedSkus &&
+              importResults.updatedSkus.length > 0 && (
+                <div className="mt-2">
+                  <div className="font-medium">更新的SKU:</div>
+                  <div className="text-xs mt-1 max-h-20 overflow-y-auto">
+                    {importResults.updatedSkus.join(", ")}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
           </div>
           <Button onClick={handleReset} className="mt-3">
             继续导入
@@ -288,8 +310,8 @@ export function ProductImport() {
         <h4 className="text-sm font-medium text-blue-900 mb-2">商品导入说明</h4>
         <ul className="text-sm text-blue-700 space-y-1">
           <li>• 文件必须包含"京东SKU"和"商品名称"列</li>
-          <li>• 可选列：品牌、仓库</li>
-          <li>• 重复的SKU将自动跳过</li>
+          <li>• 可选列：仓库</li>
+          <li>• 相同的SKU会自动覆盖更新</li>
           <li>• 导入后数据会自动同步到数据库</li>
           <li>• 支持拖拽上传和点击选择文件</li>
         </ul>
@@ -299,13 +321,11 @@ export function ProductImport() {
       <div className="mt-4 p-4 bg-gray-50 rounded-lg">
         <h4 className="text-sm font-medium text-gray-900 mb-2">示例数据格式</h4>
         <div className="text-xs text-gray-600 font-mono bg-white p-3 rounded border">
-          京东SKU 商品名称 品牌 仓库
+          京东SKU 商品名称 仓库
           <br />
-          10199075323422 【整箱】蒙牛特仑苏纯牛奶250ml*12盒/提 蒙牛（MENGNIU）
-          北京仓
+          10199075323422 【整箱】蒙牛特仑苏纯牛奶250ml*12盒/提 北京仓
           <br />
-          10199075295528 【整箱】蒙牛特仑苏纯牛奶250ml*12盒/提 蒙牛（MENGNIU）
-          天津仓
+          10199075295528 【整箱】蒙牛特仑苏纯牛奶250ml*12盒/提 天津仓
         </div>
       </div>
     </section>

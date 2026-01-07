@@ -796,7 +796,6 @@ export function processProductImportData(data) {
     // 提取必要字段
     const sku = row["京东SKU"] || row["SKU"] || row["sku"] || "";
     const productName = row["商品名称"] || row["产品名称"] || row["名称"] || "";
-    const brand = row["品牌"] || row["Brand"] || "";
     const warehouse = row["仓库"] || row["Warehouse"] || "";
 
     // 验证必要字段
@@ -815,7 +814,6 @@ export function processProductImportData(data) {
         .substr(2, 9)}-${index}`,
       sku: sku.toString().trim(),
       productName: productName.trim(),
-      brand: brand ? brand.trim() : "",
       warehouse: warehouse ? warehouse.trim() : "",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
