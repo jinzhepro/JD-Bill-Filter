@@ -212,7 +212,7 @@ export default function ResultDisplay() {
 
       addLog(`从数据库加载了 ${dbInventoryItems.length} 条库存数据`, "info");
       addLog(`使用 ${suppliers.length} 个供应商数据进行匹配`, "info");
-      addLog("开始物料名称替换和税率添加处理...", "info");
+      addLog("开始物料名称替换、税率添加和出库信息生成...", "info");
 
       const result = processWithSkuAndBatch(
         processedData,
@@ -222,6 +222,9 @@ export default function ResultDisplay() {
       const enhancedData = result.data;
       const stats = result.stats;
 
+      // 只展示出库信息，不实际扣减库存
+      addLog("出库信息已生成，库存未实际扣减（仅展示模式）", "info");
+
       setSkuProcessedData(enhancedData);
       // 直接用物料名称替换后的数据替换processedData
       setProcessedData(enhancedData);
@@ -230,11 +233,11 @@ export default function ResultDisplay() {
       setHasFailedReplacements(stats.failed > 0);
 
       addLog(
-        `物料名称替换和税率处理完成，生成 ${enhancedData.length} 条增强数据`,
+        `物料名称替换、税率处理和出库信息生成完成，生成 ${enhancedData.length} 条增强数据`,
         "success"
       );
       toast({
-        title: `物料名称替换和税率处理完成，生成 ${enhancedData.length} 条增强数据`,
+        title: `物料名称替换、税率处理和出库信息生成完成，生成 ${enhancedData.length} 条增强数据`,
       });
 
       // 显示替换统计信息
@@ -245,12 +248,15 @@ export default function ResultDisplay() {
 
       if (stats.failed > 0) {
         addLog(`未匹配的SKU: ${stats.failedSkus.join(", ")}`, "warning");
+      }
+
+      if (stats.failed > 0) {
         addLog("注意：由于存在替换失败的记录，下载功能已被禁用", "error");
       }
     } catch (error) {
       console.error("SKU处理失败:", error);
-      setError(`物料名称替换处理失败: ${error.message}`);
-      addLog(`物料名称替换处理失败: ${error.message}`, "error");
+      setError(`物料名称替换和出库信息生成失败: ${error.message}`);
+      addLog(`物料名称替换和出库信息生成失败: ${error.message}`, "error");
     } finally {
       setSkuProcessing(false);
     }

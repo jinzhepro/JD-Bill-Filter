@@ -348,7 +348,7 @@ export function mergeSameSKU(processedData) {
   }));
 }
 
-// 根据仓库SKU替换商品名并添加批次号和供应商信息
+// 根据仓库SKU替换商品名并添加批次号和供应商信息，同时处理出库逻辑
 export function processWithSkuAndBatch(
   processedData,
   inventoryItems,
@@ -386,8 +386,42 @@ export function processWithSkuAndBatch(
   let successCount = 0;
   let failedSkus = [];
 
-  // 处理每条订单数据
-  const enhancedData = processedData.map((orderItem) => {
+  // 按商品编号分组，统计每个SKU的总需要数量
+  const skuQuantityMap = {};
+  processedData.forEach((item) => {
+    const productNo = item["商品编号"];
+    const quantity = parseInt(item["商品数量"]) || 0;
+
+    if (!skuQuantityMap[productNo]) {
+      skuQuantityMap[productNo] = 0;
+    }
+    skuQuantityMap[productNo] += quantity;
+  });
+
+  // 为每个SKU预计算出库批次
+  const skuOutboundMap = {};
+  for (const [sku, totalQuantity] of Object.entries(skuQuantityMap)) {
+    const outboundResult = deductInventoryByBatch(
+      sku,
+      totalQuantity,
+      inventoryItems
+    );
+    if (outboundResult.success) {
+      skuOutboundMap[sku] = outboundResult.deductionDetails;
+    } else {
+      console.error(`SKU ${sku} 出库失败: ${outboundResult.error}`);
+      failedSkus.push(sku);
+    }
+  }
+
+  // 处理每条订单数据，生成增强数据
+  // 为了确保展示模式下结果稳定，按商品编号排序处理
+  const sortedProcessedData = [...processedData].sort((a, b) =>
+    String(a["商品编号"]).localeCompare(String(b["商品编号"]))
+  );
+
+  const enhancedData = [];
+  sortedProcessedData.forEach((orderItem) => {
     const productNo = orderItem["商品编号"];
     const originalProductName = orderItem["商品名称"];
 
@@ -415,33 +449,80 @@ export function processWithSkuAndBatch(
       });
     }
 
-    // 创建新的数据项
-    const newItem = { ...orderItem };
+    if (matchedInventoryItem && skuOutboundMap[productNo]) {
+      // 获取该SKU的出库批次详情
+      const outboundDetails = skuOutboundMap[productNo];
 
-    if (matchedInventoryItem) {
-      // 用库存中对应的物料名称替换商品名称
-      newItem["商品名称"] = matchedInventoryItem.materialName;
-      // 添加税率
-      newItem["税率"] = matchedInventoryItem.taxRate || "";
+      // 如果只有一个批次出库，直接创建一行记录
+      if (outboundDetails.length === 1) {
+        const newItem = { ...orderItem };
+        newItem["商品名称"] = matchedInventoryItem.materialName;
+        newItem["税率"] = matchedInventoryItem.taxRate || "";
+        // 格式化入库时间
+        const createdTime =
+          outboundDetails[0].batchItem?.createdAt ||
+          outboundDetails[0].batchItem?.created_at;
+        const timeStr = createdTime
+          ? new Date(createdTime).toLocaleDateString("zh-CN")
+          : "";
+        newItem["出库批次"] = outboundDetails[0].batchName;
+        // 添加出库计算列：原库存 → 出库数量 → 现库存
+        const originalStock = outboundDetails[0].batchItem.quantity;
+        const deductedQty = outboundDetails[0].deductedQuantity;
+        const remainingStock = outboundDetails[0].remainingInBatch;
+        newItem[
+          "出库计算"
+        ] = `${originalStock} → ${deductedQty} → ${remainingStock}`;
+        enhancedData.push(newItem);
+      } else {
+        // 如果需要多个批次出库，为每个批次创建一行记录
+        outboundDetails.forEach((detail, index) => {
+          const newItem = { ...orderItem };
+          newItem["商品名称"] = matchedInventoryItem.materialName;
+          newItem["税率"] = matchedInventoryItem.taxRate || "";
+          // 格式化入库时间
+          const detailCreatedTime =
+            detail.batchItem?.createdAt || detail.batchItem?.created_at;
+          const detailTimeStr = detailCreatedTime
+            ? new Date(detailCreatedTime).toLocaleDateString("zh-CN")
+            : "";
+          newItem["出库批次"] = detail.batchName;
+          // 添加出库计算列：原库存 → 出库数量 → 现库存
+          const originalStock = detail.batchItem.quantity;
+          const deductedQty = detail.deductedQuantity;
+          const remainingStock = detail.remainingInBatch;
+          newItem[
+            "出库计算"
+          ] = `${originalStock} → ${deductedQty} → ${remainingStock}`;
+          // 调整商品数量为该批次的实际出库数量
+          newItem["商品数量"] = detail.deductedQuantity;
+          // 重新计算单价和总价
+          const unitPrice = parseFloat(orderItem["单价"]) || 0;
+          newItem["总价"] = unitPrice * detail.deductedQuantity;
+          enhancedData.push(newItem);
+        });
+      }
 
       successCount++;
       console.log(
         `匹配成功: 商品编号 ${productNo}, 原商品名 ${originalProductName} -> 物料名称 ${
           matchedInventoryItem.materialName
-        }, 批次号 ${matchedInventoryItem.purchaseBatch}, 供应商ID ${
-          newItem["供应商ID"] || "无"
-        }`
+        }, 出库批次: ${outboundDetails.map((d) => d.batchName).join("; ")}`
       );
     } else {
-      // 如果没有匹配的库存项，添加空税率
+      // 如果没有匹配的库存项或出库失败，创建一行失败记录
+      const newItem = { ...orderItem };
       newItem["税率"] = "";
-      failedSkus.push(productNo);
+      newItem["出库批次"] = "库存不足或未匹配";
+      newItem["出库计算"] = "无库存信息";
+      if (!failedSkus.includes(productNo)) {
+        failedSkus.push(productNo);
+      }
+      enhancedData.push(newItem);
       console.log(
-        `未匹配: 商品编号 ${productNo}, 商品名称 ${originalProductName}`
+        `未匹配或出库失败: 商品编号 ${productNo}, 商品名称 ${originalProductName}`
       );
     }
-
-    return newItem;
   });
 
   console.log(`SKU和税率处理完成，生成 ${enhancedData.length} 条增强数据`);
@@ -483,6 +564,72 @@ export function processMultipleFilesData(fileDataArray) {
   return processedData;
 }
 
+// 按批次顺序出库
+function deductInventoryByBatch(sku, totalQuantityNeeded, inventoryItems) {
+  // 找到该SKU的所有批次
+  const skuBatches = inventoryItems
+    .filter(
+      (item) =>
+        item.sku &&
+        item.sku.trim() === sku.trim() &&
+        parseInt(item.quantity) > 0
+    )
+    .sort((a, b) => {
+      // 按创建时间排序（最早入库的批次优先出库）
+      const timeA = new Date(a.createdAt || a.created_at || 0).getTime();
+      const timeB = new Date(b.createdAt || b.created_at || 0).getTime();
+      return timeA - timeB; // 升序，时间早的优先
+    });
+
+  if (skuBatches.length === 0) {
+    return {
+      success: false,
+      error: `SKU ${sku} 没有可用的库存批次`,
+      deductionDetails: [],
+      totalDeducted: 0,
+    };
+  }
+
+  let remainingQuantity = totalQuantityNeeded;
+  const deductionDetails = [];
+
+  // 从第一个批次开始扣减
+  for (const batch of skuBatches) {
+    if (remainingQuantity <= 0) break;
+
+    const batchQuantity = parseInt(batch.quantity) || 0;
+    const deductFromThisBatch = Math.min(remainingQuantity, batchQuantity);
+
+    if (deductFromThisBatch > 0) {
+      deductionDetails.push({
+        batchName: batch.purchaseBatch,
+        deductedQuantity: deductFromThisBatch,
+        remainingInBatch: batchQuantity - deductFromThisBatch,
+        batchItem: batch, // 保存完整的批次信息，用于获取入库时间
+      });
+
+      remainingQuantity -= deductFromThisBatch;
+    }
+  }
+
+  if (remainingQuantity > 0) {
+    return {
+      success: false,
+      error: `SKU ${sku} 库存不足：需要 ${totalQuantityNeeded}，实际可出库 ${
+        totalQuantityNeeded - remainingQuantity
+      }`,
+      deductionDetails,
+      totalDeducted: totalQuantityNeeded - remainingQuantity,
+    };
+  }
+
+  return {
+    success: true,
+    deductionDetails,
+    totalDeducted: totalQuantityNeeded,
+  };
+}
+
 // 扣减库存并创建记录
 export async function deductInventory(enhancedData, inventoryItems) {
   if (!enhancedData || enhancedData.length === 0) {
@@ -495,14 +642,6 @@ export async function deductInventory(enhancedData, inventoryItems) {
 
   console.log(`开始扣减库存，处理 ${enhancedData.length} 条订单数据`);
 
-  // 创建商品编号到库存项的映射
-  const skuMap = {};
-  inventoryItems.forEach((item) => {
-    if (item.sku && item.sku.trim() !== "") {
-      skuMap[item.sku.trim()] = item;
-    }
-  });
-
   // 库存扣减记录
   const deductionRecords = [];
   let totalDeducted = 0;
@@ -514,55 +653,51 @@ export async function deductInventory(enhancedData, inventoryItems) {
     const productNo = item["商品编号"];
     const quantity = parseInt(item["商品数量"]) || 0;
 
-    if (skuMap[productNo.toString().trim()]) {
-      if (!skuDeductionMap[productNo]) {
-        skuDeductionMap[productNo] = 0;
-      }
-      skuDeductionMap[productNo] += quantity;
+    if (!skuDeductionMap[productNo]) {
+      skuDeductionMap[productNo] = 0;
     }
+    skuDeductionMap[productNo] += quantity;
   });
 
-  // 处理每个SKU的库存扣减
+  // 处理每个SKU的库存扣减（按批次顺序）
   for (const [sku, deductionQuantity] of Object.entries(skuDeductionMap)) {
-    const inventoryItem = skuMap[sku];
+    const deductionResult = deductInventoryByBatch(
+      sku,
+      deductionQuantity,
+      inventoryItems
+    );
 
-    if (!inventoryItem) {
-      deductionErrors.push(`SKU ${sku} 未找到对应的库存项`);
-      continue;
-    }
-
-    const currentQuantity = parseInt(inventoryItem.quantity) || 0;
-
-    if (currentQuantity < deductionQuantity) {
-      deductionErrors.push(
-        `SKU ${sku} 库存不足：当前库存 ${currentQuantity}，需要扣减 ${deductionQuantity}`
-      );
+    if (!deductionResult.success) {
+      deductionErrors.push(deductionResult.error);
       continue;
     }
 
     // 创建扣减记录
-    const deductionRecord = {
-      id: `deduction-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      sku: sku,
-      materialName: inventoryItem.materialName,
-      purchaseBatch: inventoryItem.purchaseBatch,
-      originalQuantity: currentQuantity,
-      deductedQuantity: deductionQuantity,
-      remainingQuantity: currentQuantity - deductionQuantity,
-      timestamp: new Date().toISOString().slice(0, 19).replace("T", " "),
-      orderCount: enhancedData.filter((item) => item["商品编号"] === sku)
-        .length,
-    };
+    deductionResult.deductionDetails.forEach((detail) => {
+      const deductionRecord = {
+        id: `deduction-${Date.now()}-${Math.random()
+          .toString(36)
+          .substr(2, 9)}`,
+        sku: sku,
+        purchaseBatch: detail.batchName,
+        deductedQuantity: detail.deductedQuantity,
+        remainingQuantity: detail.remainingInBatch,
+        timestamp: new Date().toISOString().slice(0, 19).replace("T", " "),
+        orderCount: enhancedData.filter((item) => item["商品编号"] === sku)
+          .length,
+      };
 
-    deductionRecords.push(deductionRecord);
-    totalDeducted += deductionQuantity;
+      deductionRecords.push(deductionRecord);
+    });
+
+    totalDeducted += deductionResult.totalDeducted;
 
     console.log(
-      `库存扣减: SKU ${sku}, 物料名称 ${
-        inventoryItem.materialName
-      }, 原库存 ${currentQuantity}, 扣减 ${deductionQuantity}, 剩余 ${
-        currentQuantity - deductionQuantity
-      }`
+      `批次出库: SKU ${sku}, 总扣减 ${
+        deductionResult.totalDeducted
+      }, 涉及批次: ${deductionResult.deductionDetails
+        .map((d) => `${d.batchName}(${d.deductedQuantity})`)
+        .join(", ")}`
     );
   }
 

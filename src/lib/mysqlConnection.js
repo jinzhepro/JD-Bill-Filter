@@ -802,29 +802,3 @@ export async function getAllBatchesPdfCounts() {
     };
   }
 }
-
-// 更新商品批次号
-export async function updateProductBatchNumbers(batchUpdates, mode = "push") {
-  try {
-    const response = await fetch("/api/mysql", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        action: "updateProductBatchNumbers",
-        data: batchUpdates,
-        mode: mode,
-      }),
-    });
-
-    const result = await response.json();
-    return result;
-  } catch (error) {
-    console.error("更新商品批次号失败:", error);
-    return {
-      success: false,
-      message: `更新商品批次号失败: ${error.message}`,
-    };
-  }
-}

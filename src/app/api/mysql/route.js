@@ -744,55 +744,6 @@ async function ensureWarehouseColumn() {
   }
 }
 
-// 检查并添加商品表的batch_number字段
-async function ensureBatchNumberColumn() {
-  let connection;
-  try {
-    console.log("检查商品表batch_number字段...");
-    connection = await pool.getConnection();
-
-    // 检查batch_number字段是否存在
-    const [columns] = await connection.execute(
-      `
-      SELECT COLUMN_NAME
-      FROM INFORMATION_SCHEMA.COLUMNS
-      WHERE TABLE_SCHEMA = ?
-      AND TABLE_NAME = 'products'
-      AND COLUMN_NAME = 'batch_number'
-    `,
-      [process.env.DB_DATABASE || "testdb"]
-    );
-
-    if (columns.length === 0) {
-      console.log("batch_number字段不存在，正在添加...");
-      // 添加batch_number字段
-      await connection.execute(`
-        ALTER TABLE products
-        ADD COLUMN batch_number TEXT COMMENT '批次号'
-      `);
-
-      console.log("batch_number字段添加成功");
-    } else {
-      console.log("batch_number字段已存在");
-    }
-
-    if (connection) {
-      connection.release();
-    }
-
-    return { success: true, message: "batch_number字段检查完成" };
-  } catch (error) {
-    console.error("检查batch_number字段失败:", error);
-    if (connection) {
-      connection.release();
-    }
-    return {
-      success: false,
-      message: `检查batch_number字段失败: ${error.message}`,
-    };
-  }
-}
-
 // 创建商品表（如果不存在）
 async function createProductTable() {
   let connection;
@@ -807,7 +758,6 @@ async function createProductTable() {
         sku VARCHAR(255) NOT NULL UNIQUE COMMENT '京东SKU',
         product_name VARCHAR(500) NOT NULL COMMENT '商品名称',
         warehouse VARCHAR(255) DEFAULT '' COMMENT '仓库',
-        batch_number TEXT COMMENT '批次号',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
         INDEX idx_sku (sku),
@@ -821,9 +771,6 @@ async function createProductTable() {
 
     // 确保warehouse字段存在
     await ensureWarehouseColumn();
-
-    // 确保batch_number字段存在
-    await ensureBatchNumberColumn();
 
     if (connection) {
       connection.release();
@@ -860,12 +807,11 @@ async function pushProductsToMySQL(products) {
       // 准备插入语句
       const insertSQL = `
         INSERT INTO products (
-          id, sku, product_name, warehouse, batch_number
-        ) VALUES (?, ?, ?, ?, ?)
+          id, sku, product_name, warehouse
+        ) VALUES (?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
           product_name = VALUES(product_name),
           warehouse = VALUES(warehouse),
-          batch_number = VALUES(batch_number),
           updated_at = CURRENT_TIMESTAMP
       `;
 
@@ -876,7 +822,6 @@ async function pushProductsToMySQL(products) {
           product.sku,
           product.productName,
           product.warehouse || "",
-          product.batchNumber || "",
         ]);
       }
 
@@ -917,7 +862,7 @@ async function getProductsFromMySQL() {
 
     const [rows] = await connection.execute(`
       SELECT
-        id, sku, product_name, warehouse, batch_number,
+        id, sku, product_name, warehouse,
         created_at, updated_at
       FROM products
       ORDER BY sku
@@ -935,7 +880,6 @@ async function getProductsFromMySQL() {
       sku: row.sku,
       productName: row.product_name,
       warehouse: row.warehouse,
-      batchNumber: row.batch_number,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }));
@@ -955,100 +899,6 @@ async function getProductsFromMySQL() {
     return {
       success: false,
       message: `从MySQL获取商品数据失败: ${error.message}`,
-    };
-  }
-}
-
-// 更新商品批次号
-async function updateProductBatchNumbers(batchUpdates, mode = "replace") {
-  if (!batchUpdates || batchUpdates.length === 0) {
-    return { success: false, message: "没有批次号更新数据" };
-  }
-
-  try {
-    // 确保商品表和所有必需的字段都存在
-    await createProductTable();
-
-    const connection = await pool.getConnection();
-
-    // 开始事务
-    await connection.beginTransaction();
-
-    try {
-      let updateCount = 0;
-
-      // 批量更新每个商品的批次号
-      for (const update of batchUpdates) {
-        const { sku, batchNumber } = update;
-
-        if (!sku) {
-          console.warn("跳过缺少SKU的更新项:", update);
-          continue;
-        }
-
-        if (mode === "push" && batchNumber) {
-          // push模式：先查询现有批次号，然后追加
-          const [existingRows] = await connection.execute(
-            "SELECT batch_number FROM products WHERE sku = ?",
-            [sku]
-          );
-
-          let newBatchNumber = batchNumber;
-          if (existingRows.length > 0 && existingRows[0].batch_number) {
-            // 如果已有批次号，追加新的批次号
-            const existingBatchNumber = existingRows[0].batch_number.trim();
-            if (
-              existingBatchNumber &&
-              !existingBatchNumber.includes(batchNumber)
-            ) {
-              newBatchNumber = existingBatchNumber + "\n" + batchNumber;
-            } else {
-              newBatchNumber = existingBatchNumber || batchNumber;
-            }
-          }
-
-          const [result] = await connection.execute(
-            "UPDATE products SET batch_number = ?, updated_at = CURRENT_TIMESTAMP WHERE sku = ?",
-            [newBatchNumber, sku]
-          );
-
-          if (result.affectedRows > 0) {
-            updateCount++;
-          }
-        } else {
-          // replace模式：直接替换
-          const [result] = await connection.execute(
-            "UPDATE products SET batch_number = ?, updated_at = CURRENT_TIMESTAMP WHERE sku = ?",
-            [batchNumber || "", sku]
-          );
-
-          if (result.affectedRows > 0) {
-            updateCount++;
-          }
-        }
-      }
-
-      // 提交事务
-      await connection.commit();
-      connection.release();
-
-      return {
-        success: true,
-        message: `成功更新了 ${updateCount} 个商品的批次号`,
-        updatedCount: updateCount,
-        mode: mode,
-      };
-    } catch (error) {
-      // 回滚事务
-      await connection.rollback();
-      connection.release();
-      throw error;
-    }
-  } catch (error) {
-    console.error("更新商品批次号失败:", error);
-    return {
-      success: false,
-      message: `更新商品批次号失败: ${error.message}`,
     };
   }
 }
@@ -1350,10 +1200,6 @@ export async function POST(request) {
 
       case "getAllBatchesPdfCounts":
         result = await getAllBatchesPdfCounts();
-        break;
-
-      case "updateProductBatchNumbers":
-        result = await updateProductBatchNumbers(data, mode || "push");
         break;
 
       default:

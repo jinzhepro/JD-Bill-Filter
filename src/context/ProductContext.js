@@ -28,7 +28,6 @@ const initialProductForm = {
   sku: "",
   productName: "",
   warehouse: "",
-  batchNumber: "",
 };
 
 // 商品状态reducer

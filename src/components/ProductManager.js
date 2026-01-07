@@ -107,7 +107,6 @@ export function ProductManager() {
       sku: form.sku.trim(),
       productName: form.productName.trim(),
       warehouse: form.warehouse.trim(),
-      batchNumber: form.batchNumber ? form.batchNumber.trim() : "",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -120,7 +119,6 @@ export function ProductManager() {
       sku: form.sku.trim(),
       productName: form.productName.trim(),
       warehouse: form.warehouse.trim(),
-      batchNumber: form.batchNumber ? form.batchNumber.trim() : "",
       updatedAt: new Date().toISOString(),
     };
   };
@@ -192,7 +190,6 @@ export function ProductManager() {
       sku: item.sku,
       productName: item.productName,
       warehouse: item.warehouse || "",
-      batchNumber: item.batchNumber || "",
     });
     setEditingProductId(item.id);
     setIsFormModalOpen(true);
@@ -290,11 +287,7 @@ export function ProductManager() {
             (product) => product.warehouse || ""
           );
           break;
-        case "batchNumber":
-          columnData = filteredProducts.map(
-            (product) => product.batchNumber || ""
-          );
-          break;
+
         default:
           columnData = filteredProducts.map(
             (product) => product[columnName] || ""
@@ -504,9 +497,7 @@ export function ProductManager() {
       product.sku.toLowerCase().includes(searchLower) ||
       product.productName.toLowerCase().includes(searchLower) ||
       (product.warehouse &&
-        product.warehouse.toLowerCase().includes(searchLower)) ||
-      (product.batchNumber &&
-        product.batchNumber.toLowerCase().includes(searchLower))
+        product.warehouse.toLowerCase().includes(searchLower))
     );
   });
 
@@ -648,20 +639,6 @@ export function ProductManager() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                批次号
-              </label>
-              <textarea
-                name="batchNumber"
-                value={productForm.batchNumber || ""}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 resize-vertical"
-                placeholder="可选，输入批次号"
-                rows="3"
-              />
-            </div>
-
             <div className="flex gap-3 justify-end">
               <Button type="button" onClick={handleCancel} variant="secondary">
                 取消
@@ -717,13 +694,6 @@ export function ProductManager() {
                   >
                     仓库 📋
                   </th>
-                  <th
-                    className="px-3 py-3 text-left font-semibold text-gray-700 cursor-pointer hover:bg-gray-50"
-                    onClick={(e) => handleCopyColumn("batchNumber", e)}
-                    title="点击复制整列数据"
-                  >
-                    批次号 📋
-                  </th>
                   <th className="px-3 py-3 text-left font-semibold text-gray-700">
                     操作
                   </th>
@@ -773,12 +743,6 @@ export function ProductManager() {
                       title={product.warehouse}
                     >
                       {product.warehouse || "-"}
-                    </td>
-                    <td
-                      className="px-3 py-3 truncate"
-                      title={product.batchNumber}
-                    >
-                      {product.batchNumber || "-"}
                     </td>
                     <td className="px-3 py-3">
                       <div className="flex gap-1">
