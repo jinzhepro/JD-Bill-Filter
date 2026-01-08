@@ -234,7 +234,7 @@ export default function SettlementFolderUpload() {
             ${
               isDragOver
                 ? "border-green-500 bg-green-50"
-                : "border-primary-300 bg-primary-50 hover:border-primary-400"
+                : "border-gray-gray-300 bg-gray-gray-50 hover:border-gray-gray-400"
             }
           `}
           onDragOver={handleDragOver}
@@ -243,7 +243,7 @@ export default function SettlementFolderUpload() {
           onClick={handleButtonClick}
         >
           <div className="text-6xl mb-6">📂</div>
-          <h3 className="text-2xl font-semibold text-primary-600 mb-4">
+          <h3 className="text-2xl font-semibold text-gray-gray-600 mb-4">
             上传结算单文件
           </h3>
           <p className="text-gray-600 mb-6 max-w-md mx-auto">

@@ -331,14 +331,14 @@ export function DeductionRecords({ onClose }) {
                     <thead>
                       <tr className="bg-gray-50">
                         <th
-                          className="px-3 py-3 text-left font-semibold text-primary-600 cursor-pointer hover:bg-blue-50 transition-colors"
+                          className="px-3 py-3 text-left font-semibold text-gray-gray-600 cursor-pointer hover:bg-blue-50 transition-colors"
                           onClick={() => handleCopyColumn("商品SKU", timestamp)}
                           title={`点击复制 "${timestamp}" 的商品SKU列数据`}
                         >
                           商品SKU 📋
                         </th>
                         <th
-                          className="px-3 py-3 text-left font-semibold text-primary-600 cursor-pointer hover:bg-blue-50 transition-colors"
+                          className="px-3 py-3 text-left font-semibold text-gray-gray-600 cursor-pointer hover:bg-blue-50 transition-colors"
                           onClick={() =>
                             handleCopyColumn("物料名称", timestamp)
                           }
@@ -347,7 +347,7 @@ export function DeductionRecords({ onClose }) {
                           物料名称 📋
                         </th>
                         <th
-                          className="px-3 py-3 text-left font-semibold text-primary-600 cursor-pointer hover:bg-blue-50 transition-colors"
+                          className="px-3 py-3 text-left font-semibold text-gray-gray-600 cursor-pointer hover:bg-blue-50 transition-colors"
                           onClick={() =>
                             handleCopyColumn("采购批号", timestamp)
                           }
@@ -356,7 +356,7 @@ export function DeductionRecords({ onClose }) {
                           采购批号 📋
                         </th>
                         <th
-                          className="px-3 py-3 text-right font-semibold text-primary-600 cursor-pointer hover:bg-blue-50 transition-colors"
+                          className="px-3 py-3 text-right font-semibold text-gray-gray-600 cursor-pointer hover:bg-blue-50 transition-colors"
                           onClick={() =>
                             handleCopyColumn("原始库存", timestamp)
                           }
@@ -365,7 +365,7 @@ export function DeductionRecords({ onClose }) {
                           原始库存 📋
                         </th>
                         <th
-                          className="px-3 py-3 text-right font-semibold text-primary-600 cursor-pointer hover:bg-blue-50 transition-colors"
+                          className="px-3 py-3 text-right font-semibold text-gray-gray-600 cursor-pointer hover:bg-blue-50 transition-colors"
                           onClick={() =>
                             handleCopyColumn("扣减数量", timestamp)
                           }
@@ -374,7 +374,7 @@ export function DeductionRecords({ onClose }) {
                           扣减数量 📋
                         </th>
                         <th
-                          className="px-3 py-3 text-right font-semibold text-primary-600 cursor-pointer hover:bg-blue-50 transition-colors"
+                          className="px-3 py-3 text-right font-semibold text-gray-gray-600 cursor-pointer hover:bg-blue-50 transition-colors"
                           onClick={() =>
                             handleCopyColumn("剩余库存", timestamp)
                           }
@@ -383,7 +383,7 @@ export function DeductionRecords({ onClose }) {
                           剩余库存 📋
                         </th>
                         <th
-                          className="px-3 py-3 text-right font-semibold text-primary-600 cursor-pointer hover:bg-blue-50 transition-colors"
+                          className="px-3 py-3 text-right font-semibold text-gray-gray-600 cursor-pointer hover:bg-blue-50 transition-colors"
                           onClick={() =>
                             handleCopyColumn("订单数量", timestamp)
                           }

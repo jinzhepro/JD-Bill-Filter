@@ -131,34 +131,34 @@ export function BatchInventoryAdd({ onAddItems, onCancel }) {
           <table className="w-full min-w-max border-collapse">
             <thead>
               <tr className="bg-gray-50">
-                <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
+                <th className="px-2 py-2 text-left font-semibold text-gray-gray-600 border whitespace-nowrap">
                   物料名称 *
                 </th>
-                <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
+                <th className="px-2 py-2 text-left font-semibold text-gray-gray-600 border whitespace-nowrap">
                   数量 *
                 </th>
-                <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
+                <th className="px-2 py-2 text-left font-semibold text-gray-gray-600 border whitespace-nowrap">
                   采购批号 *
                 </th>
-                <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
+                <th className="px-2 py-2 text-left font-semibold text-gray-gray-600 border whitespace-nowrap">
                   单价
                 </th>
-                <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
+                <th className="px-2 py-2 text-left font-semibold text-gray-gray-600 border whitespace-nowrap">
                   总价
                 </th>
-                <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
+                <th className="px-2 py-2 text-left font-semibold text-gray-gray-600 border whitespace-nowrap">
                   税率 (%)
                 </th>
-                <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
+                <th className="px-2 py-2 text-left font-semibold text-gray-gray-600 border whitespace-nowrap">
                   税额
                 </th>
-                <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
+                <th className="px-2 py-2 text-left font-semibold text-gray-gray-600 border whitespace-nowrap">
                   商品SKU
                 </th>
-                <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
+                <th className="px-2 py-2 text-left font-semibold text-gray-gray-600 border whitespace-nowrap">
                   仓库
                 </th>
-                <th className="px-2 py-2 text-left font-semibold text-primary-600 border whitespace-nowrap">
+                <th className="px-2 py-2 text-left font-semibold text-gray-gray-600 border whitespace-nowrap">
                   操作
                 </th>
               </tr>
@@ -178,7 +178,7 @@ export function BatchInventoryAdd({ onAddItems, onCancel }) {
                       onChange={(e) =>
                         updateRow(index, "materialName", e.target.value)
                       }
-                      className={`w-32 px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm ${
+                      className={`w-32 px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-gray-gray-500 text-sm ${
                         errors[index]?.includes("物料名称不能为空")
                           ? "border-red-500"
                           : "border-gray-300"
@@ -199,7 +199,7 @@ export function BatchInventoryAdd({ onAddItems, onCancel }) {
                         updateRow(index, "quantity", e.target.value)
                       }
                       min="0"
-                      className={`w-20 px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm ${
+                      className={`w-20 px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-gray-gray-500 text-sm ${
                         errors[index]?.includes("数量必须是非负整数")
                           ? "border-red-500"
                           : "border-gray-300"
@@ -219,7 +219,7 @@ export function BatchInventoryAdd({ onAddItems, onCancel }) {
                       onChange={(e) =>
                         updateRow(index, "purchaseBatch", e.target.value)
                       }
-                      className={`w-24 px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm ${
+                      className={`w-24 px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-gray-gray-500 text-sm ${
                         errors[index]?.includes("采购批号不能为空")
                           ? "border-red-500"
                           : "border-gray-300"
@@ -241,7 +241,7 @@ export function BatchInventoryAdd({ onAddItems, onCancel }) {
                       }
                       min="0"
                       step="0.01"
-                      className={`w-20 px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm ${
+                      className={`w-20 px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-gray-gray-500 text-sm ${
                         errors[index]?.includes("单价必须是非负数")
                           ? "border-red-500"
                           : "border-gray-300"
@@ -263,7 +263,7 @@ export function BatchInventoryAdd({ onAddItems, onCancel }) {
                       }
                       min="0"
                       step="0.01"
-                      className={`w-20 px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm ${
+                      className={`w-20 px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-gray-gray-500 text-sm ${
                         errors[index]?.includes("总价必须是非负数")
                           ? "border-red-500"
                           : "border-gray-300"
@@ -286,7 +286,7 @@ export function BatchInventoryAdd({ onAddItems, onCancel }) {
                       min="0"
                       max="100"
                       step="0.01"
-                      className={`w-16 px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm ${
+                      className={`w-16 px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-gray-gray-500 text-sm ${
                         errors[index]?.includes("税率必须是0-100之间的数字")
                           ? "border-red-500"
                           : "border-gray-300"
@@ -308,7 +308,7 @@ export function BatchInventoryAdd({ onAddItems, onCancel }) {
                       }
                       min="0"
                       step="0.01"
-                      className={`w-20 px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm ${
+                      className={`w-20 px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-gray-gray-500 text-sm ${
                         errors[index]?.includes("税额必须是非负数")
                           ? "border-red-500"
                           : "border-gray-300"
@@ -326,7 +326,7 @@ export function BatchInventoryAdd({ onAddItems, onCancel }) {
                       type="text"
                       value={row.sku}
                       onChange={(e) => updateRow(index, "sku", e.target.value)}
-                      className="w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm"
+                      className="w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-gray-gray-500 text-sm"
                       placeholder="可选"
                     />
                   </td>
@@ -337,7 +337,7 @@ export function BatchInventoryAdd({ onAddItems, onCancel }) {
                       onChange={(e) =>
                         updateRow(index, "warehouse", e.target.value)
                       }
-                      className="w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm"
+                      className="w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-gray-gray-500 text-sm"
                       placeholder="可选"
                     />
                   </td>

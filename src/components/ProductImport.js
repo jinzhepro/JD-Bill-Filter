@@ -268,7 +268,7 @@ export function ProductImport() {
               ${
                 isDragOver
                   ? "border-green-500 bg-green-50 transform scale-102"
-                  : "border-primary-300 bg-primary-50 hover:border-primary-400 hover:bg-primary-100"
+                  : "border-gray-gray-300 bg-gray-gray-50 hover:border-gray-gray-400 hover:bg-gray-gray-100"
               }
               ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}
             `}
@@ -278,7 +278,7 @@ export function ProductImport() {
             onClick={!isProcessing ? handleButtonClick : undefined}
           >
             <div className="text-6xl mb-4">📦</div>
-            <h3 className="text-xl font-semibold text-primary-600 mb-3">
+            <h3 className="text-xl font-semibold text-gray-gray-600 mb-3">
               {isProcessing ? "正在处理..." : "上传商品数据文件"}
             </h3>
             <p className="text-gray-600 mb-4 max-w-md mx-auto">

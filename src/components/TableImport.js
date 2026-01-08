@@ -332,7 +332,7 @@ export function TableImport({ onImportItems, onCancel }) {
         /* 文件上传区域 */
         <div className="space-y-4">
           <div
-            className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary-500 transition-colors"
+            className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-gray-500 transition-colors"
             onDragOver={handleDragOver}
             onDrop={handleDrop}
           >
@@ -354,7 +354,7 @@ export function TableImport({ onImportItems, onCancel }) {
               </div>
               <div className="text-sm text-gray-600">
                 <label htmlFor="file-upload" className="cursor-pointer">
-                  <span className="font-medium text-primary-600 hover:text-primary-500">
+                  <span className="font-medium text-gray-gray-600 hover:text-gray-gray-500">
                     点击上传文件
                   </span>
                   <span className="text-gray-500"> 或拖拽文件到此处</span>
@@ -394,7 +394,7 @@ export function TableImport({ onImportItems, onCancel }) {
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-600">
               <span className="font-medium">已选择文件：</span>
-              <span className="text-primary-600">{file.name}</span>
+              <span className="text-gray-gray-600">{file.name}</span>
               <span className="text-gray-500 ml-2">
                 ({(file.size / 1024 / 1024).toFixed(2)} MB)
               </span>
@@ -416,28 +416,28 @@ export function TableImport({ onImportItems, onCancel }) {
                 <table className="w-full text-xs border-collapse">
                   <thead>
                     <tr className="bg-gray-50">
-                      <th className="px-2 py-1 text-left font-semibold text-primary-600 border">
+                      <th className="px-2 py-1 text-left font-semibold text-gray-gray-600 border">
                         物料名称
                       </th>
-                      <th className="px-2 py-1 text-left font-semibold text-primary-600 border">
+                      <th className="px-2 py-1 text-left font-semibold text-gray-gray-600 border">
                         数量
                       </th>
-                      <th className="px-2 py-1 text-left font-semibold text-primary-600 border">
+                      <th className="px-2 py-1 text-left font-semibold text-gray-gray-600 border">
                         采购批号
                       </th>
-                      <th className="px-2 py-1 text-left font-semibold text-primary-600 border">
+                      <th className="px-2 py-1 text-left font-semibold text-gray-gray-600 border">
                         单价
                       </th>
-                      <th className="px-2 py-1 text-left font-semibold text-primary-600 border">
+                      <th className="px-2 py-1 text-left font-semibold text-gray-gray-600 border">
                         总价
                       </th>
-                      <th className="px-2 py-1 text-left font-semibold text-primary-600 border">
+                      <th className="px-2 py-1 text-left font-semibold text-gray-gray-600 border">
                         税率
                       </th>
-                      <th className="px-2 py-1 text-left font-semibold text-primary-600 border">
+                      <th className="px-2 py-1 text-left font-semibold text-gray-gray-600 border">
                         SKU
                       </th>
-                      <th className="px-2 py-1 text-left font-semibold text-primary-600 border">
+                      <th className="px-2 py-1 text-left font-semibold text-gray-gray-600 border">
                         仓库
                       </th>
                     </tr>

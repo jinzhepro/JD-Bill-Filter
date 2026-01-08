@@ -274,7 +274,7 @@ export default function FolderUpload() {
             ${
               isDragOver
                 ? "border-green-500 bg-green-50 transform scale-102"
-                : "border-primary-300 bg-primary-50 hover:border-primary-400 hover:bg-primary-100"
+                : "border-gray-gray-300 bg-gray-gray-50 hover:border-gray-gray-400 hover:bg-gray-gray-100"
             }
           `}
           onDragOver={handleDragOver}
@@ -283,7 +283,7 @@ export default function FolderUpload() {
           onClick={handleButtonClick}
         >
           <div className="text-6xl mb-6">📂</div>
-          <h3 className="text-2xl font-semibold text-primary-600 mb-4">
+          <h3 className="text-2xl font-semibold text-gray-gray-600 mb-4">
             上传文件夹
           </h3>
           <p className="text-gray-600 mb-6 max-w-md mx-auto">

@@ -207,7 +207,7 @@ export function Sidebar() {
                   href={item.href}
                   className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
                     isActive
-                      ? "bg-primary-100 text-primary-700"
+                      ? "bg-gray-gray-100 text-gray-gray-700"
                       : "text-gray-700 hover:bg-gray-100"
                   }`}
                   title={isCollapsed ? item.name : ""}
@@ -226,7 +226,7 @@ export function Sidebar() {
       {/* 侧边栏底部 */}
       <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
         <div className="flex items-center">
-          <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
+          <div className="w-8 h-8 bg-gray-gray-500 rounded-full flex items-center justify-center">
             <span className="text-white text-sm font-medium">
               {(currentUser?.realName || currentUser?.username || "用").charAt(
                 0
