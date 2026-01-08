@@ -802,3 +802,52 @@ export async function getAllBatchesPdfCounts() {
     };
   }
 }
+
+// 备份数据库
+export async function backupDatabase() {
+  try {
+    const response = await fetch("/api/mysql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "backupDatabase",
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("备份数据库失败:", error);
+    return {
+      success: false,
+      message: `备份数据库失败: ${error.message}`,
+    };
+  }
+}
+
+// 恢复数据库
+export async function restoreDatabase(backupData) {
+  try {
+    const response = await fetch("/api/mysql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "restoreDatabase",
+        data: backupData,
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("恢复数据库失败:", error);
+    return {
+      success: false,
+      message: `恢复数据库失败: ${error.message}`,
+    };
+  }
+}

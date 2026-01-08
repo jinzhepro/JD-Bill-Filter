@@ -24,6 +24,8 @@ import {
   deleteBatch,
   healthCheck,
   saveInboundRecords,
+  backupDatabase,
+  restoreDatabase,
 } from "@/lib/mysqlConnection";
 import { BatchPdfUpload } from "./BatchPdfUpload";
 
@@ -55,6 +57,12 @@ export function InventoryManager() {
 
   const [isMySqlProcessing, setIsMySqlProcessing] = useState(false);
   const [mySqlStatus, setMySqlStatus] = useState("");
+
+  // 恢复功能相关状态
+  const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [restoreStatus, setRestoreStatus] = useState("");
+  const restoreFileInputRef = useRef(null);
 
   // 确认对话框状态
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -526,6 +534,131 @@ export function InventoryManager() {
     }
   };
 
+  // 备份数据库
+  const handleBackupDatabase = async () => {
+    setIsMySqlProcessing(true);
+    setMySqlStatus("正在备份库存表...");
+
+    try {
+      const result = await backupDatabase();
+      if (result.success) {
+        setMySqlStatus("库存表备份成功");
+        addLog(`库存表备份成功: ${result.message}`, "success");
+
+        // 创建 JSON 文件并下载
+        const backupJson = JSON.stringify(result.data, null, 2);
+        const blob = new Blob([backupJson], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `inventory_backup_${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        toast({
+          title: "备份成功",
+          description: `库存表备份成功，已下载备份文件。共备份 ${result.data.summary.inventoryCount} 条库存记录。`,
+        });
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error) {
+      setMySqlStatus("库存表备份失败");
+      addLog(`库存表备份失败: ${error.message}`, "error");
+      toast({
+        variant: "destructive",
+        title: "备份失败",
+        description: `库存表备份失败: ${error.message}`,
+      });
+    } finally {
+      setIsMySqlProcessing(false);
+    }
+  };
+
+  // 打开恢复模态框
+  const handleOpenRestoreModal = useCallback(() => {
+    setIsRestoreModalOpen(true);
+    setRestoreStatus("");
+  }, []);
+
+  // 关闭恢复模态框
+  const handleCloseRestoreModal = useCallback(() => {
+    setIsRestoreModalOpen(false);
+    setRestoreStatus("");
+    setIsRestoring(false);
+  }, []);
+
+  // 处理恢复文件选择
+  const handleRestoreFileChange = useCallback(
+    async (event) => {
+      const file = event?.target?.files?.[0];
+      if (!file) return;
+
+      try {
+        setIsRestoring(true);
+        setRestoreStatus("正在读取备份文件...");
+
+        // 读取文件
+        const fileContent = await file.text();
+        const backupData = JSON.parse(fileContent);
+
+        // 验证数据结构
+        if (!backupData || !backupData.tables) {
+          throw new Error("无效的备份文件格式");
+        }
+
+        setRestoreStatus("正在恢复数据库...");
+        
+        // 确认恢复操作
+        if (
+          !window.confirm(
+            "⚠️ 警告：此操作将覆盖库存表中的所有数据！\n\n确定要恢复库存表吗？此操作不可撤销！"
+          )
+        ) {
+          setIsRestoring(false);
+          setRestoreStatus("");
+          return;
+        }
+
+        // 恢复库存表
+        const result = await restoreDatabase(backupData);
+
+        if (result.success) {
+          setRestoreStatus("库存表恢复成功");
+          addLog(`库存表恢复成功: ${result.message}`, "success");
+          toast({
+            title: "恢复成功",
+            description: `库存表恢复成功，共恢复 ${result.restoredRecords} 条库存记录`,
+          });
+
+          // 重新加载数据
+          await loadInventoryFromDB();
+          handleCloseRestoreModal();
+        } else {
+          throw new Error(result.message);
+        }
+      } catch (error) {
+        setRestoreStatus("库存表恢复失败");
+        addLog(`库存表恢复失败: ${error.message}`, "error");
+        toast({
+          variant: "destructive",
+          title: "恢复失败",
+          description: `库存表恢复失败: ${error.message}`,
+        });
+      } finally {
+        setIsRestoring(false);
+      }
+    },
+    [loadInventoryFromDB, addLog, handleCloseRestoreModal]
+  );
+
+  // 触发文件选择器
+  const handleRestoreButtonClick = useCallback(() => {
+    restoreFileInputRef.current?.click();
+  }, []);
+
   // 处理复制物料名称
   const handleCopyMaterialName = async (materialName, event) => {
     // 阻止事件冒泡
@@ -872,14 +1005,33 @@ export function InventoryManager() {
       <section className="bg-white rounded-xl shadow-lg p-6 animate-fade-in">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-gray-800">库存统计</h2>
-          <Link href="/outbound-records">
+          <div className="flex gap-2">
             <Button
-              variant="outline"
-              className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-300"
+              onClick={handleBackupDatabase}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              disabled={isMySqlProcessing}
+              title="备份库存表到本地JSON文件"
             >
-              出库记录 📊
+              💾 备份库存表
             </Button>
-          </Link>
+            <Button
+              onClick={handleOpenRestoreModal}
+              variant="outline"
+              className="bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-300"
+              disabled={isMySqlProcessing}
+              title="从备份文件恢复库存表"
+            >
+              📥 恢复库存表
+            </Button>
+            <Link href="/outbound-records">
+              <Button
+                variant="outline"
+                className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-300"
+              >
+                出库记录 📊
+              </Button>
+            </Link>
+          </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="text-center p-3 bg-gray-50 rounded-lg">
@@ -1033,8 +1185,8 @@ export function InventoryManager() {
         ) : (
           <div className="space-y-6">
             {Object.entries(filteredGroupedItems)
-              .sort(([, itemsA], [, itemsB]) => {
-                // 按批次入库时间排序（最早的排在前面）
+              .sort(([batchA, itemsA], [batchB, itemsB]) => {
+                // 先按入库时间排序（降序，最近的排在前面）
                 const timeA =
                   itemsA.length > 0
                     ? new Date(
@@ -1047,7 +1199,14 @@ export function InventoryManager() {
                         itemsB[0].createdAt || itemsB[0].created_at || 0
                       ).getTime()
                     : 0;
-                return timeB - timeA; // 降序，最新的排在前面
+                
+                // 如果入库时间不同，按时间降序排序
+                if (timeA !== timeB) {
+                  return timeB - timeA; // 降序，最近入库的排在前面
+                }
+                
+                // 如果入库时间相同，再按批次号排序（递增）
+                return batchA.localeCompare(batchB);
               })
               .map(([batch, items]) => (
                 <div
@@ -1665,6 +1824,66 @@ export function InventoryManager() {
               保存
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      {/* 恢复数据库模态框 */}
+      <Modal
+        isOpen={isRestoreModalOpen}
+        onClose={handleCloseRestoreModal}
+        title="从备份文件恢复库存表"
+        size="lg"
+      >
+        <div className="space-y-4">
+          <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+            <p className="text-orange-800 text-sm">
+              ⚠️ <strong>警告：</strong>此操作将覆盖库存表中的所有数据，且无法撤销！
+            </p>
+          </div>
+
+          {restoreStatus && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="text-blue-600 text-sm">{restoreStatus}</div>
+            </div>
+          )}
+
+          {!isRestoring ? (
+            <div className="text-center">
+              <div
+                className={`
+                  border-2 border-dashed rounded-xl p-8 transition-all duration-300 cursor-pointer
+                  hover:border-gray-400 hover:bg-gray-50
+                `}
+                onClick={handleRestoreButtonClick}
+              >
+                <div className="text-5xl mb-3">📥</div>
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                  选择备份文件
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  点击选择之前备份的JSON文件
+                </p>
+              </div>
+
+              <input
+                ref={restoreFileInputRef}
+                type="file"
+                accept=".json"
+                onChange={handleRestoreFileChange}
+                className="hidden"
+              />
+
+              <div className="mt-4 text-sm text-gray-500">
+                <p>支持的文件格式：.json</p>
+                <p>提示：使用"💾 备份数据库"功能生成的备份文件</p>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-500 mx-auto mb-3"></div>
+              <div className="text-lg text-gray-600">{restoreStatus}</div>
+            </div>
+          )}
         </div>
       </Modal>
 

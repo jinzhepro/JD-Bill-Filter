@@ -1202,6 +1202,14 @@ export async function POST(request) {
         result = await getAllBatchesPdfCounts();
         break;
 
+      case "backupDatabase":
+        result = await backupDatabase();
+        break;
+
+      case "restoreDatabase":
+        result = await restoreDatabase(data);
+        break;
+
       default:
         result = { success: false, message: "未知的操作类型" };
     }
@@ -1892,6 +1900,149 @@ async function getBatchStatus() {
     return {
       success: false,
       message: `获取批次状态失败: ${error.message}`,
+    };
+  }
+}
+
+// ========== 数据备份相关函数 ==========
+
+// 备份数据库（导出所有库存数据）
+async function backupDatabase() {
+  try {
+    const connection = await pool.getConnection();
+
+    // 只获取库存表的数据
+    const [inventoryRows] = await connection.execute(`
+      SELECT 
+        id, material_name, quantity, purchase_batch, sku,
+        unit_price, total_price, tax_rate, tax_amount, warehouse,
+        created_at, updated_at
+      FROM inventory
+      ORDER BY purchase_batch
+    `);
+
+    connection.release();
+
+    // 构建备份数据对象
+    const backupData = {
+      backupTime: new Date().toISOString(),
+      database: dbConfig.database,
+      tables: {
+        inventory: inventoryRows.map(row => ({
+          id: row.id,
+          materialName: row.material_name,
+          quantity: row.quantity,
+          purchaseBatch: row.purchase_batch,
+          sku: row.sku,
+          unitPrice: row.unit_price,
+          totalPrice: row.total_price,
+          taxRate: row.tax_rate,
+          taxAmount: row.tax_amount,
+          warehouse: row.warehouse,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at
+        }))
+      },
+      summary: {
+        inventoryCount: inventoryRows.length
+      }
+    };
+
+    return {
+      success: true,
+      data: backupData,
+      message: `数据库备份成功，共备份 ${inventoryRows.length} 条库存记录`
+    };
+  } catch (error) {
+    console.error("备份数据库失败:", error);
+    return {
+      success: false,
+      message: `备份数据库失败: ${error.message}`
+    };
+  }
+}
+
+// 恢复数据库（从备份文件导入数据）
+async function restoreDatabase(backupData) {
+  if (!backupData || !backupData.tables) {
+    return { success: false, message: "无效的备份数据格式" };
+  }
+
+  try {
+    const connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    try {
+      const { tables } = backupData;
+      let totalRestored = 0;
+
+      // 恢复库存表
+      if (tables.inventory && tables.inventory.length > 0) {
+        // 先清空库存表
+        await connection.execute("DELETE FROM inventory");
+        
+        // 插入数据
+        const insertInventorySQL = `
+          INSERT INTO inventory (
+            id, material_name, quantity, purchase_batch, sku,
+            unit_price, total_price, tax_rate, tax_amount, warehouse,
+            created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        
+        // 时间格式转换函数：ISO 8601 -> MySQL DATETIME
+        const formatDateTime = (dateStr) => {
+          if (!dateStr) return new Date();
+          const date = new Date(dateStr);
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          const hours = String(date.getHours()).padStart(2, '0');
+          const minutes = String(date.getMinutes()).padStart(2, '0');
+          const seconds = String(date.getSeconds()).padStart(2, '0');
+          return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        };
+        
+        for (const item of tables.inventory) {
+          await connection.execute(insertInventorySQL, [
+            item.id,
+            item.materialName,
+            item.quantity,
+            item.purchaseBatch,
+            item.sku || "",
+            item.unitPrice || 0,
+            item.totalPrice || 0,
+            item.taxRate || 13,
+            item.taxAmount || 0,
+            item.warehouse || "",
+            formatDateTime(item.createdAt),
+            formatDateTime(item.updatedAt)
+          ]);
+        }
+        totalRestored += tables.inventory.length;
+      }
+
+      await connection.commit();
+      connection.release();
+
+      return {
+        success: true,
+        message: `数据库恢复成功，共恢复 ${totalRestored} 条库存记录`,
+        restoredRecords: totalRestored,
+        details: {
+          inventory: tables.inventory?.length || 0
+        }
+      };
+    } catch (error) {
+      await connection.rollback();
+      connection.release();
+      throw error;
+    }
+  } catch (error) {
+    console.error("恢复数据库失败:", error);
+    return {
+      success: false,
+      message: `恢复数据库失败: ${error.message}`
     };
   }
 }
