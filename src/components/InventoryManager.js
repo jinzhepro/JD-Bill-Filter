@@ -15,6 +15,7 @@ import {
   createMultipleInventoryItems,
 } from "@/lib/inventoryStorage";
 import { PdfViewer } from "./PdfViewer";
+import { downloadExcel } from "@/lib/excelHandler";
 import {
   testConnection,
   createInventoryTable,
@@ -551,7 +552,9 @@ export function InventoryManager() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `inventory_backup_${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+        a.download = `inventory_backup_${new Date()
+          .toISOString()
+          .replace(/[:.]/g, "-")}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -610,7 +613,7 @@ export function InventoryManager() {
         }
 
         setRestoreStatus("正在恢复数据库...");
-        
+
         // 确认恢复操作
         if (
           !window.confirm(
@@ -999,6 +1002,60 @@ export function InventoryManager() {
     loadAllBatchPdfCounts();
   }, [loadAllBatchPdfCounts]);
 
+  // 导出库存明细到Excel
+  const handleExportInventory = useCallback(() => {
+    if (filteredItems.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "无数据",
+        description: "没有库存数据可以导出",
+      });
+      return;
+    }
+
+    try {
+      // 按入库时间升序排序
+      const sortedItems = [...filteredItems].sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return timeA - timeB; // 升序
+      });
+
+      // 准备导出数据
+      const exportData = sortedItems.map((item) => ({
+        物料名称: item.materialName || "",
+        数量: item.quantity || 0,
+        单价: item.unitPrice ? parseFloat(item.unitPrice).toFixed(2) : "",
+        总价: item.totalPrice ? parseFloat(item.totalPrice).toFixed(2) : "",
+        税率: item.taxRate || "",
+        SKU: item.sku || "",
+        仓库: item.warehouse || "",
+        采购批号: item.purchaseBatch || "",
+        入库时间: item.createdAt
+          ? new Date(item.createdAt).toLocaleString("zh-CN")
+          : "",
+      }));
+
+      // 生成文件名
+      const fileName = `库存明细_${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+      // 导出Excel
+      downloadExcel(exportData, fileName);
+
+      toast({
+        title: "导出成功",
+        description: `已成功导出 ${sortedItems.length} 条库存记录`,
+      });
+    } catch (error) {
+      console.error("导出库存明细失败:", error);
+      toast({
+        variant: "destructive",
+        title: "导出失败",
+        description: `导出库存明细失败: ${error.message}`,
+      });
+    }
+  }, [filteredItems, toast]);
+
   return (
     <div className="space-y-6">
       {/* 统计信息 */}
@@ -1006,6 +1063,15 @@ export function InventoryManager() {
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-gray-800">库存统计</h2>
           <div className="flex gap-2">
+            <Button
+              onClick={handleExportInventory}
+              variant="outline"
+              className="bg-green-50 hover:bg-green-100 text-green-700 border-green-300"
+              disabled={inventoryItems.length === 0}
+              title="导出库存明细到Excel文件"
+            >
+              📊 导出库存明细
+            </Button>
             <Button
               onClick={handleBackupDatabase}
               className="bg-purple-600 hover:bg-purple-700 text-white"
@@ -1199,12 +1265,12 @@ export function InventoryManager() {
                         itemsB[0].createdAt || itemsB[0].created_at || 0
                       ).getTime()
                     : 0;
-                
+
                 // 如果入库时间不同，按时间降序排序
                 if (timeA !== timeB) {
                   return timeB - timeA; // 降序，最近入库的排在前面
                 }
-                
+
                 // 如果入库时间相同，再按批次号排序（递增）
                 return batchA.localeCompare(batchB);
               })
@@ -1837,7 +1903,8 @@ export function InventoryManager() {
         <div className="space-y-4">
           <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
             <p className="text-orange-800 text-sm">
-              ⚠️ <strong>警告：</strong>此操作将覆盖库存表中的所有数据，且无法撤销！
+              ⚠️ <strong>警告：</strong>
+              此操作将覆盖库存表中的所有数据，且无法撤销！
             </p>
           </div>
 
