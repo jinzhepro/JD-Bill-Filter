@@ -2,8 +2,40 @@ import Decimal from "decimal.js";
 
 /**
  * 结算单数据处理器 - 合并相同SKU的应结金额
- * 优化版：高效处理大数据量
+ * 优化版：高效处理大数据量，支持商品库匹配
  */
+
+// 商品库缓存
+let productCache = null;
+
+/**
+ * 加载商品库数据（从商品管理数据库）
+ */
+export async function loadProductCache() {
+  if (productCache) return productCache;
+
+  try {
+    const { getProductsFromMySQL } = await import("@/lib/mysqlConnection");
+    const result = await getProductsFromMySQL();
+
+    // 构建商品编号到商品名称的映射
+    productCache = {};
+    if (result.success && result.data) {
+      result.data.forEach((product) => {
+        if (product["京东SKU"] || product.sku) {
+          const sku = product["京东SKU"] || product.sku;
+          productCache[sku] = product["商品名称"] || product.productName || "";
+        }
+      });
+    }
+
+    console.log(`[结算单] 已加载 ${Object.keys(productCache).length} 个商品`);
+    return productCache;
+  } catch (error) {
+    console.error("[结算单] 加载商品库失败:", error);
+    return {};
+  }
+}
 
 /**
  * 验证结算单数据结构
@@ -31,10 +63,9 @@ export function validateSettlementDataStructure(data) {
 }
 
 /**
- * 处理结算单数据 - 合并相同SKU的应结金额
- * 优化：使用 Map 减少查找时间，移除日志提升性能
+ * 处理结算单数据 - 合并相同SKU的应结金额，并匹配商品名称
  */
-export function processSettlementData(data) {
+export async function processSettlementData(data) {
   if (!data || data.length === 0) {
     throw new Error("没有结算单数据需要处理");
   }
@@ -48,7 +79,11 @@ export function processSettlementData(data) {
     throw new Error("数据中没有找到金额列");
   }
 
-  // 使用 Map 存储合并后的数据，key 为商品编号
+  // 加载商品库
+  const productMap = await loadProductCache();
+  console.log(`[结算单] 商品库大小: ${Object.keys(productMap).length}`);
+
+  // 使用 Map 存储合并后的数据
   const mergedData = new Map();
 
   // 遍历数据，直接累加金额
@@ -63,10 +98,11 @@ export function processSettlementData(data) {
         new Decimal(row[actualAmountColumn] || 0)
       );
     } else {
-      // 新建记录
+      // 新建记录，尝试匹配商品库名称
+      const matchedName = productMap[productNo] || row["商品名称"] || "";
       mergedData.set(productNo, {
         商品编号: productNo,
-        商品名称: row["商品名称"] || "",
+        商品名称: matchedName,
         金额: new Decimal(row[actualAmountColumn] || 0),
       });
     }
@@ -74,7 +110,17 @@ export function processSettlementData(data) {
 
   // 转换为数组
   const result = [];
+  let matchedCount = 0;
+  let unmatchedCount = 0;
+
   for (const item of mergedData.values()) {
+    const hasMatch = productMap[item.商品编号];
+    if (hasMatch) {
+      matchedCount++;
+    } else {
+      unmatchedCount++;
+    }
+
     result.push({
       商品编号: item.商品编号,
       商品名称: item.商品名称,
@@ -82,5 +128,8 @@ export function processSettlementData(data) {
     });
   }
 
+  console.log(
+    `[结算单] 处理完成: 匹配 ${matchedCount} 个，未匹配 ${unmatchedCount} 个`
+  );
   return result;
 }

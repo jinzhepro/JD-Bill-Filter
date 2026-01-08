@@ -102,9 +102,9 @@ export default function SettlementFolderUpload() {
 
       // 处理结算单数据
       try {
-        addLog("开始处理结算单数据...", "info");
-        const processedData = processSettlementData(allData);
-        addLog(`结算单处理完成，合并为 ${processedData.length} 条记录`, "info");
+        addLog("开始处理结算单数据...");
+        const processedData = await processSettlementData(allData);
+        addLog(`结算单处理完成，合并为 ${processedData.length} 条记录`);
 
         setProcessedData(processedData);
         addLog("上传完成", "success");
