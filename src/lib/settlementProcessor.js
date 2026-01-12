@@ -14,27 +14,10 @@ let productCache = null;
 export async function loadProductCache() {
   if (productCache) return productCache;
 
-  try {
-    const { getProductsFromMySQL } = await import("@/lib/mysqlConnection");
-    const result = await getProductsFromMySQL();
-
-    // 构建商品编号到商品名称的映射
-    productCache = {};
-    if (result.success && result.data) {
-      result.data.forEach((product) => {
-        if (product["京东SKU"] || product.sku) {
-          const sku = product["京东SKU"] || product.sku;
-          productCache[sku] = product["商品名称"] || product.productName || "";
-        }
-      });
-    }
-
-    console.log(`[结算单] 已加载 ${Object.keys(productCache).length} 个商品`);
-    return productCache;
-  } catch (error) {
-    console.error("[结算单] 加载商品库失败:", error);
-    return {};
-  }
+  // 数据库功能已移除，返回空对象
+  productCache = {};
+  console.log("[结算单] 商品库功能已禁用");
+  return productCache;
 }
 
 /**

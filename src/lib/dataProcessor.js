@@ -733,26 +733,6 @@ export async function deductInventory(enhancedData, inventoryItems) {
     return item;
   });
 
-  // 保存更新后的库存到数据库
-  try {
-    const { pushInventoryToMySQL } = await import("@/lib/mysqlConnection");
-    await pushInventoryToMySQL(updatedInventoryItems);
-    console.log("库存数据已更新到数据库");
-  } catch (error) {
-    console.error("更新库存数据到数据库失败:", error);
-    deductionErrors.push(`更新数据库失败: ${error.message}`);
-  }
-
-  // 保存扣减记录到数据库
-  try {
-    const { saveDeductionRecords } = await import("@/lib/mysqlConnection");
-    await saveDeductionRecords(deductionRecords);
-    console.log("库存扣减记录已保存到数据库");
-  } catch (error) {
-    console.error("保存库存扣减记录失败:", error);
-    deductionErrors.push(`保存扣减记录失败: ${error.message}`);
-  }
-
   console.log(
     `库存扣减完成：共扣减 ${totalDeducted} 件商品，创建 ${deductionRecords.length} 条记录`
   );
