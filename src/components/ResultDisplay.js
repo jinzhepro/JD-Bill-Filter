@@ -9,15 +9,11 @@ export default function ResultDisplay() {
   const {
     originalData,
     processedData,
-    uploadedFiles,
     resetOrder,
     addLog,
   } = useApp();
 
   const { toast } = useToast();
-
-  // 获取第一个上传的文件（兼容单文件模式）
-  const uploadedFile = uploadedFiles.length > 0 ? uploadedFiles[0] : null;
 
   // 计算总价
   const calculateTotalAmount = (data) => {
@@ -121,7 +117,7 @@ export default function ResultDisplay() {
             <h3 className="text-sm font-medium text-foreground mb-2">
               处理统计
             </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="grid grid-cols-3 gap-4 text-sm">
               <div>
                 <span className="text-muted-foreground">原始记录数：</span>
                 <span className="font-semibold text-foreground ml-2">
@@ -138,12 +134,6 @@ export default function ResultDisplay() {
                 <span className="text-muted-foreground">总价：</span>
                 <span className="font-semibold text-foreground ml-2">
                   ¥{totalAmount.toFixed(2)}
-                </span>
-              </div>
-              <div>
-                <span className="text-muted-foreground">文件名：</span>
-                <span className="font-semibold text-foreground ml-2">
-                  {uploadedFile?.name || "-"}
                 </span>
               </div>
             </div>
