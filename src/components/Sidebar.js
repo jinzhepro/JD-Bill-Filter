@@ -70,25 +70,25 @@ export function Sidebar() {
 
   return (
     <div
-      className={`bg-white shadow-lg transition-all duration-300 ${
+      className={`bg-card shadow-md transition-all duration-300 ${
         isCollapsed ? "w-16" : "w-64"
       } min-h-screen relative`}
     >
       {/* 侧边栏头部 */}
-      <div className="p-4 border-b border-gray-200">
+      <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between">
           {!isCollapsed && (
-            <h2 className="text-lg font-semibold text-gray-800">
+            <h2 className="text-lg font-semibold text-foreground">
               京东万商系统
             </h2>
           )}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
+            className="p-1 rounded-md hover:bg-muted transition-colors"
             title={isCollapsed ? "展开菜单" : "收起菜单"}
           >
             <svg
-              className="w-5 h-5 text-gray-600"
+              className="w-5 h-5 text-muted-foreground"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -122,10 +122,10 @@ export function Sidebar() {
               <li key={item.name}>
                 <Link
                   href={item.href}
-                  className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+                  className={`flex items-center px-3 py-2 rounded-md transition-colors ${
                     isActive
-                      ? "bg-gray-gray-100 text-gray-gray-700"
-                      : "text-gray-700 hover:bg-gray-100"
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}
                   title={isCollapsed ? item.name : ""}
                 >

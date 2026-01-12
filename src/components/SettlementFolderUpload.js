@@ -226,15 +226,15 @@ export default function SettlementFolderUpload() {
   }, []);
 
   return (
-    <section className="bg-white rounded-xl shadow-lg p-8 animate-fade-in">
+    <section className="bg-card rounded-lg shadow p-8">
       <div className="text-center">
         <div
           className={`
-            border-3 border-dashed rounded-xl p-16 transition-all duration-300 cursor-pointer
+            border-3 border-dashed rounded-lg p-16 transition-all duration-300 cursor-pointer
             ${
               isDragOver
-                ? "border-green-500 bg-green-50"
-                : "border-gray-gray-300 bg-gray-gray-50 hover:border-gray-gray-400"
+                ? "border-primary bg-primary/10"
+                : "border-border bg-muted hover:border-primary hover:bg-muted/80"
             }
           `}
           onDragOver={handleDragOver}
@@ -243,10 +243,10 @@ export default function SettlementFolderUpload() {
           onClick={handleButtonClick}
         >
           <div className="text-6xl mb-6">📂</div>
-          <h3 className="text-2xl font-semibold text-gray-gray-600 mb-4">
+          <h3 className="text-2xl font-semibold text-foreground mb-4">
             上传结算单文件
           </h3>
-          <p className="text-gray-600 mb-6 max-w-md mx-auto">
+          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
             拖拽文件到此处，或点击选择文件（支持 .xlsx, .xls, .csv）
           </p>
           <Button size="lg" className="px-8">
@@ -263,14 +263,14 @@ export default function SettlementFolderUpload() {
           className="hidden"
         />
 
-        <div className="mt-6 text-sm text-gray-500">
+        <div className="mt-6 text-sm text-muted-foreground">
           <p>支持的文件格式：.xlsx, .xls, .csv</p>
           <p>最大文件大小：50MB</p>
         </div>
 
-        <div className="mt-8 p-4 bg-blue-50 rounded-lg text-left">
-          <h4 className="text-sm font-medium text-blue-900 mb-2">处理说明</h4>
-          <ul className="text-sm text-blue-700 space-y-1">
+        <div className="mt-8 p-4 bg-primary/10 rounded-lg text-left">
+          <h4 className="text-sm font-medium text-foreground mb-2">处理说明</h4>
+          <ul className="text-sm text-muted-foreground space-y-1">
             <li>• 自动合并相同商品编号的应结金额</li>
             <li>• 支持批量上传多个文件</li>
             <li>• 合并后可直接导出结果</li>

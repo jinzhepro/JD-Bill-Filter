@@ -171,15 +171,15 @@ export default function MultiFileUpload() {
   }, [fileDataArray, setMergeMode, addLog, setError]);
 
   return (
-    <section className="bg-white rounded-xl shadow-lg p-8 animate-fade-in">
+    <section className="bg-card rounded-lg shadow p-8">
       <div className="text-center">
         <div
           className={`
-            border-3 border-dashed rounded-xl p-16 transition-all duration-300 cursor-pointer
+            border-3 border-dashed rounded-lg p-16 transition-all duration-300 cursor-pointer
             ${
               isDragOver
-                ? "border-green-500 bg-green-50 transform scale-102"
-                : "border-gray-gray-300 bg-gray-gray-50 hover:border-gray-gray-400 hover:bg-gray-gray-100"
+                ? "border-primary bg-primary/10 transform scale-102"
+                : "border-border bg-muted hover:border-primary hover:bg-muted/80"
             }
           `}
           onDragOver={handleDragOver}
@@ -188,10 +188,10 @@ export default function MultiFileUpload() {
           onClick={handleButtonClick}
         >
           <div className="text-6xl mb-6">📁</div>
-          <h3 className="text-2xl font-semibold text-gray-gray-600 mb-4">
+          <h3 className="text-2xl font-semibold text-foreground mb-4">
             上传多个Excel/CSV文件
           </h3>
-          <p className="text-gray-600 mb-6 max-w-md mx-auto">
+          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
             拖拽多个文件到此处或点击选择文件（支持 .xlsx, .xls, .csv 格式）
           </p>
           <Button size="lg" disabled={false} className="px-8">
@@ -208,7 +208,7 @@ export default function MultiFileUpload() {
           className="hidden"
         />
 
-        <div className="mt-6 text-sm text-gray-500">
+        <div className="mt-6 text-sm text-muted-foreground">
           <p>支持的文件格式：.xlsx, .xls, .csv</p>
           <p>最大文件大小：50MB</p>
           <p>支持同时上传多个文件</p>
@@ -217,20 +217,20 @@ export default function MultiFileUpload() {
         {/* 已上传文件列表 */}
         {uploadedFiles.length > 0 && (
           <div className="mt-8">
-            <h4 className="text-lg font-medium text-gray-800 mb-4">
+            <h4 className="text-lg font-medium text-foreground mb-4">
               已上传文件 ({uploadedFiles.length})
             </h4>
             <div className="space-y-2">
               {uploadedFiles.map((file, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                  className="flex items-center justify-between p-3 bg-muted rounded-lg"
                 >
                   <div className="flex items-center">
                     <span className="text-2xl mr-3">📄</span>
                     <div className="text-left">
-                      <p className="font-medium text-gray-800">{file.name}</p>
-                      <p className="text-sm text-gray-500">
+                      <p className="font-medium text-foreground">{file.name}</p>
+                      <p className="text-sm text-muted-foreground">
                         {(file.size / 1024 / 1024).toFixed(2)} MB
                       </p>
                     </div>
@@ -257,7 +257,7 @@ export default function MultiFileUpload() {
                 合并所有文件
               </Button>
               {uploadedFiles.length < 2 && (
-                <p className="mt-2 text-sm text-gray-500">
+                <p className="mt-2 text-sm text-muted-foreground">
                   至少需要2个文件才能进行合并
                 </p>
               )}
@@ -266,11 +266,11 @@ export default function MultiFileUpload() {
         )}
 
         {/* 处理说明 */}
-        <div className="mt-8 p-4 bg-blue-50 rounded-lg text-left">
-          <h4 className="text-sm font-medium text-blue-900 mb-2">
+        <div className="mt-8 p-4 bg-primary/10 rounded-lg text-left">
+          <h4 className="text-sm font-medium text-foreground mb-2">
             多文件合并说明
           </h4>
-          <ul className="text-sm text-blue-700 space-y-1">
+          <ul className="text-sm text-muted-foreground space-y-1">
             <li>• 支持同时上传多个 Excel (.xlsx, .xls) 和 CSV 文件</li>
             <li>• 系统会自动合并相同SKU和单价的商品记录</li>
             <li>• 合并后会重新计算商品数量和总价</li>

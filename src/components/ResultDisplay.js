@@ -105,44 +105,44 @@ export default function ResultDisplay() {
       <div className="flex justify-between items-center">
         <Button
           onClick={handleReset}
-          className="bg-gray-200 text-gray-700 hover:bg-gray-300"
+          variant="outline"
         >
           ← 返回主界面
         </Button>
-        <h1 className="text-2xl font-bold text-white">订单处理结果</h1>
+        <h1 className="text-2xl font-bold text-foreground">订单处理结果</h1>
         <div></div>
       </div>
 
       {/* 处理后数据展示 */}
       {processedData && processedData.length > 0 && (
-        <section className="bg-white rounded-xl shadow-lg p-8 animate-fade-in">
+        <section className="bg-card rounded-lg shadow p-8">
           {/* 统计信息 */}
-          <div className="mb-6 p-4 bg-green-50 rounded-lg">
-            <h3 className="text-sm font-medium text-green-900 mb-2">
+          <div className="mb-6 p-4 bg-primary/10 rounded-lg">
+            <h3 className="text-sm font-medium text-foreground mb-2">
               处理统计
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
-                <span className="text-gray-600">原始记录数：</span>
-                <span className="font-semibold text-gray-900 ml-2">
+                <span className="text-muted-foreground">原始记录数：</span>
+                <span className="font-semibold text-foreground ml-2">
                   {originalData?.length || 0}
                 </span>
               </div>
               <div>
-                <span className="text-gray-600">处理后记录数：</span>
-                <span className="font-semibold text-gray-900 ml-2">
+                <span className="text-muted-foreground">处理后记录数：</span>
+                <span className="font-semibold text-foreground ml-2">
                   {processedData.length}
                 </span>
               </div>
               <div>
-                <span className="text-gray-600">总价：</span>
-                <span className="font-semibold text-green-700 ml-2">
+                <span className="text-muted-foreground">总价：</span>
+                <span className="font-semibold text-foreground ml-2">
                   ¥{totalAmount.toFixed(2)}
                 </span>
               </div>
               <div>
-                <span className="text-gray-600">文件名：</span>
-                <span className="font-semibold text-gray-900 ml-2">
+                <span className="text-muted-foreground">文件名：</span>
+                <span className="font-semibold text-foreground ml-2">
                   {uploadedFile?.name || "-"}
                 </span>
               </div>
@@ -152,9 +152,8 @@ export default function ResultDisplay() {
           {/* 操作按钮 */}
           <div className="mb-6 flex gap-3 flex-wrap">
             <Button
-              variant="success"
               onClick={handleDownloadExcel}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               下载Excel结果 📊
             </Button>
@@ -164,8 +163,8 @@ export default function ResultDisplay() {
           </div>
 
           {/* 处理后数据表格 */}
-          <div className="table-container custom-scrollbar">
-            <table className="preview-table">
+          <div className="max-h-96 overflow-auto border border-border rounded-lg">
+            <table className="w-full border-collapse text-sm">
               <thead>
                 <tr>
                   {processedData.length > 0 &&
@@ -174,7 +173,7 @@ export default function ResultDisplay() {
                         key={index}
                         onClick={() => handleCopyColumn(header)}
                         title={`点击复制 "${header}" 列数据`}
-                        className="cursor-pointer hover:bg-blue-50 transition-colors"
+                        className="px-3 py-3 text-left border-b border-border bg-muted font-semibold text-foreground sticky top-0 cursor-pointer hover:bg-muted/80 transition-colors"
                       >
                         {header} 📋
                       </th>
@@ -183,9 +182,9 @@ export default function ResultDisplay() {
               </thead>
               <tbody>
                 {processedData.map((row, rowIndex) => (
-                  <tr key={rowIndex}>
+                  <tr key={rowIndex} className="hover:bg-muted/50">
                     {Object.entries(row).map(([key, value]) => (
-                      <td key={key}>
+                      <td key={key} className="px-3 py-3 text-left border-b border-border">
                         {key === "单价" || key === "总价"
                           ? `¥${parseFloat(value).toFixed(2)}`
                           : value}
@@ -195,7 +194,7 @@ export default function ResultDisplay() {
                 ))}
               </tbody>
             </table>
-            <div className="mt-2 text-sm text-gray-500 text-center">
+            <div className="mt-2 text-sm text-muted-foreground text-center">
               💡 提示：点击表头可复制该列的所有数据
             </div>
           </div>

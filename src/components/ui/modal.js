@@ -27,9 +27,9 @@ export default function Modal({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className={`${sizeClasses[size]} p-0`}>
         {(title || showCloseButton) && (
-          <DialogHeader className="p-6 border-b border-gray-200">
+          <DialogHeader className="p-6 border-b border-border">
             {title && (
-              <DialogTitle className="text-lg font-semibold text-gray-900">
+              <DialogTitle className="text-lg font-semibold text-foreground">
                 {title}
               </DialogTitle>
             )}
@@ -58,9 +58,9 @@ export function ConfirmModal({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-md p-0">
         <div className="text-center p-6">
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-gray-100 mb-4">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-muted mb-4">
             <svg
-              className="h-6 w-6 text-gray-600"
+              className="h-6 w-6 text-muted-foreground"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -73,10 +73,10 @@ export function ConfirmModal({
               />
             </svg>
           </div>
-          <DialogTitle className="text-lg font-medium text-gray-900 mb-2">
+          <DialogTitle className="text-lg font-medium text-foreground mb-2">
             {title}
           </DialogTitle>
-          <p className="text-sm text-gray-500 mb-6">{message}</p>
+          <p className="text-sm text-muted-foreground mb-6">{message}</p>
           <div className="flex gap-3 justify-center">
             <Button variant="secondary" onClick={onClose} disabled={isLoading}>
               {cancelText}
@@ -101,9 +101,9 @@ export function ErrorModal({ isOpen, onClose, title = "错误提示", message })
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-md p-0">
         <div className="text-center p-6">
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-gray-100 mb-4">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-muted mb-4">
             <svg
-              className="h-6 w-6 text-gray-600"
+              className="h-6 w-6 text-muted-foreground"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -116,10 +116,10 @@ export function ErrorModal({ isOpen, onClose, title = "错误提示", message })
               />
             </svg>
           </div>
-          <DialogTitle className="text-lg font-medium text-gray-900 mb-2">
+          <DialogTitle className="text-lg font-medium text-foreground mb-2">
             {title}
           </DialogTitle>
-          <p className="text-sm text-gray-500 mb-6">{message}</p>
+          <p className="text-sm text-muted-foreground mb-6">{message}</p>
           <div className="flex justify-center">
             <Button onClick={onClose}>确定</Button>
           </div>

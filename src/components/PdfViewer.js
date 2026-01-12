@@ -35,18 +35,18 @@ export function PdfViewer({ pdf, isOpen, onClose }) {
 
         <div className="flex-1 relative">
           {isLoading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+            <div className="absolute inset-0 flex items-center justify-center bg-muted">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                <p className="text-gray-600">正在加载PDF...</p>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                <p className="text-muted-foreground">正在加载PDF...</p>
               </div>
             </div>
           )}
 
           {error && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+            <div className="absolute inset-0 flex items-center justify-center bg-muted">
               <div className="text-center">
-                <div className="text-red-500 mb-2">
+                <div className="text-destructive mb-2">
                   <svg
                     className="h-8 w-8 mx-auto"
                     fill="currentColor"
@@ -59,8 +59,8 @@ export function PdfViewer({ pdf, isOpen, onClose }) {
                     />
                   </svg>
                 </div>
-                <p className="text-red-600 mb-2">PDF加载失败</p>
-                <p className="text-gray-600 text-sm mb-4">{error}</p>
+                <p className="text-destructive mb-2">PDF加载失败</p>
+                <p className="text-muted-foreground text-sm mb-4">{error}</p>
                 <Button
                   onClick={() => {
                     setError(null);
@@ -95,8 +95,8 @@ export function PdfViewer({ pdf, isOpen, onClose }) {
           />
         </div>
 
-        <div className="p-4 border-t bg-gray-50">
-          <div className="flex items-center justify-between text-sm text-gray-600">
+        <div className="p-4 border-t bg-muted">
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
             <div className="flex items-center gap-4">
               <span>📁 文件大小: {(pdf.fileSize / 1024).toFixed(2)} KB</span>
               <span>

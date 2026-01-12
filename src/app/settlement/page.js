@@ -9,12 +9,12 @@ export default function SettlementPage() {
     <MainLayout>
       <div className="space-y-8">
         {/* 功能介绍 */}
-        <section className="bg-white rounded-xl shadow-lg p-6 animate-fade-in">
+        <section className="bg-card rounded-lg shadow p-6">
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
+            <h2 className="text-2xl font-bold text-foreground mb-4">
               结算单处理
             </h2>
-            <p className="text-gray-600 mb-6">
+            <p className="text-muted-foreground mb-6">
               智能处理Excel/CSV结算单，自动合并相同商品编码和单价的记录
             </p>
           </div>

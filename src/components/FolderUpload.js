@@ -266,15 +266,15 @@ export default function FolderUpload() {
   }, []);
 
   return (
-    <section className="bg-white rounded-xl shadow-lg p-8 animate-fade-in">
+    <section className="bg-card rounded-lg shadow p-8">
       <div className="text-center">
         <div
           className={`
-            border-3 border-dashed rounded-xl p-16 transition-all duration-300 cursor-pointer
+            border-3 border-dashed rounded-lg p-16 transition-all duration-300 cursor-pointer
             ${
               isDragOver
-                ? "border-green-500 bg-green-50 transform scale-102"
-                : "border-gray-gray-300 bg-gray-gray-50 hover:border-gray-gray-400 hover:bg-gray-gray-100"
+                ? "border-primary bg-primary/10 transform scale-102"
+                : "border-border bg-muted hover:border-primary hover:bg-muted/80"
             }
           `}
           onDragOver={handleDragOver}
@@ -283,10 +283,10 @@ export default function FolderUpload() {
           onClick={handleButtonClick}
         >
           <div className="text-6xl mb-6">📂</div>
-          <h3 className="text-2xl font-semibold text-gray-gray-600 mb-4">
+          <h3 className="text-2xl font-semibold text-foreground mb-4">
             上传文件夹
           </h3>
-          <p className="text-gray-600 mb-6 max-w-md mx-auto">
+          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
             拖拽一个或多个文件夹到此处，或点击选择文件夹（将自动递归处理所有支持的文件）
           </p>
           <Button size="lg" disabled={false} className="px-8">
@@ -305,7 +305,7 @@ export default function FolderUpload() {
           className="hidden"
         />
 
-        <div className="mt-6 text-sm text-gray-500">
+        <div className="mt-6 text-sm text-muted-foreground">
           <p>支持的文件格式：.xlsx, .xls, .csv</p>
           <p>最大文件大小：50MB</p>
           <p>支持递归处理文件夹中的所有文件</p>
@@ -314,11 +314,11 @@ export default function FolderUpload() {
         </div>
 
         {/* 处理说明 */}
-        <div className="mt-8 p-4 bg-blue-50 rounded-lg text-left">
-          <h4 className="text-sm font-medium text-blue-900 mb-2">
+        <div className="mt-8 p-4 bg-primary/10 rounded-lg text-left">
+          <h4 className="text-sm font-medium text-primary-foreground mb-2">
             文件夹上传说明
           </h4>
-          <ul className="text-sm text-blue-700 space-y-1">
+          <ul className="text-sm text-muted-foreground space-y-1">
             <li>• 支持上传一个或多个文件夹，系统会递归处理所有子文件夹</li>
             <li>• 可以同时拖拽多个文件夹到上传区域</li>
             <li>• 自动识别并处理 Excel (.xlsx, .xls) 和 CSV 文件</li>
