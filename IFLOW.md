@@ -2,23 +2,21 @@
 
 ## 项目概述
 
-京东万商系统是一个基于 Next.js 16 的企业级对帐单处理系统，用于处理京东平台的订单、结算单和库存管理。系统支持 Excel/CSV 文件导入、智能订单合并、库存批次管理（FIFO 出库）、供应商转换等功能。
+京东万商系统是一个基于 Next.js 16 的企业级对帐单处理系统，用于处理京东平台的订单、结算单和供应商信息管理。系统支持 Excel/CSV 文件导入、智能订单合并、供应商转换等功能。
 
 ### 核心功能
 
 1. **对帐单处理** - 导入 Excel/CSV 对帐单，自动合并相同商品编号和单价的记录
-2. **结算单处理** - 合并相同 SKU 的应结金额，支持商品库匹配
+2. **结算单处理** - 合并相同 SKU 的应结金额，支持批量文件处理
 3. **供应商转换** - 根据匹配字符串自动识别并转换供应商信息
-4. **库存管理** - 批次管理、库存扣减、出库记录（FIFO 原则）
 
 ### 技术栈
 
 - **框架**: Next.js 16 (App Router)
 - **前端**: React 19
-- **样式**: Tailwind CSS 3.4
+- **样式**: Tailwind CSS 3.4 + shadcn/ui
 - **UI 组件**: Radix UI
-- **数据库**: MySQL + mysql2
-- **数据处理**: xlsx (Excel), pdfjs-dist (PDF), Decimal.js (高精度计算)
+- **数据处理**: xlsx (Excel), Decimal.js (高精度计算)
 - **状态管理**: React Context + useReducer
 - **认证**: bcrypt
 
@@ -27,7 +25,6 @@
 ### 环境要求
 
 - Node.js 18+
-- MySQL 5.7+ 或 8.0+
 
 ### 安装依赖
 
@@ -79,30 +76,30 @@ JD-Bill-Filter/
 │   │   ├── page.js            # 首页（对帐单处理）
 │   │   ├── settlement/        # 结算单处理页面
 │   │   ├── suppliers/         # 供应商转换页面
-│   │   ├── api/               # API 路由
-│   │   │   ├── pdf/           # PDF 处理接口
-│   │   │   └── suppliers/     # 供应商接口
 │   │   ├── layout.js          # 根布局
-│   │   └── globals.css        # 全局样式
+│   │   └── globals.css        # 全局样式（shadcn/ui）
 │   ├── components/            # React 组件
-│   │   ├── ui/               # 基础 UI 组件（Radix UI 封装）
+│   │   ├── ui/               # shadcn/ui 基础组件
 │   │   ├── AppContent.js     # 对帐单处理主内容
 │   │   ├── Sidebar.js        # 侧边栏导航
 │   │   ├── SupplierManager.js # 供应商管理
-│   │   ├── MergeProcessor.js # 订单合并处理器
-│   │   ├── FileUpload.js     # 文件上传
-│   │   └── ResultDisplay.js  # 结果展示
+│   │   ├── FolderUpload.js   # 文件夹上传
+│   │   ├── ResultDisplay.js  # 结果展示
+│   │   ├── SettlementContent.js # 结算单内容
+│   │   ├── SettlementFolderUpload.js # 结算单文件夹上传
+│   │   ├── SettlementResultDisplay.js # 结算单结果展示
+│   │   └── MainLayout.js     # 主布局
 │   ├── context/              # React Context 状态管理
 │   │   ├── AppContext.js     # 全局应用状态
 │   │   └── SupplierContext.js # 供应商状态
 │   ├── lib/                  # 核心业务逻辑
-│   │   ├── dataProcessor.js  # 对帐单数据处理（订单合并、SKU 匹配、库存出库）
+│   │   ├── dataProcessor.js  # 对帐单数据处理（订单合并、SKU 匹配）
 │   │   ├── settlementProcessor.js # 结算单数据处理
 │   │   ├── excelHandler.js   # Excel 文件处理
 │   │   └── utils.js          # 工具函数
 │   ├── data/                 # 静态数据
 │   │   ├── suppliers.js      # 供应商数据
-│   │   └── jdSkuMapping.js   #京东 SKU 映射
+│   │   └── jdSkuMapping.js   # 京东 SKU 映射
 │   ├── hooks/                # 自定义 Hooks
 │   │   └── use-toast.js      # Toast 提示
 │   └── types/                # 类型定义
@@ -111,6 +108,7 @@ JD-Bill-Filter/
 ├── package.json
 ├── tailwind.config.js        # Tailwind 配置
 ├── next.config.mjs           # Next.js 配置
+├── components.json           # shadcn/ui 配置
 └── eslint.config.mjs         # ESLint 配置
 ```
 
@@ -119,7 +117,7 @@ JD-Bill-Filter/
 ### 对帐单处理流程 (`src/lib/dataProcessor.js`)
 
 ```
-文件上传 → 数据解析 → 订单合并 → SKU合并 → 结果导出
+文件夹上传 → 数据解析 → 订单合并 → SKU合并 → 结果导出
 ```
 
 1. **数据验证** - 检查必需列（订单编号、单据类型、费用项、商品编号、商品名称、商品数量、金额）
@@ -127,20 +125,12 @@ JD-Bill-Filter/
 3. **非销售单处理** - 特殊处理非销售单金额
 4. **订单合并** - 按订单编号分组，合并货款和直营服务费
 5. **SKU 合并** - 相同商品编号和单价的记录合并金额和数量
-6. **库存匹配**（可选）- 根据 SKU 替换商品名并添加批次号和出库信息
 
 ### 结算单处理流程 (`src/lib/settlementProcessor.js`)
 
-1. 加载商品库数据（从 MySQL）
-2. 验证结算单数据结构
-3. 按商品编号合并应结金额
-4. 匹配商品库名称
-
-### 库存出库规则
-
-- **FIFO 原则** - 按入库时间顺序出库（最早入库的批次优先）
-- **单批次出库** - 如果一个批次足够，直接出库
-- **多批次出库** - 如果需要多个批次，创建多条出库记录
+1. 验证结算单数据结构
+2. 按商品编号合并应结金额
+3. 支持批量文件处理和自动合并
 
 ## 开发规范
 
@@ -149,6 +139,7 @@ JD-Bill-Filter/
 - 使用 ESLint 进行代码检查
 - 遵循 React 19 最佳实践
 - 所有客户端组件必须以 `"use client"` 开头
+- 使用 shadcn/ui 组件库，遵循其设计规范
 
 ### 导入顺序
 
@@ -203,14 +194,19 @@ function MyComponent() {
 }
 ```
 
-## 数据库表结构
+### 样式规范
 
-系统会在首次使用时自动创建以下表：
+- 使用 shadcn/ui 的语义化 CSS 变量
+- 避免使用自定义颜色类名
+- 使用 Tailwind 的工具类和 shadcn/ui 的组件变体
 
-- `products` - 商品表（京东SKU、商品名称、仓库）
-- `inventory` - 库存表（SKU、物料名称、税率、采购批次、数量）
-- `deduction_records` - 扣减记录表（出库记录）
-- `suppliers` - 供应商表（供应商名称、ID、匹配字符串）
+```javascript
+// ✅ 推荐 - 使用 shadcn/ui 语义化类名
+<div className="bg-card text-foreground border-border" />
+
+// ❌ 避免 - 使用自定义颜色
+<div className="bg-white text-gray-800 border-gray-200" />
+```
 
 ## 供应商数据管理
 
@@ -226,7 +222,6 @@ function MyComponent() {
 
 - 密码使用 bcrypt 加密存储
 - 敏感操作需要用户认证
-- API 请求超时保护（30 秒）
 - 文件大小限制（50MB）
 - 支持的文件类型验证（.xlsx, .xls, .csv）
 
@@ -251,25 +246,13 @@ function MyComponent() {
 
 ### 如何添加新的 UI 组件？
 
-在 `src/components/ui/` 目录下创建新组件，基于 Radix UI 进行封装。
-
-## API 接口
-
-### PDF 处理
-
-- `GET /api/pdf/download/[id]` - 下载处理后的 PDF 文件
-
-### 供应商接口
-
-- `GET /api/suppliers` - 获取供应商列表
-
-## 测试
-
-项目使用 Next.js 内置的测试框架。运行测试：
+使用 shadcn/ui CLI 添加新组件：
 
 ```bash
-npm test
+npx shadcn@latest add [component-name]
 ```
+
+或在 `src/components/ui/` 目录下手动创建新组件，基于 Radix UI 进行封装。
 
 ## 依赖管理
 
@@ -280,11 +263,11 @@ npm test
 - `tailwindcss` - CSS 框架
 - `xlsx` - Excel 文件处理
 - `decimal.js` - 高精度数学计算
-- `mysql2` - MySQL 数据库驱动
 - `@radix-ui/*` - UI 组件库
-- `pdfjs-dist` - PDF 处理
 - `bcrypt` - 密码加密
 - `uuid` - 唯一 ID 生成
+- `class-variance-authority` - 组件变体管理
+- `clsx` / `tailwind-merge` - 类名合并工具
 
 ## 版本信息
 
