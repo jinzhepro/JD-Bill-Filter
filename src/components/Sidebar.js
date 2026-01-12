@@ -72,7 +72,7 @@ export function Sidebar() {
       {/* 侧边栏头部 */}
       <div className="p-4 border-b border-border">
         <h2 className="text-lg font-semibold text-foreground">
-          京东万商系统
+          京东单据处理系统
         </h2>
       </div>
 

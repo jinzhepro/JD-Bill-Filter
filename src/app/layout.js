@@ -3,8 +3,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { AppProvider } from "@/context/AppContext";
 
 export const metadata = {
-  title: "京东万商库存管理系统",
-  description: "智能库存管理和对帐单处理系统",
+  title: "京东单据处理系统",
+  description: "智能单据处理系统",
 };
 
 export default function RootLayout({ children }) {
