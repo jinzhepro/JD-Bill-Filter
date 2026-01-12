@@ -5,10 +5,8 @@ import {
   useContext,
   useReducer,
   useCallback,
-  useEffect,
 } from "react";
 import { LogType } from "@/types";
-import { getInventoryFromDatabase } from "@/lib/inventoryStorage";
 
 // 初始状态
 const initialState = {
@@ -24,11 +22,6 @@ const initialState = {
   // SKU和批次号处理相关状态
   skuProcessedData: [], // 经过SKU替换和批次号添加的数据
   isSkuProcessing: false, // 是否正在进行SKU处理
-  // MySQL数据库相关状态
-  isDbLoading: false, // 是否正在从数据库加载数据
-  // 用户认证相关状态
-  isAuthenticated: false, // 是否已登录
-  currentUser: null, // 当前登录用户信息
 };
 
 // Action 类型
@@ -44,20 +37,13 @@ const ActionTypes = {
   SET_ERROR: "SET_ERROR",
   CLEAR_ERROR: "CLEAR_ERROR",
   RESET: "RESET",
-  RESET_ORDER: "RESET_ORDER", // 新增：只重置订单处理相关状态，保留用户认证状态
+  RESET_ORDER: "RESET_ORDER", // 新增：只重置订单处理相关状态
   SET_MERGE_MODE: "SET_MERGE_MODE", // 新增：设置合并模式
   SET_MERGED_DATA: "SET_MERGED_DATA", // 新增：设置合并后的数据
   SET_FILE_DATA_ARRAY: "SET_FILE_DATA_ARRAY", // 新增：设置文件数据数组
   // SKU和批次号处理相关Action类型
   SET_SKU_PROCESSED_DATA: "SET_SKU_PROCESSED_DATA",
   SET_SKU_PROCESSING: "SET_SKU_PROCESSING",
-  // MySQL数据库相关Action类型
-  LOAD_INVENTORY_FROM_DB: "LOAD_INVENTORY_FROM_DB",
-  SET_DB_LOADING: "SET_DB_LOADING",
-  // 用户认证相关Action类型
-  SET_AUTHENTICATED: "SET_AUTHENTICATED",
-  SET_CURRENT_USER: "SET_CURRENT_USER",
-  LOGOUT: "LOGOUT",
 };
 
 // Reducer
@@ -128,27 +114,6 @@ function appReducer(state, action) {
     case ActionTypes.SET_SKU_PROCESSING:
       return { ...state, isSkuProcessing: action.payload };
 
-    // MySQL数据库相关处理
-    case ActionTypes.LOAD_INVENTORY_FROM_DB:
-      return { ...state, inventoryItems: action.payload };
-
-    case ActionTypes.SET_DB_LOADING:
-      return { ...state, isDbLoading: action.payload };
-
-    // 用户认证相关处理
-    case ActionTypes.SET_AUTHENTICATED:
-      return { ...state, isAuthenticated: action.payload };
-
-    case ActionTypes.SET_CURRENT_USER:
-      return { ...state, currentUser: action.payload };
-
-    case ActionTypes.LOGOUT:
-      return {
-        ...state,
-        isAuthenticated: false,
-        currentUser: null,
-      };
-
     case ActionTypes.RESET:
       return initialState;
 
@@ -177,38 +142,6 @@ const AppContext = createContext();
 // Provider 组件
 export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
-
-  // 在组件挂载时检查登录状态和加载库存数据
-  useEffect(() => {
-    const initializeApp = async () => {
-      // 检查本地存储中的用户信息
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        try {
-          const user = JSON.parse(storedUser);
-          dispatch({ type: ActionTypes.SET_AUTHENTICATED, payload: true });
-          dispatch({ type: ActionTypes.SET_CURRENT_USER, payload: user });
-        } catch (error) {
-          console.error("解析用户信息失败:", error);
-          localStorage.removeItem("user");
-        }
-      }
-
-      // 加载库存数据
-      dispatch({ type: ActionTypes.SET_DB_LOADING, payload: true });
-      try {
-        const items = await getInventoryFromDatabase();
-        dispatch({ type: ActionTypes.LOAD_INVENTORY_FROM_DB, payload: items });
-      } catch (error) {
-        console.error("初始化加载库存数据失败:", error);
-        // 不设置错误状态，避免在应用启动时显示错误
-      } finally {
-        dispatch({ type: ActionTypes.SET_DB_LOADING, payload: false });
-      }
-    };
-
-    initializeApp();
-  }, []);
 
   // Actions
   const actions = {
@@ -271,41 +204,6 @@ export function AppProvider({ children }) {
 
     setSkuProcessing: useCallback((isProcessing) => {
       dispatch({ type: ActionTypes.SET_SKU_PROCESSING, payload: isProcessing });
-    }, []),
-
-    // MySQL数据库相关actions
-    loadInventoryFromDB: useCallback(async () => {
-      dispatch({ type: ActionTypes.SET_DB_LOADING, payload: true });
-      try {
-        const items = await getInventoryFromDatabase();
-        dispatch({ type: ActionTypes.LOAD_INVENTORY_FROM_DB, payload: items });
-        return items;
-      } catch (error) {
-        console.error("从数据库加载库存数据失败:", error);
-        dispatch({
-          type: ActionTypes.SET_ERROR,
-          payload: "从数据库加载库存数据失败",
-        });
-        return [];
-      } finally {
-        dispatch({ type: ActionTypes.SET_DB_LOADING, payload: false });
-      }
-    }, []),
-
-    setDbLoading: useCallback((isLoading) => {
-      dispatch({ type: ActionTypes.SET_DB_LOADING, payload: isLoading });
-    }, []),
-
-    // 用户认证相关actions
-    login: useCallback((user) => {
-      localStorage.setItem("user", JSON.stringify(user));
-      dispatch({ type: ActionTypes.SET_AUTHENTICATED, payload: true });
-      dispatch({ type: ActionTypes.SET_CURRENT_USER, payload: user });
-    }, []),
-
-    logout: useCallback(() => {
-      localStorage.removeItem("user");
-      dispatch({ type: ActionTypes.LOGOUT });
     }, []),
 
     reset: useCallback(() => {

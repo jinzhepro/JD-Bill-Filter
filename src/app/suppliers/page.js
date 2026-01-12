@@ -6,7 +6,6 @@ import { MainLayout } from "@/components/MainLayout";
 import SupplierManager from "@/components/SupplierManager";
 import { ErrorModal } from "@/components/ui/modal";
 import { useSupplier } from "@/context/SupplierContext";
-import { RouteGuard } from "@/components/RouteGuard";
 
 function SupplierContent() {
   const { error, clearError } = useSupplier();
@@ -18,10 +17,10 @@ function SupplierContent() {
         <section className="bg-white rounded-xl shadow-lg p-6 animate-fade-in">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              供应商管理
+              供应商转换
             </h2>
             <p className="text-gray-600 mb-6">
-              管理供应商信息，包括供应商名称和ID的增删改查操作
+              根据输入的文本自动匹配供应商信息，快速完成供应商ID转换
             </p>
           </div>
         </section>
@@ -42,20 +41,12 @@ function SupplierContent() {
   );
 }
 
-function SupplierWithGuard() {
-  return (
-    <RouteGuard>
-      <MainLayout>
-        <SupplierContent />
-      </MainLayout>
-    </RouteGuard>
-  );
-}
-
 export default function SuppliersPage() {
   return (
     <SupplierProvider>
-      <SupplierWithGuard />
+      <MainLayout>
+        <SupplierContent />
+      </MainLayout>
     </SupplierProvider>
   );
 }

@@ -824,3 +824,52 @@ export function processProductImportData(data) {
 
   return processedProducts;
 }
+
+// 只处理供应商匹配（不依赖库存数据）
+export function processWithSupplier(processedData, suppliers = []) {
+  if (!processedData || processedData.length === 0) {
+    throw new Error("没有处理后的数据");
+  }
+
+  console.log(`开始处理 ${processedData.length} 条订单数据，匹配 ${suppliers.length} 个供应商`);
+
+  // 创建供应商映射
+  const supplierMap = {};
+  suppliers.forEach((supplier) => {
+    if (supplier.matchString && supplier.matchString.trim() !== "") {
+      supplierMap[supplier.matchString.trim()] = supplier;
+    }
+  });
+
+  // 处理每条订单数据，只添加供应商信息
+  const enhancedData = processedData.map((item) => {
+    const newItem = { ...item };
+
+    // 尝试匹配供应商
+    let matchedSupplier = null;
+    for (const [matchString, supplier] of Object.entries(supplierMap)) {
+      if (item["供应商"] && item["供应商"].includes(matchString)) {
+        matchedSupplier = supplier;
+        break;
+      }
+    }
+
+    if (matchedSupplier) {
+      newItem["供应商名称"] = matchedSupplier.name;
+    }
+
+    return newItem;
+  });
+
+  console.log(`供应商匹配完成，生成 ${enhancedData.length} 条数据`);
+
+  return {
+    data: enhancedData,
+    stats: {
+      total: enhancedData.length,
+      matched: enhancedData.filter((item) => item["供应商名称"]).length,
+      unmatched: enhancedData.filter((item) => !item["供应商名称"]).length,
+    },
+  };
+}
+
