@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 export function Sidebar() {
   const pathname = usePathname();
-  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const menuItems = [
     {
@@ -69,48 +68,12 @@ export function Sidebar() {
   ];
 
   return (
-    <div
-      className={`bg-card shadow-md transition-all duration-300 ${
-        isCollapsed ? "w-16" : "w-64"
-      } min-h-screen relative`}
-    >
+    <div className="bg-card shadow-md w-64 min-h-screen">
       {/* 侧边栏头部 */}
       <div className="p-4 border-b border-border">
-        <div className="flex items-center justify-between">
-          {!isCollapsed && (
-            <h2 className="text-lg font-semibold text-foreground">
-              京东万商系统
-            </h2>
-          )}
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-1 rounded-md hover:bg-muted transition-colors"
-            title={isCollapsed ? "展开菜单" : "收起菜单"}
-          >
-            <svg
-              className="w-5 h-5 text-muted-foreground"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              {isCollapsed ? (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              ) : (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              )}
-            </svg>
-          </button>
-        </div>
+        <h2 className="text-lg font-semibold text-foreground">
+          京东万商系统
+        </h2>
       </div>
 
       {/* 菜单项 */}
@@ -127,12 +90,9 @@ export function Sidebar() {
                       ? "bg-muted text-foreground"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}
-                  title={isCollapsed ? item.name : ""}
                 >
                   <span className="flex-shrink-0">{item.icon}</span>
-                  {!isCollapsed && (
-                    <span className="ml-3 font-medium">{item.name}</span>
-                  )}
+                  <span className="ml-3 font-medium">{item.name}</span>
                 </Link>
               </li>
             );
