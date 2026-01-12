@@ -12,14 +12,14 @@ function SupplierContent() {
 
   return (
     <>
-      <div className="space-y-8">
+      <div className="space-y-4">
         {/* 功能介绍 */}
-        <section className="bg-card rounded-lg shadow p-6">
+        <section className="bg-card rounded-lg shadow-sm border border-border p-4">
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-foreground mb-4">
+            <h2 className="text-xl font-bold text-foreground mb-2">
               供应商转换
             </h2>
-            <p className="text-muted-foreground mb-6">
+            <p className="text-sm text-muted-foreground">
               根据输入的文本自动匹配供应商信息，快速完成供应商ID转换
             </p>
           </div>

@@ -17,7 +17,7 @@ export function SettlementContent() {
   }, [resetOrder, clearError]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       {/* 文件上传组件 */}
       {(!originalData || originalData.length === 0) && !mergeMode ? (
         <SettlementFolderUpload />
