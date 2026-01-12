@@ -258,7 +258,6 @@ export default function SettlementFolderUpload() {
           ref={folderInputRef}
           type="file"
           accept=".xlsx,.xls,.csv"
-          multiple
           onChange={handleFileSelect}
           className="hidden"
         />
@@ -272,7 +271,7 @@ export default function SettlementFolderUpload() {
           <h4 className="text-sm font-medium text-foreground mb-2">处理说明</h4>
           <ul className="text-sm text-muted-foreground space-y-1">
             <li>• 自动合并相同商品编号的应结金额</li>
-            <li>• 支持批量上传多个文件</li>
+            <li>• 每次只能上传一个文件</li>
             <li>• 合并后可直接导出结果</li>
           </ul>
         </div>
