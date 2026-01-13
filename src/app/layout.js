@@ -1,6 +1,7 @@
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { AppProvider } from "@/context/AppContext";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export const metadata = {
   title: "京东单据处理系统",
@@ -11,10 +12,12 @@ export default function RootLayout({ children }) {
   return (
     <html lang="zh-CN">
       <body className="antialiased">
-        <AppProvider>
-          {children}
-          <Toaster />
-        </AppProvider>
+        <ErrorBoundary>
+          <AppProvider>
+            {children}
+            <Toaster />
+          </AppProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

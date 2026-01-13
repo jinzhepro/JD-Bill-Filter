@@ -3,12 +3,6 @@ import * as XLSX from "xlsx";
 // 读取文件（支持Excel和CSV）
 export function readFile(file, fileType) {
   return new Promise((resolve, reject) => {
-    console.log("=== 文件读取开始 ===");
-    console.log("文件名:", file.name);
-    console.log("文件类型:", fileType);
-    console.log("文件大小:", file.size, "字节");
-    console.log("文件MIME类型:", file.type);
-
     // 检查XLSX库是否可用
     if (typeof XLSX === "undefined") {
       reject(new Error("XLSX库未加载，请刷新页面重试"));
@@ -17,34 +11,26 @@ export function readFile(file, fileType) {
 
     if (fileType === "csv") {
       // 对于CSV文件，先尝试UTF-8，如果失败再尝试GBK
-      console.log("使用UTF-8编码读取CSV文件");
       const reader = new FileReader();
 
       reader.onload = function (e) {
         try {
           const csvText = e?.target?.result;
-          console.log("CSV文本长度:", csvText.length);
-          console.log("CSV前100个字符:", csvText.substring(0, 100));
 
           // 检查编码问题
           const hasChinese = /[\u4e00-\u9fa5]/.test(csvText);
-          console.log("CSV包含中文字符:", hasChinese);
 
           if (!hasChinese && csvText.length > 0) {
-            console.log("检测到可能的编码问题，尝试GBK编码...");
             // 尝试使用GBK编码重新读取
             tryReadFileWithGBK(file)
               .then((gbkText) => {
                 if (gbkText && /[\u4e00-\u9fa5]/.test(gbkText)) {
-                  console.log("GBK编码读取成功，包含中文字符");
                   parseCSVText(gbkText, resolve, reject);
                 } else {
-                  console.log("GBK编码也失败，使用原始文本");
                   parseCSVText(csvText, resolve, reject);
                 }
               })
               .catch((error) => {
-                console.log("GBK编码读取失败，使用原始文本:", error);
                 parseCSVText(csvText, resolve, reject);
               });
           } else {
@@ -67,32 +53,21 @@ export function readFile(file, fileType) {
 
       reader.onload = function (e) {
         try {
-          console.log("文件读取完成，开始解析Excel文件...");
           const data = new Uint8Array(e?.target?.result || new ArrayBuffer(0));
-          console.log("Excel数据长度:", data.length);
 
           const workbook = XLSX.read(data, { type: "array" });
-          console.log(
-            "工作簿解析完成，工作表数量:",
-            workbook.SheetNames.length
-          );
-          console.log("工作表名称:", workbook.SheetNames);
 
           // 获取第一个工作表
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
-          console.log("使用工作表:", firstSheetName);
 
           // 转换为JSON格式
           const jsonData = XLSX.utils.sheet_to_json(worksheet);
-          console.log("Excel转换为JSON完成，行数:", jsonData.length);
 
           if (jsonData.length === 0) {
             throw new Error("Excel文件中没有数据");
           }
 
-          console.log("文件解析成功，返回数据");
-          console.log("=== 文件读取完成 ===");
           resolve(jsonData);
         } catch (error) {
           console.error("Excel文件解析失败:", error);
@@ -105,7 +80,6 @@ export function readFile(file, fileType) {
         reject(new Error("Excel文件读取失败"));
       };
 
-      console.log("使用ArrayBuffer读取Excel文件");
       reader.readAsArrayBuffer(file);
     }
   });
@@ -139,26 +113,19 @@ function tryReadFileWithGBK(file) {
 // 解析CSV文本
 function parseCSVText(csvText, resolve, reject) {
   try {
-    console.log("开始解析CSV文本...");
     const workbook = XLSX.read(csvText, { type: "string" });
-    console.log("工作簿解析完成，工作表数量:", workbook.SheetNames.length);
-    console.log("工作表名称:", workbook.SheetNames);
 
     // 获取第一个工作表
     const firstSheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[firstSheetName];
-    console.log("使用工作表:", firstSheetName);
 
     // 转换为JSON格式
     const jsonData = XLSX.utils.sheet_to_json(worksheet);
-    console.log("CSV转换为JSON完成，行数:", jsonData.length);
 
     if (jsonData.length === 0) {
       throw new Error("CSV文件中没有数据");
     }
 
-    console.log("文件解析成功，返回数据");
-    console.log("=== 文件读取完成 ===");
     resolve(jsonData);
   } catch (error) {
     console.error("CSV解析失败:", error);
@@ -169,15 +136,11 @@ function parseCSVText(csvText, resolve, reject) {
 // 下载Excel文件
 export function downloadExcel(data, fileName) {
   try {
-    console.log("开始创建Excel文件...");
-
     // 创建工作簿
     const workbook = XLSX.utils.book_new();
-    console.log("工作簿创建成功");
 
     // 创建工作表
     const worksheet = XLSX.utils.json_to_sheet(data);
-    console.log("工作表创建成功");
 
     // 设置商品编码列为文本格式，避免科学计数法
     const range = XLSX.utils.decode_range(worksheet["!ref"]);
@@ -200,11 +163,9 @@ export function downloadExcel(data, fileName) {
 
     // 添加工作表到工作簿
     XLSX.utils.book_append_sheet(workbook, worksheet, "处理结果");
-    console.log("工作表添加到工作簿成功");
 
     // 下载文件
     XLSX.writeFile(workbook, fileName);
-    console.log("文件下载调用成功");
 
     return true;
   } catch (error) {

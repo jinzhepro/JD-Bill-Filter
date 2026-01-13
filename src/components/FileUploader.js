@@ -35,25 +35,31 @@ export default function FileUploader({
   // 处理文件选择
   const handleFileSelect = useCallback(
     async (event) => {
-      const files = event.target.files;
-      if (!files || files.length === 0) return;
+      try {
+        const files = event.target.files;
+        if (!files || files.length === 0) return;
 
-      const validFiles = Array.from(files).filter((file) =>
-        isValidFileExtension(file.name)
-      );
+        const validFiles = Array.from(files).filter((file) =>
+          isValidFileExtension(file.name)
+        );
 
-      if (validFiles.length === 0) {
-        console.error("没有找到有效的文件格式");
-        return;
-      }
+        if (validFiles.length === 0) {
+          console.error(
+            `没有找到有效的文件格式。支持的格式: .xlsx, .xls, .csv`
+          );
+          return;
+        }
 
-      const filesWithPath = validFiles.map((file) => ({
-        file,
-        path: file.webkitRelativePath || file.name,
-      }));
+        const filesWithPath = validFiles.map((file) => ({
+          file,
+          path: file.webkitRelativePath || file.name,
+        }));
 
-      if (onFilesSelected) {
-        onFilesSelected(filesWithPath);
+        if (onFilesSelected) {
+          onFilesSelected(filesWithPath);
+        }
+      } catch (error) {
+        console.error("文件选择失败:", error);
       }
     },
     [isValidFileExtension, onFilesSelected]
@@ -65,25 +71,34 @@ export default function FileUploader({
       event.preventDefault();
       setIsDragOver(false);
 
-      const files = event.dataTransfer.files;
-      if (!files || files.length === 0) return;
+      try {
+        const files = event.dataTransfer.files;
+        if (!files || files.length === 0) {
+          console.warn("拖拽区域为空");
+          return;
+        }
 
-      const validFiles = Array.from(files).filter((file) =>
-        isValidFileExtension(file.name)
-      );
+        const validFiles = Array.from(files).filter((file) =>
+          isValidFileExtension(file.name)
+        );
 
-      if (validFiles.length === 0) {
-        console.error("没有找到有效的文件");
-        return;
-      }
+        if (validFiles.length === 0) {
+          console.warn(
+            `没有找到有效的文件。请确保拖拽的是 .xlsx, .xls 或 .csv 文件`
+          );
+          return;
+        }
 
-      const filesWithPath = validFiles.map((file) => ({
-        file,
-        path: file.name,
-      }));
+        const filesWithPath = validFiles.map((file) => ({
+          file,
+          path: file.name,
+        }));
 
-      if (onFilesSelected) {
-        onFilesSelected(filesWithPath);
+        if (onFilesSelected) {
+          onFilesSelected(filesWithPath);
+        }
+      } catch (error) {
+        console.error("拖拽文件处理失败:", error);
       }
     },
     [isValidFileExtension, onFilesSelected]

@@ -9,6 +9,7 @@ import {
 } from "@/lib/excelHandler";
 import { validateDataStructure, processOrderData } from "@/lib/dataProcessor";
 import FileUploader from "./FileUploader";
+import { useErrorHandler } from "./ErrorBoundary";
 
 export default function FolderUpload() {
   const {
@@ -19,6 +20,8 @@ export default function FolderUpload() {
     setOriginalData,
     setProcessedData,
   } = useApp();
+
+  const { handleError } = useErrorHandler();
 
   // 递归遍历文件夹结构，获取所有支持的文件
   const traverseFileTree = useCallback(async (item, path = "") => {
@@ -64,6 +67,7 @@ export default function FolderUpload() {
 
         const allData = [];
         const processedFiles = new Set();
+        const errorFiles = [];
 
         addLog(`开始处理 ${filesWithPath.length} 个文件...`, "info");
 
@@ -83,10 +87,18 @@ export default function FolderUpload() {
           addLog(`正在处理文件: ${path}`, "info");
 
           try {
-            const fileType = file.name
-              .match(/\.(xlsx|xls|csv)$/i)[1]
-              .toLowerCase();
+            const fileExtensionMatch = file.name.match(/\.(xlsx|xls|csv)$/i);
+            if (!fileExtensionMatch) {
+              throw new Error(`不支持的文件格式: ${file.name}`);
+            }
+
+            const fileType = fileExtensionMatch[1].toLowerCase();
             const data = await readFile(file, fileType);
+
+            if (!data || data.length === 0) {
+              addLog(`文件 "${path}" 数据为空，跳过`, "warning");
+              continue;
+            }
 
             validateDataStructure(data);
             addLog(`文件 "${path}" 数据结构验证通过`, "info");
@@ -94,29 +106,47 @@ export default function FolderUpload() {
             allData.push(...data);
             addLog(`文件 "${path}" 成功读取 ${data.length} 行数据`, "info");
           } catch (error) {
-            addLog(`文件 "${path}" 处理失败: ${error.message}`, "error");
+            const errorMsg = `文件 "${path}" 处理失败: ${error.message}`;
+            addLog(errorMsg, "error");
+            errorFiles.push({ path, error: error.message });
+            // 继续处理其他文件，不中断整个流程
           }
         }
 
         if (allData.length === 0) {
+          const errorDetail = errorFiles.length > 0
+            ? `\n错误详情:\n${errorFiles.map(f => `- ${f.path}: ${f.error}`).join('\n')}`
+            : '';
           setError(
-            "没有找到有效的文件数据。请确保文件夹中包含有效的 .xlsx, .xls 或 .csv 格式的文件。"
+            `没有找到有效的文件数据。请确保文件夹中包含有效的 .xlsx, .xls 或 .csv 格式的文件。${errorDetail}`
           );
           return;
+        }
+
+        // 如果有部分文件处理失败，给出警告
+        if (errorFiles.length > 0) {
+          addLog(
+            `警告: ${errorFiles.length} 个文件处理失败，但继续处理剩余 ${filesWithPath.length - errorFiles.length} 个文件`,
+            "warning"
+          );
         }
 
         setOriginalData(allData);
         addLog(`总共读取 ${allData.length} 行数据`, "info");
 
-        addLog("开始处理订单数据...", "info");
-        const processedData = processOrderData(allData);
-        setProcessedData(processedData);
-        addLog(`成功处理 ${processedData.length} 条订单记录`, "success");
-        addLog("文件夹上传完成", "success");
+        try {
+          addLog("开始处理订单数据...", "info");
+          const processedData = processOrderData(allData);
+          setProcessedData(processedData);
+          addLog(`成功处理 ${processedData.length} 条订单记录`, "success");
+          addLog("文件夹上传完成", "success");
+        } catch (error) {
+          handleError(error, "订单数据处理");
+          throw error;
+        }
       } catch (error) {
-        console.error("文件夹处理失败:", error);
-        setError(error.message);
-        addLog(`文件夹处理失败: ${error.message}`, "error");
+        handleError(error, "文件夹处理");
+        throw error;
       } finally {
         setProcessing(false);
       }
@@ -128,6 +158,7 @@ export default function FolderUpload() {
       setProcessing,
       setOriginalData,
       setProcessedData,
+      handleError,
     ]
   );
 
@@ -135,19 +166,29 @@ export default function FolderUpload() {
   const handleDrop = useCallback(
     async (event) => {
       const items = event.dataTransfer.items;
-      if (!items || items.length === 0) return;
+      if (!items || items.length === 0) {
+        handleError(new Error("没有拖拽任何文件或文件夹"), "拖拽上传");
+        return;
+      }
 
       try {
         setProcessing(true);
         clearError();
 
         const allFiles = [];
+        const errorCount = { directories: 0, files: 0 };
 
         for (let i = 0; i < items.length; i++) {
           const item = items[i];
           if (item.kind === "file") {
-            const entry = item.webkitGetAsEntry();
-            if (entry) {
+            try {
+              const entry = item.webkitGetAsEntry();
+              if (!entry) {
+                errorCount.files++;
+                addLog(`无法获取文件条目: ${item.name}`, "warning");
+                continue;
+              }
+
               if (entry.isDirectory) {
                 const files = await traverseFileTree(entry);
                 allFiles.push(...files);
@@ -156,9 +197,15 @@ export default function FolderUpload() {
                   "info"
                 );
               } else if (entry.isFile) {
-                const file = await new Promise((resolve) => {
-                  entry.file(resolve);
+                const file = await new Promise((resolve, reject) => {
+                  entry.file(resolve, reject);
+                }).catch((err) => {
+                  errorCount.files++;
+                  addLog(`读取文件失败: ${entry.name} - ${err.message}`, "error");
+                  return null;
                 });
+
+                if (!file) continue;
 
                 const fileName = file.name.toLowerCase();
                 const isValidExtension =
@@ -169,14 +216,26 @@ export default function FolderUpload() {
                 if (isValidExtension) {
                   allFiles.push({ file, path: file.name });
                   addLog(`找到有效文件: ${file.name}`, "info");
+                } else {
+                  addLog(`跳过不支持的文件格式: ${file.name}`, "info");
                 }
               }
+            } catch (error) {
+              errorCount.directories++;
+              addLog(`处理文件条目失败: ${error.message}`, "error");
             }
           }
         }
 
         if (allFiles.length === 0) {
-          setError("没有找到有效的文件或文件夹");
+          const errorMsg = `没有找到有效的文件或文件夹。`;
+          if (errorCount.directories > 0 || errorCount.files > 0) {
+            setError(
+              `${errorMsg}\n处理失败: ${errorCount.directories} 个文件夹, ${errorCount.files} 个文件`
+            );
+          } else {
+            setError(errorMsg);
+          }
           setProcessing(false);
           return;
         }
@@ -184,9 +243,7 @@ export default function FolderUpload() {
         addLog(`总共找到 ${allFiles.length} 个有效文件，开始处理...`, "info");
         await handleFolderFiles(allFiles);
       } catch (error) {
-        console.error("拖拽文件夹处理失败:", error);
-        setError(error.message);
-        addLog(`拖拽文件夹处理失败: ${error.message}`, "error");
+        handleError(error, "拖拽文件夹处理");
         setProcessing(false);
       }
     },
@@ -197,6 +254,7 @@ export default function FolderUpload() {
       setError,
       clearError,
       setProcessing,
+      handleError,
     ]
   );
 

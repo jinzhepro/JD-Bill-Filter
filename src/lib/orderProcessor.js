@@ -37,7 +37,6 @@ export function processAfterSalesData(data) {
       mergedAfterSalesData[productNo].金额.toNumber();
   });
 
-  console.log(mergedAfterSalesData);
   return mergedAfterSalesData;
 }
 
@@ -48,67 +47,30 @@ export function processAfterSalesData(data) {
 export function processNonSalesOrders(data) {
   const nonSalesOrders = data.filter((row) => row["单据类型"] === "非销售单");
 
-  console.log("找到非销售单数量:", nonSalesOrders.length);
-  console.log("非销售单列表:", nonSalesOrders);
-
   const processedNonSalesOrders = new Set();
 
   nonSalesOrders.forEach((nonSalesRow) => {
     const rowId = `${nonSalesRow["订单编号"]}_${nonSalesRow["商品编号"]}`;
 
-    console.log("处理非销售单:", {
-      订单编号: nonSalesRow["订单编号"],
-      商品编号: nonSalesRow["商品编号"],
-      单据类型: nonSalesRow["单据类型"],
-      金额: nonSalesRow["金额"],
-    });
-
     if (processedNonSalesOrders.has(rowId)) {
-      console.log("该非销售单已处理过，跳过");
       return;
     }
 
     const nonSalesAmount = new Decimal(nonSalesRow["金额"] || 0);
     const nonSalesAbsAmount = nonSalesAmount.abs();
 
-    console.log("非销售单金额信息:", {
-      原始金额: nonSalesAmount.toNumber(),
-      绝对值: nonSalesAbsAmount.toNumber(),
-    });
-
     let matchCount = 0;
     for (const row of data) {
       const rowAmount = new Decimal(row["金额"] || 0);
-
-      console.log("检查订单记录:", {
-        订单编号: row["订单编号"],
-        商品编号: row["商品编号"],
-        单据类型: row["单据类型"],
-        金额: rowAmount.toNumber(),
-        是否大于绝对值: rowAmount.greaterThan(nonSalesAbsAmount),
-      });
 
       if (rowAmount.greaterThan(nonSalesAbsAmount)) {
         const newAmount = rowAmount.plus(nonSalesAmount);
         row["金额"] = newAmount.toNumber();
         matchCount++;
-
-        console.log("非销售单金额调整:", {
-          非销售单订单编号: nonSalesRow["订单编号"],
-          非销售单商品编号: nonSalesRow["商品编号"],
-          非销售单金额: nonSalesAmount.toNumber(),
-          非销售单金额绝对值: nonSalesAbsAmount.toNumber(),
-          调整记录订单编号: row["订单编号"],
-          调整记录商品编号: row["商品编号"],
-          原始金额: rowAmount.toNumber(),
-          调整后金额: newAmount.toNumber(),
-        });
-
         break;
       }
     }
 
-    console.log("该非销售单调整了", matchCount, "条记录");
     processedNonSalesOrders.add(rowId);
   });
 }
@@ -130,16 +92,6 @@ export function processOrderWithAfterSales(orderData, mergedAfterSalesData) {
 
       if (originalAmount.greaterThan(afterSalesAbs)) {
         const newAmount = originalAmount.minus(afterSalesAbs);
-
-        console.log("被减去金额的订单行:", {
-          订单编号: orderRow["订单编号"],
-          商品编号: orderRow["商品编号"],
-          商品名称: orderRow["商品名称"],
-          原始金额: originalAmount.toNumber(),
-          售后服务单金额: afterSalesAmount.toNumber(),
-          售后金额绝对值: afterSalesAbs.toNumber(),
-          减后金额: newAmount.toNumber(),
-        });
 
         usedAfterSales.add(productNo);
 
@@ -176,7 +128,6 @@ export function mergeOrders(orderData) {
   };
 
   const mergedData = mergeGroup(orderData);
-  console.log(mergedData);
 
   const groupedData = {};
   const newData = [];
@@ -212,8 +163,6 @@ export function mergeOrders(orderData) {
       groupedData[key].push(row);
     });
   });
-
-  console.log(groupedData);
 
   const processedData = [];
 
@@ -298,19 +247,12 @@ export function processMultipleFilesData(fileDataArray, processOrderData) {
     throw new Error("没有文件数据需要处理");
   }
 
-  console.log(`开始处理 ${fileDataArray.length} 个文件的数据`);
-
   const allData = [];
-  fileDataArray.forEach((fileData, index) => {
-    console.log(`合并第 ${index + 1} 个文件，数据行数: ${fileData.length}`);
+  fileDataArray.forEach((fileData) => {
     allData.push(...fileData);
   });
 
-  console.log(`所有文件数据合并完成，总数据行数: ${allData.length}`);
-
   const processedData = processOrderData(allData);
-
-  console.log(`数据处理完成，生成 ${processedData.length} 条记录`);
 
   return processedData;
 }
