@@ -2,7 +2,7 @@
 
 ## 项目概述
 
-京东万商系统是一个基于 Next.js 16 的企业级对帐单处理系统，用于处理京东平台的订单、结算单和供应商信息管理。系统支持 Excel/CSV 文件导入、智能订单合并、供应商转换等功能。
+京东单据处理系统是一个基于 Next.js 16 的企业级对帐单处理系统，用于处理京东平台的订单、结算单和供应商信息管理。系统支持 Excel/CSV 文件导入、智能订单合并、供应商转换等功能。
 
 ### 核心功能
 
@@ -16,9 +16,9 @@
 - **前端**: React 19
 - **样式**: Tailwind CSS 3.4 + shadcn/ui
 - **UI 组件**: Radix UI
-- **数据处理**: xlsx (Excel), Decimal.js (高精度计算)
+- **数据处理**: exceljs (Excel), Decimal.js (高精度计算)
 - **状态管理**: React Context + useReducer
-- **认证**: bcrypt
+- **图标**: Lucide React
 
 ## 快速开始
 
@@ -30,20 +30,6 @@
 
 ```bash
 npm install
-```
-
-### 配置环境变量
-
-创建 `.env.local` 文件：
-
-```env
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=your_password
-DB_NAME=jd_bill_filter
-JWT_SECRET=your_jwt_secret_key
-NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
 ### 启动开发服务器
@@ -84,7 +70,10 @@ JD-Bill-Filter/
 │   │   ├── Sidebar.js        # 侧边栏导航
 │   │   ├── SupplierManager.js # 供应商管理
 │   │   ├── FolderUpload.js   # 文件夹上传
+│   │   ├── FileUploader.js   # 文件上传
 │   │   ├── ResultDisplay.js  # 结果展示
+│   │   ├── DataDisplay.js    # 数据展示
+│   │   ├── ErrorBoundary.js  # 错误边界
 │   │   ├── SettlementContent.js # 结算单内容
 │   │   ├── SettlementFolderUpload.js # 结算单文件夹上传
 │   │   ├── SettlementResultDisplay.js # 结算单结果展示
@@ -96,10 +85,11 @@ JD-Bill-Filter/
 │   │   ├── dataProcessor.js  # 对帐单数据处理（订单合并、SKU 匹配）
 │   │   ├── settlementProcessor.js # 结算单数据处理
 │   │   ├── excelHandler.js   # Excel 文件处理
+│   │   ├── fileValidation.js # 文件验证
+│   │   ├── orderProcessor.js # 订单处理逻辑
 │   │   └── utils.js          # 工具函数
 │   ├── data/                 # 静态数据
-│   │   ├── suppliers.js      # 供应商数据
-│   │   └── jdSkuMapping.js   # 京东 SKU 映射
+│   │   └── suppliers.js      # 供应商数据
 │   ├── hooks/                # 自定义 Hooks
 │   │   └── use-toast.js      # Toast 提示
 │   └── types/                # 类型定义
@@ -120,17 +110,45 @@ JD-Bill-Filter/
 文件夹上传 → 数据解析 → 订单合并 → SKU合并 → 结果导出
 ```
 
+#### 详细流程
+
 1. **数据验证** - 检查必需列（订单编号、单据类型、费用项、商品编号、商品名称、商品数量、金额）
 2. **售后服务单处理** - 合并相同商品编号的售后金额，从对应订单中扣除
 3. **非销售单处理** - 特殊处理非销售单金额
 4. **订单合并** - 按订单编号分组，合并货款和直营服务费
 5. **SKU 合并** - 相同商品编号和单价的记录合并金额和数量
 
+#### 订单处理模块 (`src/lib/orderProcessor.js`)
+
+- `processAfterSalesData()` - 处理售后服务单数据，合并相同商品编号的售后金额
+- `processNonSalesOrders()` - 处理非销售单金额逻辑
+- `processOrderWithAfterSales()` - 处理订单数据并扣除售后服务单金额
+- `mergeOrders()` - 合并订单数据，按订单编号分组
+- `mergeSameSKU()` - 合并相同商品编号的记录
+- `processOrderData()` - 主订单处理函数，执行完整的订单处理流程
+
 ### 结算单处理流程 (`src/lib/settlementProcessor.js`)
 
 1. 验证结算单数据结构
 2. 按商品编号合并应结金额
 3. 支持批量文件处理和自动合并
+
+### 文件验证模块 (`src/lib/fileValidation.js`)
+
+- `isValidFileExtension()` - 验证文件扩展名是否有效
+- `isValidFileSize()` - 验证文件大小是否在限制范围内（默认 50MB）
+- `getFileType()` - 从文件名中提取文件类型
+- `filterValidFiles()` - 过滤有效文件
+- `getFileKey()` - 生成文件唯一标识
+- `validateFile()` - 综合验证文件
+
+### Excel 处理模块 (`src/lib/excelHandler.js`)
+
+使用 exceljs 库处理 Excel 文件的读取和写入：
+- 支持读取 .xlsx、.xls、.csv 格式
+- 自动识别表头和数据行
+- 支持批量文件处理
+- 支持导出处理结果为 Excel 文件
 
 ## 开发规范
 
@@ -149,6 +167,7 @@ import React, { useState, useEffect } from "react";
 
 // 2. 第三方库
 import Decimal from "decimal.js";
+import ExcelJS from "exceljs";
 
 // 3. 项目内部（使用 @/ 别名）
 import { useApp } from "@/context/AppContext";
@@ -208,6 +227,20 @@ function MyComponent() {
 <div className="bg-white text-gray-800 border-gray-200" />
 ```
 
+### 文件验证规范
+
+```javascript
+// 使用 fileValidation 模块进行文件验证
+import { validateFile } from "@/lib/fileValidation";
+
+try {
+  validateFile(file, 50 * 1024 * 1024); // 50MB 限制
+  // 处理文件
+} catch (error) {
+  console.error("文件验证失败:", error.message);
+}
+```
+
 ## 供应商数据管理
 
 供应商数据存储在 `src/data/suppliers.js` 文件中，包含：
@@ -220,10 +253,9 @@ function MyComponent() {
 
 ## 安全注意事项
 
-- 密码使用 bcrypt 加密存储
-- 敏感操作需要用户认证
 - 文件大小限制（50MB）
 - 支持的文件类型验证（.xlsx, .xls, .csv）
+- 使用 ErrorBoundary 组件捕获运行时错误
 
 ## 常见问题
 
@@ -242,7 +274,11 @@ function MyComponent() {
 
 ### 如何修改数据处理逻辑？
 
-核心数据处理逻辑在 `src/lib/dataProcessor.js` 和 `src/lib/settlementProcessor.js` 中。
+核心数据处理逻辑在以下文件中：
+- `src/lib/dataProcessor.js` - 对帐单数据处理
+- `src/lib/settlementProcessor.js` - 结算单数据处理
+- `src/lib/orderProcessor.js` - 订单处理逻辑
+- `src/lib/fileValidation.js` - 文件验证逻辑
 
 ### 如何添加新的 UI 组件？
 
@@ -254,20 +290,66 @@ npx shadcn@latest add [component-name]
 
 或在 `src/components/ui/` 目录下手动创建新组件，基于 Radix UI 进行封装。
 
+### 如何修改文件大小限制？
+
+在 `src/lib/fileValidation.js` 中修改默认的文件大小限制：
+
+```javascript
+// 默认 50MB，可以根据需要调整
+const maxSize = 50 * 1024 * 1024;
+```
+
 ## 依赖管理
 
-主要依赖：
+### 主要依赖
 
-- `next` - Next.js 框架
-- `react` / `react-dom` - React 库
-- `tailwindcss` - CSS 框架
-- `xlsx` - Excel 文件处理
-- `decimal.js` - 高精度数学计算
+- `next` - Next.js 框架 (16.0.10)
+- `react` / `react-dom` - React 库 (19.2.0)
+- `tailwindcss` - CSS 框架 (3.4.18)
+- `exceljs` - Excel 文件处理 (4.4.0)
+- `decimal.js` - 高精度数学计算 (10.6.0)
 - `@radix-ui/*` - UI 组件库
-- `bcrypt` - 密码加密
-- `uuid` - 唯一 ID 生成
+  - `@radix-ui/react-checkbox` - 复选框组件
+  - `@radix-ui/react-dialog` - 对话框组件
+  - `@radix-ui/react-select` - 选择器组件
+  - `@radix-ui/react-toast` - Toast 提示组件
+  - `@radix-ui/react-slot` - 插槽组件
+- `lucide-react` - 图标库 (0.562.0)
+
+### 开发依赖
+
 - `class-variance-authority` - 组件变体管理
-- `clsx` / `tailwind-merge` - 类名合并工具
+- `clsx` - 类名合并工具
+- `tailwind-merge` - Tailwind 类名合并
+- `tailwindcss-animate` - Tailwind 动画
+- `eslint` - 代码检查
+- `eslint-config-next` - Next.js ESLint 配置
+
+## 架构说明
+
+### 模块化设计
+
+项目采用模块化设计，将核心功能拆分为独立的模块：
+
+- **dataProcessor.js** - 数据处理入口，协调整个处理流程
+- **orderProcessor.js** - 订单处理逻辑，包括售后单、非销售单处理
+- **settlementProcessor.js** - 结算单处理逻辑
+- **excelHandler.js** - Excel 文件的读写操作
+- **fileValidation.js** - 文件验证逻辑
+- **utils.js** - 通用工具函数
+
+### 状态管理
+
+使用 React Context API 进行状态管理：
+
+- **AppContext** - 全局应用状态（处理数据、日志等）
+- **SupplierContext** - 供应商数据状态
+
+### 错误处理
+
+- 使用 ErrorBoundary 组件捕获 React 组件树中的错误
+- 在异步操作中使用 try-catch 进行错误处理
+- 提供用户友好的错误提示
 
 ## 版本信息
 
@@ -275,3 +357,18 @@ npx shadcn@latest add [component-name]
 - Next.js: 16.0.10
 - React: 19.2.0
 - Node.js: 18+
+
+## 更新日志
+
+### 最近更新
+
+- ✅ 从 xlsx 迁移到 exceljs 库
+- ✅ 移除未使用的依赖（bcrypt、mysql2、pdfjs-dist、uuid）
+- ✅ 新增文件验证模块（fileValidation.js）
+- ✅ 新增订单处理模块（orderProcessor.js）
+- ✅ 新增通用文件上传组件（FileUploader.js）
+- ✅ 新增数据展示组件（DataDisplay.js）
+- ✅ 新增错误边界组件（ErrorBoundary.js）
+- ✅ 移除京东 SKU 映射功能
+- ✅ 更新项目名称为"京东单据处理系统"
+- ✅ 优化代码结构和模块划分
