@@ -1,14 +1,8 @@
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 // 读取文件（支持Excel和CSV）
 export function readFile(file, fileType) {
   return new Promise((resolve, reject) => {
-    // 检查XLSX库是否可用
-    if (typeof XLSX === "undefined") {
-      reject(new Error("XLSX库未加载，请刷新页面重试"));
-      return;
-    }
-
     if (fileType === "csv") {
       // 对于CSV文件，先尝试UTF-8，如果失败再尝试GBK
       const reader = new FileReader();
@@ -53,25 +47,62 @@ export function readFile(file, fileType) {
 
       reader.onload = function (e) {
         try {
-          const data = new Uint8Array(e?.target?.result || new ArrayBuffer(0));
+          const arrayBuffer = e?.target?.result || new ArrayBuffer(0);
 
-          const workbook = XLSX.read(data, { type: "array" });
+          const workbook = new ExcelJS.Workbook();
+          workbook.xlsx.load(arrayBuffer).then(() => {
+            // 获取第一个工作表
+            const worksheet = workbook.worksheets[0];
 
-          // 获取第一个工作表
-          const firstSheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[firstSheetName];
+            if (!worksheet) {
+              throw new Error("Excel文件中没有工作表");
+            }
 
-          // 转换为JSON格式
-          const jsonData = XLSX.utils.sheet_to_json(worksheet);
+            // 转换为JSON格式
+            const jsonData = [];
+            const headerRow = worksheet.getRow(1);
+            const headers = [];
 
-          if (jsonData.length === 0) {
-            throw new Error("Excel文件中没有数据");
-          }
+            // 读取表头
+            headerRow.eachCell((cell, colNumber) => {
+              headers[colNumber - 1] = cell.value;
+            });
 
-          resolve(jsonData);
+            // 读取数据行
+            worksheet.eachRow((row, rowNumber) => {
+              if (rowNumber === 1) return; // 跳过表头
+
+              const rowData = {};
+              row.eachCell((cell, colNumber) => {
+                const header = headers[colNumber - 1];
+                if (header) {
+                  let value = cell.value;
+                  // 清理 Excel 自动添加的等号前缀
+                  if (typeof value === 'string' && value.startsWith('=') && value.includes('"')) {
+                    // 匹配格式: ="123456" 或 ="数字"
+                    const match = value.match(/^="([^"]+)"$/);
+                    if (match) {
+                      value = match[1];
+                    }
+                  }
+                  rowData[header] = value;
+                }
+              });
+              jsonData.push(rowData);
+            });
+
+            if (jsonData.length === 0) {
+              throw new Error("Excel文件中没有数据");
+            }
+
+            resolve(jsonData);
+          }).catch((error) => {
+            console.error("Excel文件解析失败:", error);
+            reject(new Error(`Excel文件解析失败: ${error.message}`));
+          });
         } catch (error) {
-          console.error("Excel文件解析失败:", error);
-          reject(new Error(`Excel文件解析失败: ${error.message}`));
+          console.error("Excel文件读取失败:", error);
+          reject(new Error(`Excel文件读取失败: ${error.message}`));
         }
       };
 
@@ -113,14 +144,46 @@ function tryReadFileWithGBK(file) {
 // 解析CSV文本
 function parseCSVText(csvText, resolve, reject) {
   try {
-    const workbook = XLSX.read(csvText, { type: "string" });
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Data");
 
-    // 获取第一个工作表
-    const firstSheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[firstSheetName];
+    // 解析CSV文本
+    const lines = csvText.split(/\r?\n/).filter((line) => line.trim());
+    if (lines.length === 0) {
+      throw new Error("CSV文件中没有数据");
+    }
+
+    // 添加数据到工作表
+    lines.forEach((line, index) => {
+      const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map((v) => {
+        // 移除引号
+        let value = v.trim();
+        if (value.startsWith('"') && value.endsWith('"')) {
+          value = value.slice(1, -1).replace(/""/g, '"');
+        }
+        return value;
+      });
+
+      const row = worksheet.addRow(values);
+    });
 
     // 转换为JSON格式
-    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+    const jsonData = [];
+    const headerRow = worksheet.getRow(1);
+    const headers = headerRow.values;
+
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return; // 跳过表头
+
+      const rowData = {};
+      row.eachCell((cell, colNumber) => {
+        const header = headers[colNumber];
+        if (header) {
+          rowData[header] = cell.value;
+        }
+      });
+      jsonData.push(rowData);
+    });
 
     if (jsonData.length === 0) {
       throw new Error("CSV文件中没有数据");
@@ -129,43 +192,100 @@ function parseCSVText(csvText, resolve, reject) {
     resolve(jsonData);
   } catch (error) {
     console.error("CSV解析失败:", error);
-    reject(new Error(`CSV文件解析失败: ${error.message}`));
+    reject(new Error(`CSV解析失败: ${error.message}`));
   }
 }
 
 // 下载Excel文件
-export function downloadExcel(data, fileName) {
+export async function downloadExcel(data, fileName) {
   try {
     // 创建工作簿
-    const workbook = XLSX.utils.book_new();
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("处理结果");
 
-    // 创建工作表
-    const worksheet = XLSX.utils.json_to_sheet(data);
-
-    // 设置商品编码列为文本格式，避免科学计数法
-    const range = XLSX.utils.decode_range(worksheet["!ref"]);
-    for (let col = 0; col <= range.e.c; col++) {
-      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
-      const headerCell = worksheet[cellAddress];
-      if (headerCell && headerCell.v === "商品编码") {
-        // 设置整列为文本格式
-        for (let row = 1; row <= range.e.r; row++) {
-          const dataCellAddress = XLSX.utils.encode_cell({ r: row, c: col });
-          const dataCell = worksheet[dataCellAddress];
-          if (dataCell) {
-            dataCell.t = "s"; // 设置为字符串类型
-            dataCell.w = String(dataCell.v); // 设置显示格式
-          }
-        }
-        break;
-      }
+    if (!data || data.length === 0) {
+      throw new Error("没有数据可导出");
     }
 
-    // 添加工作表到工作簿
-    XLSX.utils.book_append_sheet(workbook, worksheet, "处理结果");
+    // 获取表头
+    const headers = Object.keys(data[0]);
 
-    // 下载文件
-    XLSX.writeFile(workbook, fileName);
+    // 找到商品编码列的索引
+    const productCodeColumnIndex = headers.findIndex(
+      (h) => h === "商品编码" || h === "商品编号"
+    );
+
+    // 设置列属性
+    worksheet.columns = headers.map((header) => ({
+      header,
+      key: header,
+      width: 20,
+    }));
+
+    // 找到需要设置为数字格式的列索引
+    const numericColumns = ["商品数量", "单价", "总价"];
+    const numericColumnIndices = numericColumns
+      .map((colName) => headers.indexOf(colName))
+      .filter((index) => index !== -1);
+
+    // 在添加数据之前设置列格式
+    if (productCodeColumnIndex !== -1) {
+      const column = worksheet.getColumn(productCodeColumnIndex + 1);
+      column.numFmt = '@'; // '@' 表示文本格式
+    }
+
+    // 设置数字列格式
+    numericColumnIndices.forEach((colIndex) => {
+      const column = worksheet.getColumn(colIndex + 1);
+      column.numFmt = '0.00'; // 保留两位小数的数字格式
+    });
+
+    // 逐行添加数据，确保各列正确处理
+    data.forEach((item) => {
+      const rowValues = [];
+      headers.forEach((header) => {
+        let value = item[header];
+        // 如果是商品编码列，确保是字符串类型
+        if (header === "商品编码" || header === "商品编号") {
+          value = String(value || "");
+        }
+        // 如果是数字列，转换为数字类型
+        else if (numericColumns.includes(header)) {
+          // 移除货币符号和其他非数字字符
+          if (typeof value === 'string') {
+            value = value.replace(/[¥￥$,\s]/g, '');
+          }
+          value = parseFloat(value) || 0;
+        }
+        rowValues.push(value);
+      });
+      worksheet.addRow(rowValues);
+    });
+
+    // 再次强制设置商品编码列每个单元格的格式
+    if (productCodeColumnIndex !== -1) {
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return; // 跳过表头
+        const cell = row.getCell(productCodeColumnIndex + 1);
+        const value = String(data[rowNumber - 2][headers[productCodeColumnIndex]] || "");
+        // 强制设置为字符串值
+        cell.value = value;
+      });
+    }
+
+    // 生成文件
+    const buffer = await workbook.xlsx.writeBuffer();
+
+    // 创建下载链接
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
 
     return true;
   } catch (error) {

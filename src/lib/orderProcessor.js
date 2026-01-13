@@ -230,13 +230,24 @@ export function mergeSameSKU(processedData) {
     return acc;
   }, []);
 
-  return mergedData.map((item) => ({
-    商品名称: item["商品名称"],
-    商品编号: item["商品编号"],
-    单价: item["单价"],
-    商品数量: item["商品数量"],
-    总价: item["总价"],
-  }));
+  return mergedData.map((item) => {
+    // 清理商品编号中的等号前缀
+    let productNo = item["商品编号"];
+    if (typeof productNo === 'string' && productNo.startsWith('=') && productNo.includes('"')) {
+      const match = productNo.match(/^="([^"]+)"$/);
+      if (match) {
+        productNo = match[1];
+      }
+    }
+
+    return {
+      商品名称: item["商品名称"],
+      商品编号: productNo,
+      单价: item["单价"],
+      商品数量: item["商品数量"],
+      总价: item["总价"],
+    };
+  });
 }
 
 /**
