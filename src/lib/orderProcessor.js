@@ -293,3 +293,92 @@ export function processOrderData(data) {
 
   return mergedProcessedData;
 }
+
+/**
+ * 商品合并处理函数
+ * 合并多个表格中相同商品编号的商品数量和总价，并计算单价
+ */
+export function processProductMergeData(dataArray) {
+  if (!dataArray || dataArray.length === 0) {
+    throw new Error("没有数据需要处理");
+  }
+
+  // 合并所有文件的数据
+  const allData = [];
+  dataArray.forEach((fileData) => {
+    if (fileData && fileData.length > 0) {
+      allData.push(...fileData);
+    }
+  });
+
+  if (allData.length === 0) {
+    throw new Error("所有文件数据为空");
+  }
+
+  // 验证数据结构
+  const firstRow = allData[0];
+  const requiredColumns = ["商品名称", "商品编号", "单价", "商品数量", "总价"];
+  
+  for (const column of requiredColumns) {
+    if (!(column in firstRow)) {
+      throw new Error(`缺少必要的列: ${column}`);
+    }
+  }
+
+  // 按商品编号分组合并数据
+  const mergedMap = new Map();
+
+  allData.forEach((row) => {
+    const productNo = row["商品编号"];
+    const productName = row["商品名称"];
+    const quantity = new Decimal(row["商品数量"] || 0);
+    const totalPrice = new Decimal(row["总价"] || 0);
+
+    if (mergedMap.has(productNo)) {
+      const existing = mergedMap.get(productNo);
+      existing.quantity = existing.quantity.plus(quantity);
+      existing.totalPrice = existing.totalPrice.plus(totalPrice);
+    } else {
+      mergedMap.set(productNo, {
+        productName,
+        quantity,
+        totalPrice,
+      });
+    }
+  });
+
+  // 计算单价并生成结果数组
+  const result = [];
+  mergedMap.forEach((value, productNo) => {
+    // 计算单价 = 总价 / 商品数量
+    const unitPrice = value.quantity.greaterThan(0)
+      ? value.totalPrice.div(value.quantity)
+      : new Decimal(0);
+
+    // 清理商品编号中的等号前缀
+    let cleanedProductNo = productNo;
+    if (typeof productNo === 'string' && productNo.startsWith('=') && productNo.includes('"')) {
+      const match = productNo.match(/^="([^"]+)"$/);
+      if (match) {
+        cleanedProductNo = match[1];
+      }
+    }
+
+    result.push({
+      商品名称: value.productName,
+      商品编号: cleanedProductNo,
+      单价: unitPrice.toNumber(),
+      商品数量: value.quantity.toNumber(),
+      总价: value.totalPrice.toNumber(),
+    });
+  });
+
+  // 按商品编号排序
+  result.sort((a, b) => {
+    const numA = typeof a["商品编号"] === 'number' ? a["商品编号"] : parseFloat(a["商品编号"]) || 0;
+    const numB = typeof b["商品编号"] === 'number' ? b["商品编号"] : parseFloat(b["商品编号"]) || 0;
+    return numA - numB;
+  });
+
+  return result;
+}
