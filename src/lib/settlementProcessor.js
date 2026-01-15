@@ -75,16 +75,26 @@ export async function processSettlementData(data) {
     if (mergedData.has(productNo)) {
       // 已存在，累加金额
       const existing = mergedData.get(productNo);
-      existing.金额 = existing.金额.plus(
-        new Decimal(row[actualAmountColumn] || 0)
-      );
+      const amountValue = row[actualAmountColumn] || 0;
+      // 确保金额值是有效的数字，处理字符串格式的数字
+      const cleanAmount =
+        typeof amountValue === "string"
+          ? parseFloat(amountValue.replace(/[¥￥$,\s]/g, "")) || 0
+          : amountValue;
+      existing.金额 = existing.金额.plus(new Decimal(cleanAmount));
     } else {
       // 新建记录，尝试匹配商品库名称
       const matchedName = productMap[productNo] || row["商品名称"] || "";
+      const amountValue = row[actualAmountColumn] || 0;
+      // 确保金额值是有效的数字，处理字符串格式的数字
+      const cleanAmount =
+        typeof amountValue === "string"
+          ? parseFloat(amountValue.replace(/[¥￥$,\s]/g, "")) || 0
+          : amountValue;
       mergedData.set(productNo, {
         商品编号: productNo,
         商品名称: matchedName,
-        金额: new Decimal(row[actualAmountColumn] || 0),
+        金额: new Decimal(cleanAmount),
       });
     }
   }
