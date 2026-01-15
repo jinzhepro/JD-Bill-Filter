@@ -2,22 +2,7 @@ import Decimal from "decimal.js";
 
 /**
  * 结算单数据处理器 - 合并相同SKU的应结金额
- * 优化版：高效处理大数据量，支持商品库匹配
  */
-
-// 商品库缓存
-let productCache = null;
-
-/**
- * 加载商品库数据（从商品管理数据库）
- */
-export async function loadProductCache() {
-  if (productCache) return productCache;
-
-  // 数据库功能已移除，返回空对象
-  productCache = {};
-  return productCache;
-}
 
 /**
  * 验证结算单数据结构
@@ -45,7 +30,7 @@ export function validateSettlementDataStructure(data) {
 }
 
 /**
- * 处理结算单数据 - 合并相同SKU的应结金额，并匹配商品名称
+ * 处理结算单数据 - 合并相同SKU的应结金额
  */
 export async function processSettlementData(data) {
   if (!data || data.length === 0) {
@@ -60,9 +45,6 @@ export async function processSettlementData(data) {
   if (!actualAmountColumn) {
     throw new Error("数据中没有找到金额列");
   }
-
-  // 加载商品库
-  const productMap = await loadProductCache();
 
   // 使用 Map 存储合并后的数据
   const mergedData = new Map();
@@ -83,17 +65,14 @@ export async function processSettlementData(data) {
           : amountValue;
       existing.金额 = existing.金额.plus(new Decimal(cleanAmount));
     } else {
-      // 新建记录，尝试匹配商品库名称
-      const matchedName = productMap[productNo] || row["商品名称"] || "";
+      // 新建记录
       const amountValue = row[actualAmountColumn] || 0;
-      // 确保金额值是有效的数字，处理字符串格式的数字
       const cleanAmount =
         typeof amountValue === "string"
           ? parseFloat(amountValue.replace(/[¥￥$,\s]/g, "")) || 0
           : amountValue;
       mergedData.set(productNo, {
         商品编号: productNo,
-        商品名称: matchedName,
         金额: new Decimal(cleanAmount),
       });
     }
@@ -105,7 +84,6 @@ export async function processSettlementData(data) {
   for (const item of mergedData.values()) {
     result.push({
       商品编号: item.商品编号,
-      商品名称: item.商品名称,
       金额: item.金额.toNumber(),
     });
   }
