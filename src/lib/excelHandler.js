@@ -1,4 +1,13 @@
 import ExcelJS from "exceljs";
+import {
+  FILE_SIZE_LIMIT,
+  VALID_FILE_TYPES,
+  VALID_FILE_EXTENSIONS,
+  NUMERIC_COLUMNS,
+  PRODUCT_CODE_COLUMNS,
+  EXPORT_NUMERIC_FORMAT,
+  PRODUCT_CODE_FORMAT,
+} from "./constants";
 
 function getCellValue(cell) {
   const value = cell.value;
@@ -231,8 +240,8 @@ export async function downloadExcel(data, fileName) {
     const headers = Object.keys(data[0]);
 
     // 找到商品编码列的索引
-    const productCodeColumnIndex = headers.findIndex(
-      (h) => h === "商品编码" || h === "商品编号"
+    const productCodeColumnIndex = headers.findIndex((h) =>
+      PRODUCT_CODE_COLUMNS.includes(h)
     );
 
     // 设置列属性
@@ -243,21 +252,20 @@ export async function downloadExcel(data, fileName) {
     }));
 
     // 找到需要设置为数字格式的列索引
-    const numericColumns = ["商品数量", "单价", "总价"];
-    const numericColumnIndices = numericColumns
-      .map((colName) => headers.indexOf(colName))
-      .filter((index) => index !== -1);
+    const numericColumnIndices = NUMERIC_COLUMNS.map((colName) =>
+      headers.indexOf(colName)
+    ).filter((index) => index !== -1);
 
     // 在添加数据之前设置列格式
     if (productCodeColumnIndex !== -1) {
       const column = worksheet.getColumn(productCodeColumnIndex + 1);
-      column.numFmt = '@'; // '@' 表示文本格式
+      column.numFmt = PRODUCT_CODE_FORMAT;
     }
 
     // 设置数字列格式
     numericColumnIndices.forEach((colIndex) => {
       const column = worksheet.getColumn(colIndex + 1);
-      column.numFmt = '0.00'; // 保留两位小数的数字格式
+      column.numFmt = EXPORT_NUMERIC_FORMAT;
     });
 
     // 逐行添加数据，确保各列正确处理
@@ -265,15 +273,11 @@ export async function downloadExcel(data, fileName) {
       const rowValues = [];
       headers.forEach((header) => {
         let value = item[header];
-        // 如果是商品编码列，确保是字符串类型
-        if (header === "商品编码" || header === "商品编号") {
+        if (PRODUCT_CODE_COLUMNS.includes(header)) {
           value = String(value || "");
-        }
-        // 如果是数字列，转换为数字类型
-        else if (numericColumns.includes(header)) {
-          // 移除货币符号和其他非数字字符
-          if (typeof value === 'string') {
-            value = value.replace(/[¥￥$,\s]/g, '');
+        } else if (NUMERIC_COLUMNS.includes(header)) {
+          if (typeof value === "string") {
+            value = value.replace(/[¥￥$,\s]/g, "");
           }
           value = parseFloat(value) || 0;
         }
@@ -316,19 +320,13 @@ export async function downloadExcel(data, fileName) {
 
 // 验证文件类型
 export function validateFileType(file) {
-  const validTypes = [
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
-    "application/vnd.ms-excel", // .xls
-    "text/csv", // .csv
-    "application/csv", // .csv (某些MIME类型)
-  ];
-
   return (
-    validTypes.includes(file.type) || file.name.match(/\.(xlsx|xls|csv)$/i)
+    VALID_FILE_TYPES.includes(file.type) ||
+    VALID_FILE_EXTENSIONS.some((ext) => file.name.toLowerCase().endsWith(ext))
   );
 }
 
 // 验证文件大小
-export function validateFileSize(file, maxSize = 50 * 1024 * 1024) {
-  return file.size <= maxSize;
+export function validateFileSize(file) {
+  return file.size <= FILE_SIZE_LIMIT;
 }

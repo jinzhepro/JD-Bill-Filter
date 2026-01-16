@@ -91,47 +91,6 @@ export class ErrorBoundary extends React.Component {
           </div>
         </div>
       );
-
-      // 默认错误 UI
-      return (
-        <div className="flex items-center justify-center min-h-[400px] p-8">
-          <div className="bg-card border border-destructive rounded-lg p-8 max-w-2xl w-full">
-            <div className="text-center">
-              <div className="text-6xl mb-4">⚠️</div>
-              <h2 className="text-2xl font-semibold text-destructive mb-4">
-                应用程序遇到错误
-              </h2>
-              <p className="text-muted-foreground mb-6">
-                抱歉，应用程序遇到了意外错误。请尝试刷新页面或联系技术支持。
-              </p>
-
-              {process.env.NODE_ENV === "development" && this.state.error && (
-                <div className="bg-muted p-4 rounded-md mb-6 text-left">
-                  <h3 className="text-sm font-medium text-foreground mb-2">
-                    错误详情（仅开发环境显示）
-                  </h3>
-                  <pre className="text-xs text-destructive overflow-auto max-h-48">
-                    {this.state.error.toString()}
-                    {this.state.errorInfo?.componentStack}
-                  </pre>
-                </div>
-              )}
-
-              <div className="flex gap-4 justify-center">
-                <Button onClick={this.handleReset} variant="default">
-                  重试
-                </Button>
-                <Button
-                  onClick={() => window.location.reload()}
-                  variant="outline"
-                >
-                  刷新页面
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
     }
 
     return this.props.children;

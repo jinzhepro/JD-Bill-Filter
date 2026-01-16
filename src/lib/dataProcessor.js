@@ -1,4 +1,5 @@
 import { LogType } from "@/types";
+import { REQUIRED_ORDER_COLUMNS } from "./constants";
 
 export {
   processOrderData,
@@ -11,17 +12,8 @@ export function validateDataStructure(data) {
   }
 
   const firstRow = data[0];
-  const requiredColumns = [
-    "订单编号",
-    "单据类型",
-    "费用项",
-    "商品编号",
-    "商品名称",
-    "商品数量",
-    "金额",
-  ];
 
-  for (const column of requiredColumns) {
+  for (const column of REQUIRED_ORDER_COLUMNS) {
     if (!(column in firstRow)) {
       throw new Error(`缺少必要的列: ${column}`);
     }

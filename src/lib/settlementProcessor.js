@@ -1,4 +1,5 @@
 import Decimal from "decimal.js";
+import { SETTLEMENT_AMOUNT_COLUMNS } from "./constants";
 
 /**
  * 结算单数据处理器 - 合并相同SKU的应结金额
@@ -13,16 +14,15 @@ export function validateSettlementDataStructure(data) {
   }
 
   const firstRow = data[0];
-  const amountColumns = ["应结金额", "金额", "合计金额", "总金额"];
 
   if (!("商品编号" in firstRow)) {
     throw new Error("缺少必要的列: 商品编号");
   }
 
-  const hasAmountColumn = amountColumns.some((col) => col in firstRow);
+  const hasAmountColumn = SETTLEMENT_AMOUNT_COLUMNS.some((col) => col in firstRow);
   if (!hasAmountColumn) {
     throw new Error(
-      `缺少金额列，请确保文件包含以下任一列: ${amountColumns.join(", ")}`
+      `缺少金额列，请确保文件包含以下任一列: ${SETTLEMENT_AMOUNT_COLUMNS.join(", ")}`
     );
   }
 
@@ -37,10 +37,8 @@ export async function processSettlementData(data) {
     throw new Error("没有结算单数据需要处理");
   }
 
-  // 找到实际使用的金额列名
-  const amountColumns = ["应结金额", "金额", "合计金额", "总金额"];
   const firstRow = data[0];
-  const actualAmountColumn = amountColumns.find((col) => col in firstRow);
+  const actualAmountColumn = SETTLEMENT_AMOUNT_COLUMNS.find((col) => col in firstRow);
 
   if (!actualAmountColumn) {
     throw new Error("数据中没有找到金额列");
