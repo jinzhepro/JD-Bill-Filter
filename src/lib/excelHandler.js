@@ -1,5 +1,25 @@
 import ExcelJS from "exceljs";
 
+function getCellValue(cell) {
+  const value = cell.value;
+  
+  if (value === null || value === undefined) {
+    return "";
+  }
+  
+  // 处理公式对象 { formula: '...', result: ... }
+  if (typeof value === 'object' && 'result' in value) {
+    return value.result;
+  }
+  
+  // 处理日期对象
+  if (value instanceof Date) {
+    return value.toLocaleDateString('zh-CN');
+  }
+  
+  return value;
+}
+
 // 读取文件（支持Excel和CSV）
 export function readFile(file, fileType) {
   return new Promise((resolve, reject) => {
@@ -76,7 +96,7 @@ export function readFile(file, fileType) {
               row.eachCell((cell, colNumber) => {
                 const header = headers[colNumber - 1];
                 if (header) {
-                  let value = cell.value;
+                  let value = getCellValue(cell);
                   // 清理 Excel 自动添加的等号前缀
                   if (typeof value === 'string' && value.startsWith('=') && value.includes('"')) {
                     // 匹配格式: ="123456" 或 ="数字"
@@ -179,7 +199,7 @@ function parseCSVText(csvText, resolve, reject) {
       row.eachCell((cell, colNumber) => {
         const header = headers[colNumber];
         if (header) {
-          rowData[header] = cell.value;
+          rowData[header] = getCellValue(cell);
         }
       });
       jsonData.push(rowData);

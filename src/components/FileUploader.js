@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useCallback } from "react";
 import { Button } from "./ui/button";
+import { isValidFileExtension } from "@/lib/fileValidation";
 
 /**
  * 通用文件上传组件
@@ -22,14 +23,13 @@ export default function FileUploader({
   const [isDragOver, setIsDragOver] = useState(false);
   const inputRef = useRef(null);
 
-  // 验证文件扩展名
-  const isValidFileExtension = useCallback((fileName) => {
-    const lowerName = fileName.toLowerCase();
-    return (
-      lowerName.endsWith(".xlsx") ||
-      lowerName.endsWith(".xls") ||
-      lowerName.endsWith(".csv")
-    );
+  const isValidFileExtensionMemo = useCallback((fileName) => {
+    try {
+      isValidFileExtension(fileName);
+      return true;
+    } catch {
+      return false;
+    }
   }, []);
 
   // 处理文件选择
@@ -40,7 +40,7 @@ export default function FileUploader({
         if (!files || files.length === 0) return;
 
         const validFiles = Array.from(files).filter((file) =>
-          isValidFileExtension(file.name)
+          isValidFileExtensionMemo(file.name)
         );
 
         if (validFiles.length === 0) {
@@ -62,7 +62,7 @@ export default function FileUploader({
         console.error("文件选择失败:", error);
       }
     },
-    [isValidFileExtension, onFilesSelected]
+    [isValidFileExtensionMemo, onFilesSelected]
   );
 
   // 处理拖拽上传
@@ -79,7 +79,7 @@ export default function FileUploader({
         }
 
         const validFiles = Array.from(files).filter((file) =>
-          isValidFileExtension(file.name)
+          isValidFileExtensionMemo(file.name)
         );
 
         if (validFiles.length === 0) {
@@ -101,7 +101,7 @@ export default function FileUploader({
         console.error("拖拽文件处理失败:", error);
       }
     },
-    [isValidFileExtension, onFilesSelected]
+    [isValidFileExtensionMemo, onFilesSelected]
   );
 
   const handleDragOver = useCallback((event) => {
@@ -124,10 +124,9 @@ export default function FileUploader({
         <div
           className={`
             border-3 border-dashed rounded-lg p-16 transition-all duration-300 cursor-pointer
-            ${
-              isDragOver
-                ? "border-primary bg-primary/10"
-                : "border-border bg-muted hover:border-primary hover:bg-muted/80"
+            ${isDragOver
+              ? "border-primary bg-primary/10"
+              : "border-border bg-muted hover:border-primary hover:bg-muted/80"
             }
             ${disabled ? "opacity-50 cursor-not-allowed" : ""}
           `}
