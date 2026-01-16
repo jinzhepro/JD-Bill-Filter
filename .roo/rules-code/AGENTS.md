@@ -38,7 +38,7 @@ This file provides guidance to agents when working with code in this repository.
 
 ### 导入路径
 
-- 使用路径别名 @/_ 映射到 src/_
+- 使用路径别名 @/_ 映射到 ./src/_
 - 组件导入：@/components、@/components/ui
 - 工具函数导入：@/lib、@/lib/utils
 - 类型导入：@/types
