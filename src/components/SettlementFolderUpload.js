@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback } from "react";
-import { useApp } from "@/context/AppContext";
+import { useSettlement } from "@/context/SettlementContext";
 import { validateFileSize, readFile } from "@/lib/excelHandler";
 import {
   validateSettlementDataStructure,
@@ -18,7 +18,7 @@ export default function SettlementFolderUpload() {
     setProcessing,
     setOriginalData,
     setProcessedData,
-  } = useApp();
+  } = useSettlement();
 
   const { handleError } = useErrorHandler();
 

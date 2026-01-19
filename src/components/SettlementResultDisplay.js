@@ -1,15 +1,15 @@
 "use client";
 
 import React from "react";
-import { useApp } from "@/context/AppContext";
+import { useSettlement } from "@/context/SettlementContext";
 import { downloadExcel } from "@/lib/excelHandler";
 import DataDisplay from "./DataDisplay";
 
 export default function SettlementResultDisplay() {
-  const { originalData, processedData, resetOrder } = useApp();
+  const { originalData, processedData, resetSettlement } = useSettlement();
 
   const handleReset = () => {
-    resetOrder();
+    resetSettlement();
   };
 
   const handleDownloadExcel = () => {

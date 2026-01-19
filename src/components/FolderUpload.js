@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback } from "react";
-import { useApp } from "@/context/AppContext";
+import { useOrder } from "@/context/OrderContext";
 import {
   validateFileType,
   validateFileSize,
@@ -19,7 +19,7 @@ export default function FolderUpload() {
     setProcessing,
     setOriginalData,
     setProcessedData,
-  } = useApp();
+  } = useOrder();
 
   const { handleError } = useErrorHandler();
 

@@ -12,12 +12,12 @@ export default function RootLayout({ children }) {
   return (
     <html lang="zh-CN">
       <body className="antialiased">
-        <ErrorBoundary>
-          <AppProvider>
+        <AppProvider>
+          <ErrorBoundary>
             {children}
             <Toaster />
-          </AppProvider>
-        </ErrorBoundary>
+          </ErrorBoundary>
+        </AppProvider>
       </body>
     </html>
   );

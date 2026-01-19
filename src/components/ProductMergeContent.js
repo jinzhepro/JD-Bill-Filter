@@ -1,20 +1,18 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { useApp } from "@/context/AppContext";
+import { useProductMerge } from "@/context/ProductMergeContext";
 import ProductMergeUpload from "./ProductMergeUpload";
 import ProductMergeResultDisplay from "./ProductMergeResultDisplay";
 import { ErrorModal } from "./ui/modal";
 
 export function ProductMergeContent() {
-  const { error, clearError, resetOrder, originalData } = useApp();
+  const { error, clearError, resetProductMerge, originalData } = useProductMerge();
 
-  // 页面加载时重置所有状态，避免残留数据
   useEffect(() => {
-    resetOrder();
+    resetProductMerge();
     clearError();
-    console.log("[ProductMergeContent] 页面加载，重置状态");
-  }, [resetOrder, clearError]);
+  }, [resetProductMerge, clearError]);
 
   return (
     <div className="space-y-4">
@@ -31,7 +29,7 @@ export function ProductMergeContent() {
         onClose={() => {
           clearError();
           if (error?.includes("文件") || error?.includes("文件夹")) {
-            resetOrder();
+            resetProductMerge();
           }
         }}
         message={error || ""}

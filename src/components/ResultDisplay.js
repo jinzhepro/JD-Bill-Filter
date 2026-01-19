@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useApp } from "@/context/AppContext";
+import { useOrder } from "@/context/OrderContext";
 import DataDisplay from "./DataDisplay";
 
 export default function ResultDisplay() {
@@ -10,7 +10,7 @@ export default function ResultDisplay() {
     processedData,
     resetOrder,
     addLog,
-  } = useApp();
+  } = useOrder();
 
   const handleReset = () => {
     resetOrder();

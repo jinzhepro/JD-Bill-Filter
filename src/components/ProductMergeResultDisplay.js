@@ -1,14 +1,14 @@
 "use client";
 
 import React from "react";
-import { useApp } from "@/context/AppContext";
+import { useProductMerge } from "@/context/ProductMergeContext";
 import DataDisplay from "./DataDisplay";
 import { Button } from "./ui/button";
 import { Download, RotateCcw } from "lucide-react";
 import * as XLSX from "exceljs";
 
 export default function ProductMergeResultDisplay() {
-  const { processedData, originalData, resetOrder, addLog, setProcessing } = useApp();
+  const { processedData, originalData, resetProductMerge, addLog, setProcessing } = useProductMerge();
 
   const handleExport = async () => {
     if (!processedData || processedData.length === 0) {
@@ -71,7 +71,7 @@ export default function ProductMergeResultDisplay() {
   };
 
   const handleReset = () => {
-    resetOrder();
+    resetProductMerge();
     addLog("已重置数据", "info");
   };
 

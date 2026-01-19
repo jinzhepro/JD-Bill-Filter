@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback } from "react";
-import { useApp } from "@/context/AppContext";
+import { useProductMerge } from "@/context/ProductMergeContext";
 import { validateFileSize, readFile } from "@/lib/excelHandler";
 import { processProductMergeData } from "@/lib/orderProcessor";
 import FileUploader from "./FileUploader";
@@ -15,7 +15,7 @@ export default function ProductMergeUpload() {
     setProcessing,
     setOriginalData,
     setProcessedData,
-  } = useApp();
+  } = useProductMerge();
 
   const { handleError } = useErrorHandler();
 

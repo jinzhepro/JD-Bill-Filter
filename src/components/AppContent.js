@@ -1,14 +1,18 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { useApp } from "@/context/AppContext";
+import { useOrder } from "@/context/OrderContext";
 import FolderUpload from "./FolderUpload";
 import ResultDisplay from "./ResultDisplay";
 import { ErrorModal } from "./ui/modal";
-import Link from "next/link";
 
 export function AppContent() {
-  const { error, clearError, resetOrder, originalData } = useApp();
+  const { error, clearError, resetOrder, originalData } = useOrder();
+
+  useEffect(() => {
+    resetOrder();
+    clearError();
+  }, [resetOrder, clearError]);
 
   return (
     <div className="space-y-4">

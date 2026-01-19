@@ -1,20 +1,18 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { useApp } from "@/context/AppContext";
+import { useSettlement } from "@/context/SettlementContext";
 import SettlementFolderUpload from "./SettlementFolderUpload";
 import SettlementResultDisplay from "./SettlementResultDisplay";
 import { ErrorModal } from "./ui/modal";
 
 export function SettlementContent() {
-  const { error, clearError, resetOrder, originalData, mergeMode } = useApp();
+  const { error, clearError, resetSettlement, originalData, mergeMode } = useSettlement();
 
-  // 页面加载时重置所有状态，避免残留数据
   useEffect(() => {
-    resetOrder();
+    resetSettlement();
     clearError();
-    console.log("[SettlementContent] 页面加载，重置状态");
-  }, [resetOrder, clearError]);
+  }, [resetSettlement, clearError]);
 
   return (
     <div className="space-y-4">
@@ -31,7 +29,7 @@ export function SettlementContent() {
         onClose={() => {
           clearError();
           if (error?.includes("文件") || error?.includes("文件夹")) {
-            resetOrder();
+            resetSettlement();
           }
         }}
         message={error || ""}
