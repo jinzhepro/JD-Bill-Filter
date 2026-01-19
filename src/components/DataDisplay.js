@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "./ui/button";
 import { useToast } from "@/hooks/use-toast";
 
@@ -23,6 +23,7 @@ export default function DataDisplay({
   customStats = null,
 }) {
   const { toast } = useToast();
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
 
   // 计算总价
   const calculateTotalAmount = (data) => {
@@ -34,6 +35,33 @@ export default function DataDisplay({
   };
 
   const totalAmount = calculateTotalAmount(processedData);
+
+  // 排序处理
+  const handleSort = (key) => {
+    let direction = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedData = React.useMemo(() => {
+    if (!sortConfig.key || !processedData) return processedData;
+    return [...processedData].sort((a, b) => {
+      const aVal = a[sortConfig.key];
+      const bVal = b[sortConfig.key];
+      if (aVal === bVal) return 0;
+      const aNum = parseFloat(aVal);
+      const bNum = parseFloat(bVal);
+      const isNumeric = !isNaN(aNum) && !isNaN(bNum);
+      if (isNumeric) {
+        return sortConfig.direction === "asc" ? aNum - bNum : bNum - aNum;
+      }
+      return sortConfig.direction === "asc"
+        ? String(aVal).localeCompare(String(bVal))
+        : String(bVal).localeCompare(String(aVal));
+    });
+  }, [processedData, sortConfig]);
 
   // 复制列数据功能
   const handleCopyColumn = async (columnName) => {
@@ -86,25 +114,55 @@ export default function DataDisplay({
     if (onReset) onReset();
   };
 
+  // 格式化金额显示
+  const formatAmount = (value) => {
+    const num = parseFloat(value || 0);
+    const formatted = Math.abs(num).toFixed(2);
+    if (num < 0) {
+      return <span className="text-destructive font-medium">-¥{formatted}</span>;
+    }
+    return <span className="text-green-600 font-medium">¥{formatted}</span>;
+  };
+
+  // 获取排序图标
+  const getSortIcon = (key) => {
+    if (sortConfig.key !== key) {
+      return (
+        <svg className="w-4 h-4 text-muted-foreground ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+        </svg>
+      );
+    }
+    return sortConfig.direction === "asc" ? (
+      <svg className="w-4 h-4 ml-1 text-primary" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M5 15l7-7 7 7" />
+      </svg>
+    ) : (
+      <svg className="w-4 h-4 ml-1 text-primary" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M19 9l-7 7-7-7" />
+      </svg>
+    );
+  };
+
   // 自定义统计信息或默认统计
   const statsContent = customStats || (
-    <div className="grid grid-cols-3 gap-4 text-sm">
-      <div>
-        <span className="text-muted-foreground">原始记录数：</span>
-        <span className="font-semibold text-foreground ml-2">
+    <div className="grid grid-cols-3 gap-4">
+      <div className="flex flex-col p-3 rounded-lg bg-muted/50">
+        <span className="text-xs text-muted-foreground">原始记录数</span>
+        <span className="text-xl font-bold text-foreground">
           {originalData?.length || 0}
         </span>
       </div>
-      <div>
-        <span className="text-muted-foreground">处理后记录数：</span>
-        <span className="font-semibold text-foreground ml-2">
+      <div className="flex flex-col p-3 rounded-lg bg-muted/50">
+        <span className="text-xs text-muted-foreground">处理后记录数</span>
+        <span className="text-xl font-bold text-foreground">
           {processedData?.length || 0}
         </span>
       </div>
       {showTotalAmount && (
-        <div>
-          <span className="text-muted-foreground">总价：</span>
-          <span className="font-semibold text-foreground ml-2">
+        <div className="flex flex-col p-3 rounded-lg bg-primary/10">
+          <span className="text-xs text-muted-foreground">总价</span>
+          <span className="text-xl font-bold text-primary">
             ¥{totalAmount.toFixed(2)}
           </span>
         </div>
@@ -117,21 +175,24 @@ export default function DataDisplay({
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* 返回按钮和标题 */}
       <div className="flex justify-between items-center">
-        <Button onClick={handleReset} variant="outline">
-          ← 返回
+        <Button onClick={handleReset} variant="outline" className="shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          返回
         </Button>
         <h1 className="text-2xl font-bold text-foreground">{title}</h1>
         <div></div>
       </div>
 
       {/* 处理后数据展示 */}
-      <section className="bg-card rounded-lg shadow p-8">
+      <section className="bg-card rounded-lg border border-border p-6">
         {/* 统计信息 */}
-        <div className="mb-6 p-4 bg-primary/10 rounded-lg">
-          <h3 className="text-sm font-medium text-foreground mb-2">
+        <div className="mb-6">
+          <h3 className="text-sm font-medium text-foreground mb-3">
             处理统计
           </h3>
           {statsContent}
@@ -141,11 +202,17 @@ export default function DataDisplay({
         <div className="mb-6 flex gap-3 flex-wrap">
           <Button
             onClick={handleDownloadExcel}
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
+            className="shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
           >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
             {downloadButtonText}
           </Button>
-          <Button variant="destructive" onClick={handleReset}>
+          <Button variant="outline" onClick={handleReset} className="shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
             {resetButtonText}
           </Button>
         </div>
@@ -153,38 +220,53 @@ export default function DataDisplay({
         {/* 处理后数据表格 */}
         <div className="max-h-96 overflow-auto border border-border rounded-lg">
           <table className="w-full border-collapse text-sm">
-              <thead>
+            <thead>
               <tr>
                 {processedData.length > 0 &&
                   Object.keys(processedData[0]).map((header) => (
                     <th
                       key={header}
                       onClick={
-                        showCopyColumn ? () => handleCopyColumn(header) : undefined
+                        showCopyColumn ? () => handleCopyColumn(header) : () => handleSort(header)
                       }
                       title={
                         showCopyColumn
                           ? `点击复制 "${header}" 列数据`
-                          : undefined
+                          : `点击排序 "${header}"`
                       }
-                      className={`px-3 py-3 text-left border-b border-border bg-muted font-semibold text-foreground sticky top-0 ${
+                      className={`px-4 py-3 text-left border-b border-border bg-muted/80 font-semibold text-foreground sticky top-0 ${
                         showCopyColumn
-                          ? "cursor-pointer hover:bg-muted/80 transition-colors"
-                          : ""
+                          ? "cursor-pointer hover:bg-muted/60 transition-colors"
+                          : "cursor-pointer hover:bg-muted/60 transition-colors"
                       }`}
                     >
-                      {header} {showCopyColumn && "📋"}
+                      <div className="flex items-center">
+                        <span>{header}</span>
+                        {getSortIcon(header)}
+                        {showCopyColumn && (
+                          <svg className="w-3 h-3 ml-1 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        )}
+                      </div>
                     </th>
                   ))}
               </tr>
             </thead>
             <tbody>
-              {processedData.map((row) => (
-                <tr key={row["商品编号"] || row["订单编号"] || JSON.stringify(row)} className="hover:bg-muted/50">
+              {sortedData.map((row, rowIndex) => (
+                <tr
+                  key={row["商品编号"] || row["订单编号"] || rowIndex}
+                  className={`
+                    transition-colors duration-150
+                    ${rowIndex % 2 === 0 ? "bg-background" : "bg-muted/30"}
+                    hover:bg-primary/5
+                  `}
+                >
                   {Object.entries(row).map(([key]) => (
-                    <td key={key} className="px-3 py-3 text-left border-b border-border">
+                    <td key={key} className="px-4 py-2.5 text-left border-b border-border/50">
                       {key === "单价" || key === "总价" || key === amountField
-                        ? `¥${parseFloat(row[key] || 0).toFixed(2)}`
+                        ? formatAmount(row[key])
                         : row[key]}
                     </td>
                   ))}
@@ -192,11 +274,30 @@ export default function DataDisplay({
               ))}
             </tbody>
           </table>
-          {showCopyColumn && (
-            <div className="mt-2 text-sm text-muted-foreground text-center">
-              💡 提示：点击表头可复制该列的所有数据
+          <div className="mt-3 p-3 bg-muted/50 rounded-lg">
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                </svg>
+                <span>点击表头可排序</span>
+              </div>
+              {showCopyColumn && (
+                <div className="flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  <span>复制列数据</span>
+                </div>
+              )}
+              <div className="flex items-center gap-1">
+                <span className="text-green-600 font-medium">绿色</span>
+                <span>正数</span>
+                <span className="text-destructive font-medium ml-2">红色</span>
+                <span>负数</span>
+              </div>
             </div>
-          )}
+          </div>
         </div>
       </section>
     </div>
