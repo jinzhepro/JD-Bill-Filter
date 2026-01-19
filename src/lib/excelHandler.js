@@ -8,6 +8,7 @@ import {
   EXPORT_NUMERIC_FORMAT,
   PRODUCT_CODE_FORMAT,
 } from "./constants";
+import { cleanProductCode, cleanAmount } from "./utils";
 
 function getCellValue(cell) {
   const value = cell.value;
@@ -107,13 +108,7 @@ export function readFile(file, fileType) {
                 if (header) {
                   let value = getCellValue(cell);
                   // 清理 Excel 自动添加的等号前缀
-                  if (typeof value === 'string' && value.startsWith('=') && value.includes('"')) {
-                    // 匹配格式: ="123456" 或 ="数字"
-                    const match = value.match(/^="([^"]+)"$/);
-                    if (match) {
-                      value = match[1];
-                    }
-                  }
+                  value = cleanProductCode(value);
                   rowData[header] = value;
                 }
               });
@@ -276,10 +271,7 @@ export async function downloadExcel(data, fileName) {
         if (PRODUCT_CODE_COLUMNS.includes(header)) {
           value = String(value || "");
         } else if (NUMERIC_COLUMNS.includes(header)) {
-          if (typeof value === "string") {
-            value = value.replace(/[¥￥$,\s]/g, "");
-          }
-          value = parseFloat(value) || 0;
+          value = cleanAmount(value);
         }
         rowValues.push(value);
       });

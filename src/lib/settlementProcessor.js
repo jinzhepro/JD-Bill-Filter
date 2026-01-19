@@ -1,5 +1,6 @@
 import Decimal from "decimal.js";
 import { SETTLEMENT_AMOUNT_COLUMNS } from "./constants";
+import { cleanAmount } from "./utils";
 
 /**
  * 结算单数据处理器 - 合并相同SKU的应结金额
@@ -55,23 +56,14 @@ export async function processSettlementData(data) {
     if (mergedData.has(productNo)) {
       // 已存在，累加金额
       const existing = mergedData.get(productNo);
-      const amountValue = row[actualAmountColumn] || 0;
-      // 确保金额值是有效的数字，处理字符串格式的数字
-      const cleanAmount =
-        typeof amountValue === "string"
-          ? parseFloat(amountValue.replace(/[¥￥$,\s]/g, "")) || 0
-          : amountValue;
-      existing.金额 = existing.金额.plus(new Decimal(cleanAmount));
+      const cleanAmountValue = cleanAmount(row[actualAmountColumn] || 0);
+      existing.金额 = existing.金额.plus(new Decimal(cleanAmountValue));
     } else {
       // 新建记录
-      const amountValue = row[actualAmountColumn] || 0;
-      const cleanAmount =
-        typeof amountValue === "string"
-          ? parseFloat(amountValue.replace(/[¥￥$,\s]/g, "")) || 0
-          : amountValue;
+      const cleanAmountValue = cleanAmount(row[actualAmountColumn] || 0);
       mergedData.set(productNo, {
         商品编号: productNo,
-        金额: new Decimal(cleanAmount),
+        金额: new Decimal(cleanAmountValue),
       });
     }
   }

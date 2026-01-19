@@ -1,11 +1,13 @@
-import { LogType } from "@/types";
 import { REQUIRED_ORDER_COLUMNS } from "./constants";
 
-export {
-  processOrderData,
-  processMultipleFilesData,
-} from "./orderProcessor";
+/**
+ * 对账单数据处理模块
+ * 提供订单数据验证和处理功能
+ */
 
+/**
+ * 验证数据结构
+ */
 export function validateDataStructure(data) {
   if (data.length === 0) {
     throw new Error("数据为空");
@@ -21,3 +23,9 @@ export function validateDataStructure(data) {
 
   return true;
 }
+
+// 导出订单处理函数
+export {
+  processOrderData,
+  processMultipleFilesData,
+} from "./orderProcessor";

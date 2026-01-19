@@ -1,4 +1,5 @@
 import Decimal from "decimal.js";
+import { cleanProductCode } from "./utils";
 
 /**
  * 订单处理模块
@@ -43,11 +44,14 @@ export function processAfterSalesData(data) {
 /**
  * 处理非销售单金额逻辑
  * 将非销售单金额调整到符合条件的订单记录中
+ * 注意：返回新数组，不修改原数据
  */
 export function processNonSalesOrders(data) {
   const nonSalesOrders = data.filter((row) => row["单据类型"] === "非销售单");
-
   const processedNonSalesOrders = new Set();
+
+  // 创建一个映射，用于存储需要修改的行的索引和新金额
+  const amountModifications = [];
 
   nonSalesOrders.forEach((nonSalesRow) => {
     const rowId = `${nonSalesRow["订单编号"]}_${nonSalesRow["商品编号"]}`;
@@ -59,20 +63,32 @@ export function processNonSalesOrders(data) {
     const nonSalesAmount = new Decimal(nonSalesRow["金额"] || 0);
     const nonSalesAbsAmount = nonSalesAmount.abs();
 
-    let matchCount = 0;
-    for (const row of data) {
+    let matchIndex = -1;
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
       const rowAmount = new Decimal(row["金额"] || 0);
 
       if (rowAmount.greaterThan(nonSalesAbsAmount)) {
         const newAmount = rowAmount.plus(nonSalesAmount);
-        row["金额"] = newAmount.toNumber();
-        matchCount++;
+        amountModifications.push({ index: i, newAmount });
+        matchIndex = i;
         break;
       }
     }
 
     processedNonSalesOrders.add(rowId);
   });
+
+  // 应用修改，创建新数组
+  const newData = data.map((row, index) => {
+    const mod = amountModifications.find((m) => m.index === index);
+    if (mod) {
+      return { ...row, 金额: mod.newAmount.toNumber() };
+    }
+    return row;
+  });
+
+  return newData;
 }
 
 /**
@@ -232,13 +248,7 @@ export function mergeSameSKU(processedData) {
 
   return mergedData.map((item) => {
     // 清理商品编号中的等号前缀
-    let productNo = item["商品编号"];
-    if (typeof productNo === 'string' && productNo.startsWith('=') && productNo.includes('"')) {
-      const match = productNo.match(/^="([^"]+)"$/);
-      if (match) {
-        productNo = match[1];
-      }
-    }
+    const productNo = cleanProductCode(item["商品编号"]);
 
     return {
       商品名称: item["商品名称"],
@@ -274,9 +284,9 @@ export function processMultipleFilesData(fileDataArray, processOrderData) {
  */
 export function processOrderData(data) {
   const mergedAfterSalesData = processAfterSalesData(data);
-  processNonSalesOrders(data);
+  const processedDataWithNonSales = processNonSalesOrders(data);
 
-  let orderData = data
+  let orderData = processedDataWithNonSales
     .filter(
       (row) => row["单据类型"] === "订单" || row["单据类型"] === "取消退款单"
     )
@@ -356,13 +366,7 @@ export function processProductMergeData(dataArray) {
       : new Decimal(0);
 
     // 清理商品编号中的等号前缀
-    let cleanedProductNo = productNo;
-    if (typeof productNo === 'string' && productNo.startsWith('=') && productNo.includes('"')) {
-      const match = productNo.match(/^="([^"]+)"$/);
-      if (match) {
-        cleanedProductNo = match[1];
-      }
-    }
+    const cleanedProductNo = cleanProductCode(productNo);
 
     result.push({
       商品名称: value.productName,

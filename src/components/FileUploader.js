@@ -171,8 +171,8 @@ export default function FileUploader({
           <div className="mt-8 p-4 bg-primary/10 rounded-lg text-left">
             <h4 className="text-sm font-medium text-foreground mb-2">处理说明</h4>
             <ul className="text-sm text-muted-foreground space-y-1">
-              {tips.map((tip, index) => (
-                <li key={index}>• {tip}</li>
+              {tips.map((tip) => (
+                <li key={tip}>• {tip}</li>
               ))}
             </ul>
           </div>

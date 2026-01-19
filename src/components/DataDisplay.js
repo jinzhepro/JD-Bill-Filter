@@ -153,12 +153,12 @@ export default function DataDisplay({
         {/* 处理后数据表格 */}
         <div className="max-h-96 overflow-auto border border-border rounded-lg">
           <table className="w-full border-collapse text-sm">
-            <thead>
+              <thead>
               <tr>
                 {processedData.length > 0 &&
-                  Object.keys(processedData[0]).map((header, index) => (
+                  Object.keys(processedData[0]).map((header) => (
                     <th
-                      key={index}
+                      key={header}
                       onClick={
                         showCopyColumn ? () => handleCopyColumn(header) : undefined
                       }
@@ -179,13 +179,13 @@ export default function DataDisplay({
               </tr>
             </thead>
             <tbody>
-              {processedData.map((row, rowIndex) => (
-                <tr key={rowIndex} className="hover:bg-muted/50">
-                  {Object.entries(row).map(([key, value]) => (
+              {processedData.map((row) => (
+                <tr key={row["商品编号"] || row["订单编号"] || JSON.stringify(row)} className="hover:bg-muted/50">
+                  {Object.entries(row).map(([key]) => (
                     <td key={key} className="px-3 py-3 text-left border-b border-border">
                       {key === "单价" || key === "总价" || key === amountField
-                        ? `¥${parseFloat(value || 0).toFixed(2)}`
-                        : value}
+                        ? `¥${parseFloat(row[key] || 0).toFixed(2)}`
+                        : row[key]}
                     </td>
                   ))}
                 </tr>
