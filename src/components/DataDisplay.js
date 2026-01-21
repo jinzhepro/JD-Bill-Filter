@@ -65,8 +65,6 @@ export default function DataDisplay({
 
   // 复制列数据功能
   const handleCopyColumn = async (columnName) => {
-    if (!onCopyColumn) return;
-
     try {
       const dataToCopy = processedData
         .map((row) => row[columnName])
@@ -217,6 +215,24 @@ export default function DataDisplay({
           </Button>
         </div>
 
+        {/* 表格操作提示 */}
+        {showCopyColumn && (
+          <div className="mb-4 p-3 bg-muted/50 rounded-lg flex items-center gap-4 text-sm">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              <span>点击表头 <span className="font-medium">复制列数据</span></span>
+            </div>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+              </svg>
+              <span>双击表头 <span className="font-medium">排序</span></span>
+            </div>
+          </div>
+        )}
+
         {/* 处理后数据表格 */}
         <div className="max-h-96 overflow-auto border border-border rounded-lg">
           <table className="w-full border-collapse text-sm">
@@ -226,12 +242,24 @@ export default function DataDisplay({
                   Object.keys(processedData[0]).map((header) => (
                     <th
                       key={header}
-                      onClick={
-                        showCopyColumn ? () => handleCopyColumn(header) : () => handleSort(header)
-                      }
+                      onClick={(e) => {
+                        if (showCopyColumn && !e.ctrlKey && !e.metaKey) {
+                          // 点击复制列数据
+                          handleCopyColumn(header);
+                        } else {
+                          // Ctrl+点击或未开启复制时排序
+                          handleSort(header);
+                        }
+                      }}
+                      onDoubleClick={(e) => {
+                        if (showCopyColumn) {
+                          // 双击排序
+                          handleSort(header);
+                        }
+                      }}
                       title={
                         showCopyColumn
-                          ? `点击复制 "${header}" 列数据`
+                          ? `点击复制 "${header}" 列数据，Ctrl+点击或双击排序`
                           : `点击排序 "${header}"`
                       }
                       className={`px-4 py-3 text-left border-b border-border bg-muted/80 font-semibold text-foreground sticky top-0 ${
@@ -274,30 +302,6 @@ export default function DataDisplay({
               ))}
             </tbody>
           </table>
-          <div className="mt-3 p-3 bg-muted/50 rounded-lg">
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
-                </svg>
-                <span>点击表头可排序</span>
-              </div>
-              {showCopyColumn && (
-                <div className="flex items-center gap-1">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                  <span>复制列数据</span>
-                </div>
-              )}
-              <div className="flex items-center gap-1">
-                <span className="text-green-600 font-medium">绿色</span>
-                <span>正数</span>
-                <span className="text-destructive font-medium ml-2">红色</span>
-                <span>负数</span>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
     </div>

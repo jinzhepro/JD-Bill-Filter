@@ -1,13 +1,25 @@
 import Decimal from "decimal.js";
-import { SETTLEMENT_AMOUNT_COLUMNS } from "./constants";
+import { SETTLEMENT_AMOUNT_COLUMNS, SETTLEMENT_QUANTITY_COLUMN, SETTLEMENT_FEE_NAME_FILTER } from "./constants";
 import { cleanAmount } from "./utils";
 
 /**
- * 结算单数据处理器 - 合并相同SKU的应结金额
+ * 清理字符串中的Tab和换行字符
+ */
+function cleanString(value) {
+  if (typeof value === "string") {
+    return value.replace(/[\t\n\r]/g, "").trim();
+  }
+  return value;
+}
+
+/**
+ * 结算单数据处理器 - 合并相同SKU的应结金额和数量
+ * 只处理费用名称为"货款"的记录
  */
 
 /**
  * 验证结算单数据结构
+ * 检查是否包含必要的列：商品编号、金额列，可选费用名称列
  */
 export function validateSettlementDataStructure(data) {
   if (!data || data.length === 0) {
@@ -31,7 +43,8 @@ export function validateSettlementDataStructure(data) {
 }
 
 /**
- * 处理结算单数据 - 合并相同SKU的应结金额
+ * 处理结算单数据 - 合并相同SKU的应结金额和数量
+ * 只处理费用名称为"货款"的记录
  */
 export async function processSettlementData(data) {
   if (!data || data.length === 0) {
@@ -45,38 +58,108 @@ export async function processSettlementData(data) {
     throw new Error("数据中没有找到金额列");
   }
 
-  // 使用 Map 存储合并后的数据
-  const mergedData = new Map();
+  // 检查是否存在费用名称列
+  const hasFeeNameColumn = "费用名称" in firstRow;
 
-  // 遍历数据，直接累加金额
-  for (let i = 0; i < data.length; i++) {
-    const row = data[i];
-    const productNo = row["商品编号"];
+  // 调试日志
+  console.log("settlementProcessor - firstRow:", firstRow);
+  console.log("settlementProcessor - hasFeeNameColumn:", hasFeeNameColumn);
+  console.log("settlementProcessor - SETTLEMENT_FEE_NAME_FILTER:", SETTLEMENT_FEE_NAME_FILTER);
+  console.log("settlementProcessor - data.length:", data.length);
+  console.log("settlementProcessor - cleanString(费用名称):", cleanString(firstRow["费用名称"]));
 
-    if (mergedData.has(productNo)) {
-      // 已存在，累加金额
-      const existing = mergedData.get(productNo);
-      const cleanAmountValue = cleanAmount(row[actualAmountColumn] || 0);
-      existing.金额 = existing.金额.plus(new Decimal(cleanAmountValue));
-    } else {
-      // 新建记录
-      const cleanAmountValue = cleanAmount(row[actualAmountColumn] || 0);
-      mergedData.set(productNo, {
-        商品编号: productNo,
-        金额: new Decimal(cleanAmountValue),
-      });
+  // 检查是否存在数量列（在货款记录中查找）
+  let hasQuantityColumn = false;
+  for (const row of data) {
+    // 如果有费用名称列，只检查"货款"记录
+    if (hasFeeNameColumn && cleanString(row["费用名称"]) !== SETTLEMENT_FEE_NAME_FILTER) {
+      continue;
+    }
+    if (cleanString(row[SETTLEMENT_QUANTITY_COLUMN])) {
+      hasQuantityColumn = true;
+      break;
     }
   }
 
-  // 转换为数组
-  const result = [];
+  // 调试日志
+  console.log("settlementProcessor - hasQuantityColumn:", hasQuantityColumn);
 
-  for (const item of mergedData.values()) {
-    result.push({
-      商品编号: item.商品编号,
-      金额: item.金额.toNumber(),
-    });
+  // 使用 Map 存储合并后的数据
+  const mergedData = new Map();
+
+  // 遍历数据，只处理费用名称为"货款"的记录，合并金额和数量
+  let processedCount = 0;
+  let skippedCount = 0;
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    const productNo = cleanString(row["商品编号"]);
+
+    // 如果存在费用名称列，只处理"货款"记录
+    if (hasFeeNameColumn && cleanString(row["费用名称"]) !== SETTLEMENT_FEE_NAME_FILTER) {
+      skippedCount++;
+      continue;
+    }
+
+    processedCount++;
+
+    if (mergedData.has(productNo)) {
+      // 已存在，累加金额和数量
+      const existing = mergedData.get(productNo);
+      const cleanAmountValue = cleanAmount(row[actualAmountColumn] || 0);
+      existing.应结金额 = existing.应结金额.plus(new Decimal(cleanAmountValue));
+
+      // 如果存在数量列，累加数量
+      if (hasQuantityColumn) {
+        const cleanQuantityValue = cleanAmount(row[SETTLEMENT_QUANTITY_COLUMN] || 0);
+        existing.数量 = existing.数量.plus(new Decimal(cleanQuantityValue));
+      }
+    } else {
+      // 新建记录
+      const cleanAmountValue = cleanAmount(row[actualAmountColumn] || 0);
+      const initialData = {
+        商品编号: productNo,
+        应结金额: new Decimal(cleanAmountValue),
+      };
+
+      // 如果存在数量列，添加数量字段
+      if (hasQuantityColumn) {
+        const cleanQuantityValue = cleanAmount(row[SETTLEMENT_QUANTITY_COLUMN] || 0);
+        initialData.数量 = new Decimal(cleanQuantityValue);
+      }
+
+      mergedData.set(productNo, initialData);
+    }
   }
 
+  // 调试日志
+  console.log("settlementProcessor - processedCount:", processedCount);
+  console.log("settlementProcessor - skippedCount:", skippedCount);
+
+  // 转换为数组，并过滤掉金额为0的记录
+  const result = [];
+
+  console.log("settlementProcessor - mergedData.size:", mergedData.size);
+
+  for (const item of mergedData.values()) {
+    // 跳过金额为0的记录
+    if (item.应结金额.eq(new Decimal(0))) {
+      console.log("settlementProcessor - 跳过金额为0的记录:", item.商品编号);
+      continue;
+    }
+
+    const resultItem = {
+      商品编号: item.商品编号,
+      应结金额: item.应结金额.toNumber(),
+    };
+
+    // 如果存在数量列，添加到结果中
+    if (hasQuantityColumn) {
+      resultItem.数量 = item.数量.toNumber();
+    }
+
+    result.push(resultItem);
+  }
+
+  console.log("settlementProcessor - result.length:", result.length);
   return result;
 }

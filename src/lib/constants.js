@@ -26,6 +26,12 @@ export const SETTLEMENT_AMOUNT_COLUMNS = [
   "总金额",
 ];
 
+export const SETTLEMENT_QUANTITY_COLUMN = "商品数量";
+
+export const SETTLEMENT_FEE_NAME_COLUMN = "费用名称";
+
+export const SETTLEMENT_FEE_NAME_FILTER = "货款";
+
 export const NUMERIC_COLUMNS = ["商品数量", "单价", "总价"];
 
 export const PRODUCT_CODE_COLUMNS = ["商品编码", "商品编号"];

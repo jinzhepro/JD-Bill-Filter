@@ -152,7 +152,7 @@ export default function SettlementFolderUpload() {
       supportFolder={false}
       multiple={false}
       tips={[
-        "自动合并相同商品编号的应结金额",
+        "自动合并相同商品编号的应结金额和数量（仅限费用名称为货款的记录）",
         "每次只能上传一个文件",
         "合并后可直接导出结果",
       ]}
