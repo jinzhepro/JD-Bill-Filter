@@ -81,25 +81,25 @@ export default function SettlementResultDisplay() {
           {/* 货款合并统计 */}
           <div className="grid grid-cols-4 gap-4">
             <div className="flex flex-col p-3 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-              <span className="text-xs text-muted-foreground">应结金额合计</span>
+              <span className="text-xs text-muted-foreground">货款合计</span>
               <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
                 ¥{totalAmount.toFixed(2)}
               </span>
             </div>
             <div className="flex flex-col p-3 rounded-lg bg-orange-100 dark:bg-orange-900/30">
-              <span className="text-xs text-muted-foreground">直营服务费金额</span>
+              <span className="text-xs text-muted-foreground">直营服务费</span>
               <span className="text-xl font-bold text-orange-600 dark:text-orange-400">
                 ¥{selfOperationAmount.toFixed(2)}
               </span>
             </div>
             <div className="flex flex-col p-3 rounded-lg bg-purple-100 dark:bg-purple-900/30">
-              <span className="text-xs text-muted-foreground">应结-服务费</span>
+              <span className="text-xs text-muted-foreground">实际应结</span>
               <span className="text-xl font-bold text-purple-600 dark:text-purple-400">
                 ¥{finalAmount.toFixed(2)}
               </span>
             </div>
             <div className="flex flex-col p-3 rounded-lg bg-green-100 dark:bg-green-900/30">
-              <span className="text-xs text-muted-foreground">商品数量合计</span>
+              <span className="text-xs text-muted-foreground">数量合计</span>
               <span className="text-xl font-bold text-green-600 dark:text-green-400">
                 {totalQuantity.toFixed(0)}
               </span>

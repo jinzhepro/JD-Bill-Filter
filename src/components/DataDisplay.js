@@ -122,26 +122,6 @@ export default function DataDisplay({
     return <span className="text-green-600 font-medium">¥{formatted}</span>;
   };
 
-  // 获取排序图标
-  const getSortIcon = (key) => {
-    if (sortConfig.key !== key) {
-      return (
-        <svg className="w-4 h-4 text-muted-foreground ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-        </svg>
-      );
-    }
-    return sortConfig.direction === "asc" ? (
-      <svg className="w-4 h-4 ml-1 text-primary" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M5 15l7-7 7 7" />
-      </svg>
-    ) : (
-      <svg className="w-4 h-4 ml-1 text-primary" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M19 9l-7 7-7-7" />
-      </svg>
-    );
-  };
-
   // 自定义统计信息或默认统计
   const statsContent = customStats || (
     <div className="grid grid-cols-3 gap-4">
@@ -222,13 +202,13 @@ export default function DataDisplay({
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
-              <span>点击表头 <span className="font-medium">复制列数据</span></span>
+              <span>点击 <span className="font-medium">复制图标</span> 复制列数据</span>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
               </svg>
-              <span>双击表头 <span className="font-medium">排序</span></span>
+              <span>点击 <span className="font-medium">排序图标</span> 排序</span>
             </div>
           </div>
         )}
@@ -242,40 +222,46 @@ export default function DataDisplay({
                   Object.keys(processedData[0]).map((header) => (
                     <th
                       key={header}
-                      onClick={(e) => {
-                        if (showCopyColumn && !e.ctrlKey && !e.metaKey) {
-                          // 点击复制列数据
-                          handleCopyColumn(header);
-                        } else {
-                          // Ctrl+点击或未开启复制时排序
-                          handleSort(header);
-                        }
-                      }}
-                      onDoubleClick={(e) => {
-                        if (showCopyColumn) {
-                          // 双击排序
-                          handleSort(header);
-                        }
-                      }}
-                      title={
-                        showCopyColumn
-                          ? `点击复制 "${header}" 列数据，Ctrl+点击或双击排序`
-                          : `点击排序 "${header}"`
-                      }
-                      className={`px-4 py-3 text-left border-b border-border bg-muted/80 font-semibold text-foreground sticky top-0 ${
-                        showCopyColumn
-                          ? "cursor-pointer hover:bg-muted/60 transition-colors"
-                          : "cursor-pointer hover:bg-muted/60 transition-colors"
-                      }`}
+                      className="px-4 py-3 text-left border-b border-border bg-muted/80 font-semibold text-foreground sticky top-0"
                     >
-                      <div className="flex items-center">
+                      <div className="flex items-center justify-between gap-2">
                         <span>{header}</span>
-                        {getSortIcon(header)}
-                        {showCopyColumn && (
-                          <svg className="w-3 h-3 ml-1 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                          </svg>
-                        )}
+                        <div className="flex items-center gap-1">
+                          {/* 排序按钮 */}
+                          <button
+                            onClick={() => handleSort(header)}
+                            className="p-1 rounded hover:bg-muted/50 transition-colors"
+                            title={`点击排序 "${header}"`}
+                          >
+                            {sortConfig.key === header ? (
+                              sortConfig.direction === "asc" ? (
+                                <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                </svg>
+                              ) : (
+                                <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              )
+                            ) : (
+                              <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                              </svg>
+                            )}
+                          </button>
+                          {/* 复制按钮 */}
+                          {showCopyColumn && (
+                            <button
+                              onClick={() => handleCopyColumn(header)}
+                              className="p-1 rounded hover:bg-muted/50 transition-colors"
+                              title={`点击复制 "${header}" 列数据`}
+                            >
+                              <svg className="w-4 h-4 text-muted-foreground hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </th>
                   ))}
