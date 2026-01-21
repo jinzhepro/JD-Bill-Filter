@@ -4,10 +4,6 @@ import React, { useState } from "react";
 import { Button } from "./ui/button";
 import { useToast } from "@/hooks/use-toast";
 
-/**
- * 通用数据展示组件
- * 支持显示统计数据、表格、下载Excel等功能
- */
 export default function DataDisplay({
   title = "处理结果",
   originalData,
@@ -21,6 +17,7 @@ export default function DataDisplay({
   showTotalAmount = true,
   amountField = "金额",
   customStats = null,
+  showRowNumber = false,
 }) {
   const { toast } = useToast();
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
@@ -211,15 +208,22 @@ export default function DataDisplay({
         )}
 
         {/* 处理后数据表格 */}
-        <div className="max-h-96 overflow-auto border border-border rounded-lg">
+        <div className="border border-border rounded-lg overflow-hidden">
           <table className="w-full border-collapse text-sm">
-            <thead>
+            {/* 表头 - sticky定位 */}
+            <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/60 border-b border-border">
               <tr>
+                {/* 序号列 */}
+                {showRowNumber && (
+                  <th className="px-4 py-3 text-left font-semibold text-foreground w-14">
+                    序号
+                  </th>
+                )}
                 {processedData.length > 0 &&
                   Object.keys(processedData[0]).map((header) => (
                     <th
                       key={header}
-                      className="px-4 py-3 text-left border-b border-border bg-muted/80 font-semibold text-foreground sticky top-0"
+                      className="px-4 py-3 text-left font-semibold text-foreground whitespace-nowrap"
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span>{header}</span>
@@ -264,29 +268,62 @@ export default function DataDisplay({
                   ))}
               </tr>
             </thead>
+
+            {/* 表格内容 */}
             <tbody>
               {sortedData.map((row, rowIndex) => (
-                <tr
-                  key={row["商品编号"] || row["订单编号"] || rowIndex}
-                  className={`
-                    transition-colors duration-150
-                    ${rowIndex % 2 === 0 ? "bg-background" : "bg-muted/30"}
-                    hover:bg-primary/5
-                  `}
-                >
-                  {Object.entries(row).map(([key]) => (
-                    <td key={key} className="px-4 py-2.5 text-left border-b border-border/50">
-                      {key === "单价" || key === "总价" || key === amountField
-                        ? formatAmount(row[key])
-                        : row[key]}
-                    </td>
-                  ))}
-                </tr>
+                <TableRow
+                  key={row["商品编号"] || rowIndex}
+                  row={row}
+                  rowIndex={rowIndex}
+                  amountField={amountField}
+                  showRowNumber={showRowNumber}
+                />
               ))}
             </tbody>
           </table>
         </div>
       </section>
     </div>
+  );
+}
+
+/**
+ * 表格行组件
+ * 用于虚拟滚动中渲染每一行数据
+ */
+function TableRow({ row, rowIndex, amountField, showRowNumber }) {
+  // 格式化金额显示
+  const formatAmount = (value) => {
+    const num = parseFloat(value || 0);
+    const formatted = Math.abs(num).toFixed(2);
+    if (num < 0) {
+      return <span className="text-destructive font-medium">-¥{formatted}</span>;
+    }
+    return <span className="text-green-600 font-medium">¥{formatted}</span>;
+  };
+
+  return (
+    <tr
+      className={`
+        transition-colors duration-150
+        ${rowIndex % 2 === 0 ? "bg-background" : "bg-muted/30"}
+        hover:bg-primary/5
+      `}
+    >
+      {/* 序号列 */}
+      {showRowNumber && (
+        <td className="px-4 py-2.5 text-left border-b border-border/50 text-muted-foreground">
+          {rowIndex + 1}
+        </td>
+      )}
+      {Object.entries(row).map(([key]) => (
+        <td key={key} className="px-4 py-2.5 text-left border-b border-border/50 whitespace-nowrap">
+          {key === "单价" || key === "总价" || key === amountField
+            ? formatAmount(row[key])
+            : row[key]}
+        </td>
+      ))}
+    </tr>
   );
 }

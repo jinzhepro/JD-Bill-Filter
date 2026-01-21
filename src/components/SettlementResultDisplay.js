@@ -76,6 +76,7 @@ export default function SettlementResultDisplay() {
       resetButtonText="重新上传"
       showTotalAmount={true}
       amountField="应结金额"
+      showRowNumber={true}
       customStats={
         <div className="space-y-4">
           {/* 货款合并统计 */}
