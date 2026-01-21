@@ -77,7 +77,7 @@ export class ErrorBoundary extends React.Component {
               )}
 
               <div className="flex gap-4 justify-center">
-                <Button onClick={this.handleReset} variant="default">
+                <Button onClick={this.handleReset} variant="outline">
                   重试
                 </Button>
                 <Button

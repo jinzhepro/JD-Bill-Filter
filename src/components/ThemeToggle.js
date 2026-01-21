@@ -43,7 +43,7 @@ export function ThemeToggle() {
       variant="ghost"
       size="sm"
       onClick={toggleTheme}
-      className="w-9 h-9 p-0 text-muted-foreground hover:text-foreground hover:bg-accent transition-all duration-200"
+      className="w-9 h-9 p-0"
       title={isDark ? "切换到亮色模式" : "切换到暗色模式"}
     >
       {isDark ? (

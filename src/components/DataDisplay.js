@@ -156,7 +156,7 @@ export default function DataDisplay({
     <div className="space-y-6">
       {/* 返回按钮和标题 */}
       <div className="flex justify-between items-center">
-        <Button onClick={handleReset} variant="outline" className="shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+        <Button onClick={handleReset} variant="outline">
           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
@@ -178,16 +178,13 @@ export default function DataDisplay({
 
         {/* 操作按钮 */}
         <div className="mb-6 flex gap-3 flex-wrap">
-          <Button
-            onClick={handleDownloadExcel}
-            className="shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
-          >
+          <Button variant="outline" onClick={handleDownloadExcel}>
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
             {downloadButtonText}
           </Button>
-          <Button variant="outline" onClick={handleReset} className="shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+          <Button variant="outline" onClick={handleReset}>
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>

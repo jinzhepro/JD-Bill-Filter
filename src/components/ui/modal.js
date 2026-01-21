@@ -78,7 +78,7 @@ export function ConfirmModal({
           </DialogTitle>
           <p className="text-sm text-muted-foreground mb-6">{message}</p>
           <div className="flex gap-3 justify-center">
-            <Button variant="secondary" onClick={onClose} disabled={isLoading}>
+            <Button variant="outline" onClick={onClose} disabled={isLoading}>
               {cancelText}
             </Button>
             <Button
@@ -121,7 +121,7 @@ export function ErrorModal({ isOpen, onClose, title = "错误提示", message })
           </DialogTitle>
           <p className="text-sm text-muted-foreground mb-6">{message}</p>
           <div className="flex justify-center">
-            <Button onClick={onClose}>确定</Button>
+            <Button variant="outline" onClick={onClose}>确定</Button>
           </div>
         </div>
       </DialogContent>
