@@ -125,10 +125,11 @@ export async function processSettlementData(data) {
       const cleanAmountValue = cleanAmount(row[actualAmountColumn] || 0);
       existing.应结金额 = existing.应结金额.plus(new Decimal(cleanAmountValue));
 
-      // 如果存在数量列，累加数量
+      // 如果存在数量列，累加数量（负数金额对应负数数量）
       if (hasQuantityColumn) {
         const cleanQuantityValue = cleanAmount(row[SETTLEMENT_QUANTITY_COLUMN] || 0);
-        existing.数量 = existing.数量.plus(new Decimal(cleanQuantityValue));
+        const quantitySign = cleanAmountValue < 0 ? -1 : 1;
+        existing.数量 = existing.数量.plus(new Decimal(cleanQuantityValue).times(quantitySign));
       }
     } else {
       // 新建记录
@@ -138,10 +139,11 @@ export async function processSettlementData(data) {
         应结金额: new Decimal(cleanAmountValue),
       };
 
-      // 如果存在数量列，添加数量字段
+      // 如果存在数量列，添加数量字段（负数金额对应负数数量）
       if (hasQuantityColumn) {
         const cleanQuantityValue = cleanAmount(row[SETTLEMENT_QUANTITY_COLUMN] || 0);
-        initialData.数量 = new Decimal(cleanQuantityValue);
+        const quantitySign = cleanAmountValue < 0 ? -1 : 1;
+        initialData.数量 = new Decimal(cleanQuantityValue).times(quantitySign);
       }
 
       mergedData.set(productNo, initialData);
