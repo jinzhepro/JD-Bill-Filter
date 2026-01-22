@@ -40,6 +40,9 @@ export default function ResultDisplay() {
     );
   };
 
+  // 计算数量合计
+  const totalQuantity = processedData?.reduce((sum, item) => sum + (parseFloat(item.商品数量) || 0), 0) || 0;
+
   return (
     <DataDisplay
       title="订单处理结果"
@@ -52,7 +55,35 @@ export default function ResultDisplay() {
       downloadButtonText="下载Excel结果 📊"
       resetButtonText="重新上传"
       showTotalAmount={true}
-      amountField="金额"
+      amountField="总价"
+      customStats={
+        <div className="grid grid-cols-4 gap-4">
+          <div className="flex flex-col p-3 rounded-lg bg-muted/50">
+            <span className="text-xs text-muted-foreground">原始记录数</span>
+            <span className="text-xl font-bold text-foreground">
+              {originalData?.length || 0}
+            </span>
+          </div>
+          <div className="flex flex-col p-3 rounded-lg bg-muted/50">
+            <span className="text-xs text-muted-foreground">处理后记录数</span>
+            <span className="text-xl font-bold text-foreground">
+              {processedData?.length || 0}
+            </span>
+          </div>
+          <div className="flex flex-col p-3 rounded-lg bg-green-100 dark:bg-green-900/30">
+            <span className="text-xs text-muted-foreground">数量合计</span>
+            <span className="text-xl font-bold text-green-600 dark:text-green-400">
+              {totalQuantity.toFixed(0)}
+            </span>
+          </div>
+          <div className="flex flex-col p-3 rounded-lg bg-primary/10">
+            <span className="text-xs text-muted-foreground">总价</span>
+            <span className="text-xl font-bold text-primary">
+              ¥{processedData?.reduce((sum, item) => sum + (parseFloat(item.总价) || 0), 0).toFixed(2) || "0.00"}
+            </span>
+          </div>
+        </div>
+      }
     />
   );
 }
