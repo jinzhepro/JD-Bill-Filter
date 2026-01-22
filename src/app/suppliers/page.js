@@ -2,7 +2,7 @@
 
 import React from "react";
 import { SupplierProvider } from "@/context/SupplierContext";
-import { MainLayout } from "@/components/MainLayout";
+import { SimpleLayout } from "@/components/SimpleLayout";
 import SupplierManager from "@/components/SupplierManager";
 import { ErrorModal } from "@/components/ui/modal";
 import { useSupplier } from "@/context/SupplierContext";
@@ -29,9 +29,9 @@ function SupplierContent() {
 export default function SuppliersPage() {
   return (
     <SupplierProvider>
-      <MainLayout>
+      <SimpleLayout>
         <SupplierContent />
-      </MainLayout>
+      </SimpleLayout>
     </SupplierProvider>
   );
 }

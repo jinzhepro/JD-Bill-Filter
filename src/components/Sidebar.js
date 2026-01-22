@@ -10,7 +10,7 @@ export function Sidebar() {
   const menuItems = [
     {
       name: "结算单处理",
-      href: "/settlement",
+      href: "/",
       icon: (
         <svg
           className="w-5 h-5"

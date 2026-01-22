@@ -1,16 +1,16 @@
 "use client";
 
 import React from "react";
-import { AppContent } from "@/components/AppContent";
-import { MainLayout } from "@/components/MainLayout";
-import { OrderProvider } from "@/context/OrderContext";
+import { SimpleLayout } from "@/components/SimpleLayout";
+import { SettlementContent } from "@/components/SettlementContent";
+import { SettlementProvider } from "@/context/SettlementContext";
 
-export default function Home() {
+export default function SettlementPage() {
   return (
-    <MainLayout>
-      <OrderProvider>
-        <AppContent />
-      </OrderProvider>
-    </MainLayout>
+    <SimpleLayout>
+      <SettlementProvider>
+        <SettlementContent />
+      </SettlementProvider>
+    </SimpleLayout>
   );
 }
