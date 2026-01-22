@@ -65,8 +65,7 @@ export default function SettlementResultDisplay() {
       amountField="应结金额"
       amountFields={["单价", "总价", "应结金额", "直营服务费", "净结金额"]}
       showRowNumber={true}
-      columnTotals={columns}
-      calculatedTotals={totals}
+      columnTotals={["应结金额", "直营服务费", "数量", "净结金额"]}
       showStats={false}
       customStats={
         <div className="space-y-4">
