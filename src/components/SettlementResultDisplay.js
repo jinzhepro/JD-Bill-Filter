@@ -40,6 +40,17 @@ export default function SettlementResultDisplay() {
   // 计算实际应结金额（货款合计 + 直营服务费，直营服务费是负数）
   const finalAmount = totalAmount + selfOperationAmount;
 
+  // 计算需要显示总和的列
+  const columns = ["应结金额", "直营服务费", "数量", "净结金额"];
+  const totals = {};
+  columns.forEach((column) => {
+    const total = processedData?.reduce((sum, row) => {
+      const value = parseFloat(row[column] || 0);
+      return sum + (isNaN(value) ? 0 : value);
+    }, 0) || 0;
+    totals[column] = total;
+  });
+
   return (
     <DataDisplay
       title="结算单处理结果"
@@ -52,8 +63,11 @@ export default function SettlementResultDisplay() {
       resetButtonText="重新上传"
       showTotalAmount={true}
       amountField="应结金额"
-      amountFields={["单价", "总价", "应结金额", "直营服务费"]}
+      amountFields={["单价", "总价", "应结金额", "直营服务费", "净结金额"]}
       showRowNumber={true}
+      columnTotals={columns}
+      calculatedTotals={totals}
+      showStats={false}
       customStats={
         <div className="space-y-4">
           {/* 货款合并统计 */}

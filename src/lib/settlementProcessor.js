@@ -184,6 +184,10 @@ export async function processSettlementData(data) {
       resultItem.直营服务费 = 0;
     }
 
+    // 计算净结金额（应结金额 + 直营服务费，直营服务费为负数）
+    const netAmount = item.应结金额.plus(new Decimal(resultItem.直营服务费));
+    resultItem.净结金额 = netAmount.toNumber();
+
     result.push(resultItem);
   }
 
