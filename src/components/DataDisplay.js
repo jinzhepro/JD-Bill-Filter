@@ -18,6 +18,7 @@ export default function DataDisplay({
   amountField = "金额",
   customStats = null,
   showRowNumber = false,
+  amountFields = null,
 }) {
   const { toast } = useToast();
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
@@ -277,6 +278,7 @@ export default function DataDisplay({
                   row={row}
                   rowIndex={rowIndex}
                   amountField={amountField}
+                  amountFields={amountFields}
                   showRowNumber={showRowNumber}
                 />
               ))}
@@ -292,7 +294,7 @@ export default function DataDisplay({
  * 表格行组件
  * 用于虚拟滚动中渲染每一行数据
  */
-function TableRow({ row, rowIndex, amountField, showRowNumber }) {
+function TableRow({ row, rowIndex, amountField, amountFields, showRowNumber }) {
   // 格式化金额显示
   const formatAmount = (value) => {
     const num = parseFloat(value || 0);
@@ -301,6 +303,14 @@ function TableRow({ row, rowIndex, amountField, showRowNumber }) {
       return <span className="text-destructive font-medium">-¥{formatted}</span>;
     }
     return <span className="text-green-600 font-medium">¥{formatted}</span>;
+  };
+
+  // 检查字段是否为金额字段
+  const isAmountField = (key) => {
+    if (amountFields && Array.isArray(amountFields)) {
+      return amountFields.includes(key);
+    }
+    return key === "单价" || key === "总价" || key === amountField;
   };
 
   return (
@@ -319,7 +329,7 @@ function TableRow({ row, rowIndex, amountField, showRowNumber }) {
       )}
       {Object.entries(row).map(([key]) => (
         <td key={key} className="px-4 py-2.5 text-left border-b border-border/50 whitespace-nowrap">
-          {key === "单价" || key === "总价" || key === amountField
+          {isAmountField(key)
             ? formatAmount(row[key])
             : row[key]}
         </td>

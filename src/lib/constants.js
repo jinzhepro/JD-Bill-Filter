@@ -32,7 +32,9 @@ export const SETTLEMENT_FEE_NAME_COLUMN = "费用名称";
 
 export const SETTLEMENT_FEE_NAME_FILTER = "货款";
 
-export const NUMERIC_COLUMNS = ["商品数量", "单价", "总价"];
+export const SETTLEMENT_SELF_OPERATION_FEE = "直营服务费";
+
+export const NUMERIC_COLUMNS = ["商品数量", "单价", "总价", "直营服务费"];
 
 export const PRODUCT_CODE_COLUMNS = ["商品编码", "商品编号"];
 

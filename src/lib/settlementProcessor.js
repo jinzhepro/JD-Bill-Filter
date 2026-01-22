@@ -1,5 +1,5 @@
 import Decimal from "decimal.js";
-import { SETTLEMENT_AMOUNT_COLUMNS, SETTLEMENT_QUANTITY_COLUMN, SETTLEMENT_FEE_NAME_FILTER } from "./constants";
+import { SETTLEMENT_AMOUNT_COLUMNS, SETTLEMENT_QUANTITY_COLUMN, SETTLEMENT_FEE_NAME_FILTER, SETTLEMENT_SELF_OPERATION_FEE } from "./constants";
 import { cleanAmount } from "./utils";
 
 /**
@@ -87,15 +87,32 @@ export async function processSettlementData(data) {
   // 使用 Map 存储合并后的数据
   const mergedData = new Map();
 
+  // 使用 Map 存储按商品编号分组的直营服务费
+  const selfOperationFeeMap = new Map();
+
   // 遍历数据，只处理费用名称为"货款"的记录，合并金额和数量
   let processedCount = 0;
   let skippedCount = 0;
   for (let i = 0; i < data.length; i++) {
     const row = data[i];
     const productNo = cleanString(row["商品编号"]);
+    const feeName = cleanString(row["费用名称"]);
 
     // 如果存在费用名称列，只处理"货款"记录
-    if (hasFeeNameColumn && cleanString(row["费用名称"]) !== SETTLEMENT_FEE_NAME_FILTER) {
+    if (hasFeeNameColumn && feeName !== SETTLEMENT_FEE_NAME_FILTER) {
+      // 处理直营服务费记录（按商品编号分组）
+      if (feeName === SETTLEMENT_SELF_OPERATION_FEE && productNo) {
+        const cleanAmountValue = cleanAmount(row[actualAmountColumn] || 0);
+        if (selfOperationFeeMap.has(productNo)) {
+          const existing = selfOperationFeeMap.get(productNo);
+          existing.直营服务费 = existing.直营服务费.plus(new Decimal(cleanAmountValue));
+        } else {
+          selfOperationFeeMap.set(productNo, {
+            商品编号: productNo,
+            直营服务费: new Decimal(cleanAmountValue),
+          });
+        }
+      }
       skippedCount++;
       continue;
     }
@@ -132,6 +149,7 @@ export async function processSettlementData(data) {
   }
 
   // 调试日志
+  console.log("settlementProcessor - selfOperationFeeMap.size:", selfOperationFeeMap.size);
   console.log("settlementProcessor - processedCount:", processedCount);
   console.log("settlementProcessor - skippedCount:", skippedCount);
 
@@ -157,9 +175,17 @@ export async function processSettlementData(data) {
       resultItem.数量 = item.数量.toNumber();
     }
 
+    // 添加直营服务费（如果有对应的记录）
+    if (selfOperationFeeMap.has(item.商品编号)) {
+      resultItem.直营服务费 = selfOperationFeeMap.get(item.商品编号).直营服务费.toNumber();
+    } else {
+      resultItem.直营服务费 = 0;
+    }
+
     result.push(resultItem);
   }
 
+  // 调试日志
   console.log("settlementProcessor - result.length:", result.length);
   return result;
 }
