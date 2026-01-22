@@ -251,10 +251,12 @@ export async function downloadExcel(data, fileName) {
       headers.indexOf(colName)
     ).filter((index) => index !== -1);
 
-    // 在添加数据之前设置列格式
+    // 在添加数据之前先设置商品编码列为文本格式
     if (productCodeColumnIndex !== -1) {
       const column = worksheet.getColumn(productCodeColumnIndex + 1);
-      column.numFmt = PRODUCT_CODE_FORMAT;
+      column.numFmt = "@";
+      // 使用 type 设置为字符串类型
+      column.type = "string";
     }
 
     // 设置数字列格式
@@ -277,17 +279,6 @@ export async function downloadExcel(data, fileName) {
       });
       worksheet.addRow(rowValues);
     });
-
-    // 再次强制设置商品编码列每个单元格的格式
-    if (productCodeColumnIndex !== -1) {
-      worksheet.eachRow((row, rowNumber) => {
-        if (rowNumber === 1) return; // 跳过表头
-        const cell = row.getCell(productCodeColumnIndex + 1);
-        const value = String(data[rowNumber - 2][headers[productCodeColumnIndex]] || "");
-        // 强制设置为字符串值
-        cell.value = value;
-      });
-    }
 
     // 生成文件
     const buffer = await workbook.xlsx.writeBuffer();
