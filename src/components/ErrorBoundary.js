@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { logger } from "@/lib/logger";
 import { useApp } from "@/context/AppContext";
 import { Button } from "./ui/button";
 

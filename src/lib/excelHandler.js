@@ -9,6 +9,7 @@ import {
   PRODUCT_CODE_FORMAT,
 } from "./constants";
 import { cleanProductCode, cleanAmount } from "./utils";
+import { logger } from "./logger";
 
 function getCellValue(cell) {
   const value = cell.value;
@@ -61,7 +62,7 @@ export function readFile(file, fileType) {
             parseCSVText(csvText, resolve, reject);
           }
         } catch (error) {
-          console.error("CSV文件读取失败:", error);
+          logger.error("CSV文件读取失败:", error);
           reject(new Error(`CSV文件读取失败: ${error.message}`));
         }
       };
@@ -121,17 +122,17 @@ export function readFile(file, fileType) {
 
             resolve(jsonData);
           }).catch((error) => {
-            console.error("Excel文件解析失败:", error);
+            logger.error("Excel文件解析失败:", error);
             reject(new Error(`Excel文件解析失败: ${error.message}`));
           });
         } catch (error) {
-          console.error("Excel文件读取失败:", error);
+          logger.error("Excel文件读取失败:", error);
           reject(new Error(`Excel文件读取失败: ${error.message}`));
         }
       };
 
       reader.onerror = function (error) {
-        console.error("Excel文件读取失败:", error);
+        logger.error("Excel文件读取失败:", error);
         reject(new Error("Excel文件读取失败"));
       };
 
@@ -214,10 +215,10 @@ function parseCSVText(csvText, resolve, reject) {
     }
 
     resolve(jsonData);
-  } catch (error) {
-    console.error("CSV解析失败:", error);
-    reject(new Error(`CSV解析失败: ${error.message}`));
-  }
+} catch (error) {
+      logger.error("CSV解析失败:", error);
+      reject(new Error(`CSV解析失败: ${error.message}`));
+    }
 }
 
 // 下载Excel文件
@@ -296,7 +297,7 @@ export async function downloadExcel(data, fileName) {
 
     return true;
   } catch (error) {
-    console.error("下载过程中发生错误:", error);
+    logger.error("下载过程中发生错误:", error);
     throw new Error(`文件下载失败: ${error.message}`);
   }
 }
