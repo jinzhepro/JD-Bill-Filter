@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useSupplier } from "@/context/SupplierContext";
 import { Button } from "./ui/button";
+import { Textarea } from "./ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
 export default function SupplierManager() {
@@ -127,10 +128,10 @@ export default function SupplierManager() {
 
         <div className="space-y-3">
           <div>
-            <textarea
+            <Textarea
               id="inputText"
               rows={6}
-              className="w-full px-3 py-2 text-sm border border-input rounded-md focus:ring-2 focus:ring-ring focus:border-transparent resize-none"
+              className="text-sm"
               placeholder="每行一条记录"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}

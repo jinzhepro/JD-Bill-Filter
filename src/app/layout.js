@@ -1,6 +1,7 @@
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { AppProvider } from "@/context/AppContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export const metadata = {
@@ -12,12 +13,14 @@ export default function RootLayout({ children }) {
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <body className="antialiased bg-background text-foreground">
-        <AppProvider>
-          <ErrorBoundary>
-            {children}
-            <Toaster />
-          </ErrorBoundary>
-        </AppProvider>
+        <ThemeProvider>
+          <AppProvider>
+            <ErrorBoundary>
+              {children}
+              <Toaster />
+            </ErrorBoundary>
+          </AppProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

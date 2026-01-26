@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -114,7 +115,13 @@ export function Sidebar() {
       </nav>
 
       {/* 底部信息 */}
-      <div className="p-4 border-t border-border">
+      <div className="p-4 border-t border-border space-y-3">
+        {/* 主题切换按钮 */}
+        <div className="flex justify-center">
+          <ThemeToggle />
+        </div>
+        
+        {/* 版本信息 */}
         <div className="text-xs text-muted-foreground text-center">
           版本 0.1.0
         </div>
