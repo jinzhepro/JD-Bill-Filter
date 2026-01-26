@@ -9,15 +9,7 @@ export const VALID_FILE_TYPES = [
 
 export const VALID_FILE_EXTENSIONS = [".xlsx", ".xls", ".csv"];
 
-export const REQUIRED_ORDER_COLUMNS = [
-  "订单编号",
-  "单据类型",
-  "费用项",
-  "商品编号",
-  "商品名称",
-  "商品数量",
-  "金额",
-];
+
 
 export const SETTLEMENT_AMOUNT_COLUMNS = [
   "应结金额",
