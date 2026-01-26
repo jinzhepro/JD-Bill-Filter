@@ -133,14 +133,14 @@ export default function FileUploader({
     const ext = fileName.split(".").pop().toLowerCase();
     if (["xlsx", "xls"].includes(ext)) {
       return (
-        <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+        <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="currentColor" viewBox="0 0 24 24">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2l5 5h-5V4zM6 20V4h6v6h6v10H6z" />
           <path d="M8 12h8v2H8zm0 4h8v2H8z" />
         </svg>
       );
     }
     return (
-      <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+      <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 24 24">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2l5 5h-5V4zM6 20V4h6v6h6v10H6z" />
         <path d="M8 12h8v2H8zm0 4h8v2H8z" />
       </svg>
