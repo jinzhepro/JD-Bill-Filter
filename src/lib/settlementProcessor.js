@@ -1,6 +1,7 @@
 import Decimal from "decimal.js";
 import { SETTLEMENT_AMOUNT_COLUMNS, SETTLEMENT_QUANTITY_COLUMN, SETTLEMENT_FEE_NAME_FILTER, SETTLEMENT_SELF_OPERATION_FEE } from "./constants";
 import { cleanAmount } from "./utils";
+import { logger } from "./logger";
 
 /**
  * 清理字符串中的Tab和换行字符
@@ -61,12 +62,12 @@ export async function processSettlementData(data) {
   // 检查是否存在费用名称列
   const hasFeeNameColumn = "费用名称" in firstRow;
 
-  // 调试日志
-  console.log("settlementProcessor - firstRow:", firstRow);
-  console.log("settlementProcessor - hasFeeNameColumn:", hasFeeNameColumn);
-  console.log("settlementProcessor - SETTLEMENT_FEE_NAME_FILTER:", SETTLEMENT_FEE_NAME_FILTER);
-  console.log("settlementProcessor - data.length:", data.length);
-  console.log("settlementProcessor - cleanString(费用名称):", cleanString(firstRow["费用名称"]));
+  // 调试日志（仅在开发环境输出）
+  logger.log("settlementProcessor - firstRow:", firstRow);
+  logger.log("settlementProcessor - hasFeeNameColumn:", hasFeeNameColumn);
+  logger.log("settlementProcessor - SETTLEMENT_FEE_NAME_FILTER:", SETTLEMENT_FEE_NAME_FILTER);
+  logger.log("settlementProcessor - data.length:", data.length);
+  logger.log("settlementProcessor - cleanString(费用名称):", cleanString(firstRow["费用名称"]));
 
   // 检查是否存在数量列（在货款记录中查找）
   let hasQuantityColumn = false;
@@ -81,8 +82,8 @@ export async function processSettlementData(data) {
     }
   }
 
-  // 调试日志
-  console.log("settlementProcessor - hasQuantityColumn:", hasQuantityColumn);
+  // 调试日志（仅在开发环境输出）
+  logger.log("settlementProcessor - hasQuantityColumn:", hasQuantityColumn);
 
   // 使用 Map 存储合并后的数据
   const mergedData = new Map();
@@ -150,20 +151,20 @@ export async function processSettlementData(data) {
     }
   }
 
-  // 调试日志
-  console.log("settlementProcessor - selfOperationFeeMap.size:", selfOperationFeeMap.size);
-  console.log("settlementProcessor - processedCount:", processedCount);
-  console.log("settlementProcessor - skippedCount:", skippedCount);
+  // 调试日志（仅在开发环境输出）
+  logger.log("settlementProcessor - selfOperationFeeMap.size:", selfOperationFeeMap.size);
+  logger.log("settlementProcessor - processedCount:", processedCount);
+  logger.log("settlementProcessor - skippedCount:", skippedCount);
 
   // 转换为数组，并过滤掉金额为0的记录
   const result = [];
 
-  console.log("settlementProcessor - mergedData.size:", mergedData.size);
+  logger.log("settlementProcessor - mergedData.size:", mergedData.size);
 
   for (const item of mergedData.values()) {
     // 跳过金额为0的记录
     if (item.应结金额.eq(new Decimal(0))) {
-      console.log("settlementProcessor - 跳过金额为0的记录:", item.商品编号);
+      logger.log("settlementProcessor - 跳过金额为0的记录:", item.商品编号);
       continue;
     }
 
@@ -191,7 +192,7 @@ export async function processSettlementData(data) {
     result.push(resultItem);
   }
 
-  // 调试日志
-  console.log("settlementProcessor - result.length:", result.length);
+  // 调试日志（仅在开发环境输出）
+  logger.log("settlementProcessor - result.length:", result.length);
   return result;
 }

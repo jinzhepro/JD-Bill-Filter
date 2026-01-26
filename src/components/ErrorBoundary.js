@@ -39,7 +39,10 @@ export class ErrorBoundary extends React.Component {
       errorInfo: null,
     });
 
-    console.log("应用已重置");
+    // 在开发环境记录重置事件
+    if (process.env.NODE_ENV === 'development') {
+      console.log("应用已重置");
+    }
   };
 
   render() {
