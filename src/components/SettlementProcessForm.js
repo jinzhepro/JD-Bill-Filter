@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
  * 支持多行输入，用于批量处理SKU、应结金额、数量、直营服务费
  */
 export default function SettlementProcessForm() {
-  const { processedData, setProcessedData } = useSettlement();
+  const { processedData, setProcessedData, addProcessingHistory, addDataChange } = useSettlement();
   const { toast } = useToast();
 
   // 多行表单状态，初始有一行空数据
@@ -93,7 +93,7 @@ export default function SettlementProcessForm() {
    * 处理单行数据
    * @param {Object} row - 行数据
    * @param {Array} updatedData - 当前更新后的数据
-   * @returns {Object} - 处理结果 { success: boolean, message: string, data: Array }
+   * @returns {Object} - 处理结果 { success: boolean, message: string, data: Array, changes: Object }
    */
   const processRow = (row, updatedData) => {
     const skuIndex = findSkuIndex(row.sku);
@@ -103,6 +103,7 @@ export default function SettlementProcessForm() {
         success: false,
         message: `未找到SKU: ${row.sku}`,
         data: updatedData,
+        changes: null,
       };
     }
 
@@ -116,45 +117,67 @@ export default function SettlementProcessForm() {
         success: false,
         message: `SKU ${row.sku} 数量不足，当前: ${currentQuantity}，需要: ${deductQuantity}`,
         data: updatedData,
+        changes: null,
       };
     }
 
-    // 计算新的数量
+    const originalData = {
+      数量: currentQuantity,
+      应结金额: parseFloat(targetRow["应结金额"] || 0),
+      直营服务费: parseFloat(targetRow["直营服务费"] || 0),
+      净结金额: parseFloat(targetRow["净结金额"] || 0),
+    };
+
     const newQuantity = currentQuantity - deductQuantity;
 
-    // 更新目标行数据
     updatedData[skuIndex] = {
       ...targetRow,
       数量: newQuantity,
     };
 
-    // 如果提供了应结金额，更新应结金额
+    const deductedData = {
+      数量: deductQuantity,
+      应结金额: row.amount.trim() && !isNaN(parseFloat(row.amount)) ? parseFloat(row.amount) : 0,
+      直营服务费: row.serviceFee.trim() && !isNaN(parseFloat(row.serviceFee)) ? parseFloat(row.serviceFee) : 0,
+    };
+
     if (row.amount.trim() && !isNaN(parseFloat(row.amount))) {
       const currentAmount = parseFloat(targetRow["应结金额"] || 0);
       const newAmount = currentAmount - parseFloat(row.amount);
       updatedData[skuIndex]["应结金额"] = newAmount;
     }
 
-    // 如果提供了直营服务费，更新直营服务费
-    // 直营服务费是负数，用户输入正数表示要减小服务费扣除（使负数绝对值变小）
     if (row.serviceFee.trim() && !isNaN(parseFloat(row.serviceFee))) {
       const currentServiceFee = parseFloat(targetRow["直营服务费"] || 0);
       const inputServiceFee = parseFloat(row.serviceFee);
-      // 将输入转为正数后加到当前值（例如：当前-10，输入5，结果-5）
       const newServiceFee = currentServiceFee + Math.abs(inputServiceFee);
       updatedData[skuIndex]["直营服务费"] = newServiceFee;
     }
 
-    // 更新净结金额（应结金额 + 直营服务费）
     const finalAmount =
       parseFloat(updatedData[skuIndex]["应结金额"] || 0) +
       parseFloat(updatedData[skuIndex]["直营服务费"] || 0);
     updatedData[skuIndex]["净结金额"] = finalAmount;
 
+    const currentData = {
+      数量: newQuantity,
+      应结金额: parseFloat(updatedData[skuIndex]["应结金额"] || 0),
+      直营服务费: parseFloat(updatedData[skuIndex]["直营服务费"] || 0),
+      净结金额: parseFloat(updatedData[skuIndex]["净结金额"] || 0),
+    };
+
+    const changes = {
+      original: originalData,
+      deducted: deductedData,
+      current: currentData,
+      timestamp: new Date().toISOString(),
+    };
+
     return {
       success: true,
       message: `SKU ${row.sku} 处理成功`,
       data: updatedData,
+      changes: changes,
     };
   };
 
@@ -162,7 +185,6 @@ export default function SettlementProcessForm() {
    * 处理所有行数据
    */
   const handleSubmit = () => {
-    // 过滤掉空行（没有SKU的行）
     const validRows = rows.filter((row) => row.sku.trim());
 
     if (validRows.length === 0) {
@@ -173,7 +195,6 @@ export default function SettlementProcessForm() {
       return;
     }
 
-    // 验证所有行
     for (const row of validRows) {
       const error = validateRow(row);
       if (error) {
@@ -185,27 +206,38 @@ export default function SettlementProcessForm() {
       }
     }
 
-    // 创建数据副本
     let updatedData = [...processedData];
     const successResults = [];
     const errorResults = [];
+    const dataChanges = {};
 
-    // 逐行处理
     for (const row of validRows) {
       const result = processRow(row, updatedData);
       if (result.success) {
         successResults.push(row.sku);
         updatedData = result.data;
+        if (result.changes) {
+          dataChanges[row.sku] = result.changes;
+        }
       } else {
         errorResults.push({ sku: row.sku, message: result.message });
       }
     }
 
-    // 更新处理后的数据
     setProcessedData(updatedData);
 
-    // 显示处理结果
     if (successResults.length > 0) {
+      const historyItem = {
+        timestamp: new Date().toISOString(),
+        skus: successResults,
+        count: successResults.length,
+      };
+      addProcessingHistory(historyItem);
+
+      Object.entries(dataChanges).forEach(([sku, changes]) => {
+        addDataChange(sku, changes);
+      });
+
       toast({
         title: `成功处理 ${successResults.length} 条记录`,
         description: successResults.join(", "),
@@ -221,7 +253,6 @@ export default function SettlementProcessForm() {
       });
     }
 
-    // 清空所有行，重置为初始状态
     setRows([{ id: generateId(), sku: "", amount: "", quantity: "", serviceFee: "" }]);
   };
 

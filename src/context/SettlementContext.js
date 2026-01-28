@@ -22,6 +22,8 @@ const initialState = {
   processedCount: 0,
   originalTotal: 0,
   processedTotal: 0,
+  processingHistory: [],
+  dataChanges: {},
 };
 
 const ActionTypes = {
@@ -44,6 +46,10 @@ const ActionTypes = {
   SET_PROCESSED_COUNT: "SET_PROCESSED_COUNT",
   SET_ORIGINAL_TOTAL: "SET_ORIGINAL_TOTAL",
   SET_PROCESSED_TOTAL: "SET_PROCESSED_TOTAL",
+  SET_PROCESSING_HISTORY: "SET_PROCESSING_HISTORY",
+  SET_DATA_CHANGES: "SET_DATA_CHANGES",
+  ADD_PROCESSING_HISTORY: "ADD_PROCESSING_HISTORY",
+  ADD_DATA_CHANGE: "ADD_DATA_CHANGE",
 };
 
 function settlementReducer(state, action) {
@@ -118,6 +124,27 @@ function settlementReducer(state, action) {
     case ActionTypes.SET_PROCESSED_TOTAL:
       return { ...state, processedTotal: action.payload };
 
+    case ActionTypes.SET_PROCESSING_HISTORY:
+      return { ...state, processingHistory: action.payload };
+
+    case ActionTypes.SET_DATA_CHANGES:
+      return { ...state, dataChanges: action.payload };
+
+    case ActionTypes.ADD_PROCESSING_HISTORY:
+      return {
+        ...state,
+        processingHistory: [...state.processingHistory, action.payload],
+      };
+
+    case ActionTypes.ADD_DATA_CHANGE:
+      return {
+        ...state,
+        dataChanges: {
+          ...state.dataChanges,
+          [action.payload.sku]: action.payload.changes,
+        },
+      };
+
     case ActionTypes.RESET:
       return initialState;
 
@@ -135,6 +162,8 @@ function settlementReducer(state, action) {
         processedCount: 0,
         originalTotal: 0,
         processedTotal: 0,
+        processingHistory: [],
+        dataChanges: {},
       };
 
     default:
@@ -222,6 +251,22 @@ export function SettlementProvider({ children }) {
 
     resetSettlement: useCallback(() => {
       dispatch({ type: ActionTypes.RESET_SETTLEMENT });
+    }, []),
+
+    setProcessingHistory: useCallback((history) => {
+      dispatch({ type: ActionTypes.SET_PROCESSING_HISTORY, payload: history });
+    }, []),
+
+    setDataChanges: useCallback((changes) => {
+      dispatch({ type: ActionTypes.SET_DATA_CHANGES, payload: changes });
+    }, []),
+
+    addProcessingHistory: useCallback((historyItem) => {
+      dispatch({ type: ActionTypes.ADD_PROCESSING_HISTORY, payload: historyItem });
+    }, []),
+
+    addDataChange: useCallback((sku, changes) => {
+      dispatch({ type: ActionTypes.ADD_DATA_CHANGE, payload: { sku, changes } });
     }, []),
   };
 

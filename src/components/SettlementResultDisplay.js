@@ -1,17 +1,19 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useSettlement } from "@/context/SettlementContext";
 import { downloadExcel } from "@/lib/excelHandler";
 import DataDisplay from "./DataDisplay";
 import SettlementProcessForm from "./SettlementProcessForm";
+import { Button } from "./ui/button";
 
 /**
  * 结算单结果显示组件
  * 显示处理后的结算单数据，并包含处理表单用于调整SKU数量
  */
 export default function SettlementResultDisplay() {
-  const { originalData, processedData, resetSettlement } = useSettlement();
+  const { originalData, processedData, resetSettlement, processingHistory, dataChanges } = useSettlement();
+  const [showDataChanges, setShowDataChanges] = useState(true);
 
   const handleReset = () => {
     resetSettlement();
@@ -56,6 +58,8 @@ export default function SettlementResultDisplay() {
     totals[column] = total;
   });
 
+  const dataChangesCount = Object.keys(dataChanges).length;
+
   return (
     <DataDisplay
       title="结算单处理结果"
@@ -72,9 +76,9 @@ export default function SettlementResultDisplay() {
       showRowNumber={true}
       columnTotals={["应结金额", "直营服务费", "数量", "净结金额"]}
       showStats={false}
+      showDataChanges={showDataChanges}
       customStats={
         <div className="space-y-4">
-          {/* 货款合并统计 */}
           <div className="grid grid-cols-4 gap-4">
             <div className="flex flex-col p-3 rounded-lg bg-blue-100 dark:bg-blue-900/30">
               <span className="text-xs text-muted-foreground">货款合计</span>
@@ -101,6 +105,20 @@ export default function SettlementResultDisplay() {
               </span>
             </div>
           </div>
+          {dataChangesCount > 0 && (
+            <div className="flex items-center gap-4 p-3 rounded-lg bg-muted/50">
+              <span className="text-sm font-medium text-foreground">
+                已处理: {dataChangesCount} 个SKU
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDataChanges(!showDataChanges)}
+              >
+                {showDataChanges ? "隐藏" : "显示"}数据变化
+              </Button>
+            </div>
+          )}
         </div>
       }
     >

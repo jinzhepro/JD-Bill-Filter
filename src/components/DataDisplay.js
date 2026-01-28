@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useSettlement } from "@/context/SettlementContext";
 
 export default function DataDisplay({
   title = "处理结果",
@@ -24,9 +25,13 @@ export default function DataDisplay({
   calculatedTotals = null,
   showStats = true,
   children = null,
+  showDataChanges = true,
 }) {
   const { toast } = useToast();
+  const { dataChanges, processingHistory } = useSettlement();
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
+  const [showModal, setShowModal] = useState(false);
+  const [modalSku, setModalSku] = useState(null);
 
   const calculateTotalAmount = (data) => {
     if (!data || data.length === 0) return 0;
@@ -298,29 +303,105 @@ export default function DataDisplay({
                       </th>
                     );
                   })}
+                <th className="px-4 py-3 text-left font-semibold text-foreground whitespace-nowrap">
+                  变化详情
+                </th>
               </tr>
             </thead>
 
-            <tbody>
-              {sortedData.map((row, rowIndex) => (
-                <TableRow
-                  key={row["商品编号"] || rowIndex}
-                  row={row}
-                  rowIndex={rowIndex}
-                  amountField={amountField}
-                  amountFields={amountFields}
-                  showRowNumber={showRowNumber}
-                />
-              ))}
-            </tbody>
+               <tbody>
+               {sortedData.map((row, rowIndex) => (
+                 <TableRow
+                   key={row["商品编号"] || rowIndex}
+                   row={row}
+                   rowIndex={rowIndex}
+                   amountField={amountField}
+                   amountFields={amountFields}
+                   showRowNumber={showRowNumber}
+                   showDataChanges={showDataChanges}
+                   onShowModal={(sku) => {
+                     setModalSku(sku);
+                     setShowModal(true);
+                   }}
+                 />
+               ))}
+             </tbody>
           </table>
         </div>
       </section>
+
+      {showModal && modalSku && dataChanges[modalSku] && (
+        <div 
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50" 
+          onClick={() => setShowModal(false)}
+        >
+          <div 
+            className="bg-card border border-border rounded-lg shadow-xl p-6 max-w-lg w-full mx-4" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <div className="font-semibold text-lg text-foreground">数据变化详情</div>
+              <button 
+                onClick={() => setShowModal(false)}
+                className="text-muted-foreground hover:text-foreground text-xl"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-4 gap-2 font-medium text-muted-foreground border-b pb-2">
+                <div>字段</div>
+                <div className="text-right">原始</div>
+                <div className="text-right">减去</div>
+                <div className="text-right">现在</div>
+              </div>
+              {(() => {
+                const changes = dataChanges[modalSku];
+                const { original, deducted, current } = changes;
+                const formatNumber = (num) => (num !== undefined ? num.toFixed(2) : "0.00");
+                return (
+                  <>
+                    <div className="grid grid-cols-4 gap-2">
+                      <div className="font-medium">数量</div>
+                      <div className="text-right">{formatNumber(original?.数量)}</div>
+                      <div className="text-right text-red-600">-{formatNumber(deducted?.数量)}</div>
+                      <div className="text-right font-semibold">{formatNumber(current?.数量)}</div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      <div className="font-medium">应结金额</div>
+                      <div className="text-right">¥{formatNumber(original?.应结金额)}</div>
+                      <div className="text-right text-red-600">-¥{formatNumber(deducted?.应结金额)}</div>
+                      <div className="text-right font-semibold">¥{formatNumber(current?.应结金额)}</div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      <div className="font-medium">直营服务费</div>
+                      <div className="text-right">¥{formatNumber(original?.直营服务费)}</div>
+                      <div className="text-right text-red-600">-¥{formatNumber(deducted?.直营服务费)}</div>
+                      <div className="text-right font-semibold">¥{formatNumber(current?.直营服务费)}</div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      <div className="font-medium">净结金额</div>
+                      <div className="text-right">¥{formatNumber(original?.净结金额)}</div>
+                      <div className="text-right text-red-600">-¥{formatNumber(deducted?.应结金额 + deducted?.直营服务费)}</div>
+                      <div className="text-right font-semibold">¥{formatNumber(current?.净结金额)}</div>
+                    </div>
+                    <div className="pt-3 mt-3 border-t border-border text-xs text-muted-foreground">
+                      处理时间: {new Date(changes.timestamp).toLocaleString()}
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function TableRow({ row, rowIndex, amountField, amountFields, showRowNumber }) {
+function TableRow({ row, rowIndex, amountField, amountFields, showRowNumber, showDataChanges, onShowModal }) {
+  const { dataChanges } = useSettlement();
+
   const formatAmount = (value) => {
     const num = parseFloat(value || 0);
     const formatted = Math.abs(num).toFixed(2);
@@ -337,17 +418,42 @@ function TableRow({ row, rowIndex, amountField, amountFields, showRowNumber }) {
     return key === "单价" || key === "总价" || key === amountField;
   };
 
+  const sku = row["商品编号"] || row["SKU"];
+  const hasChanges = sku && dataChanges[sku];
+  const changes = hasChanges ? dataChanges[sku] : null;
+
+  const getRowBackgroundClass = () => {
+    if (!hasChanges || !showDataChanges) {
+      return rowIndex % 2 === 0 ? "bg-background" : "bg-muted/30";
+    }
+
+    const lastChange = changes;
+    const currentQuantity = parseFloat(row["数量"] || 0);
+    const originalQuantity = lastChange.original?.数量 || 0;
+
+    if (currentQuantity < originalQuantity) {
+      return "bg-red-50/50 hover:bg-red-100/50";
+    } else if (currentQuantity > originalQuantity) {
+      return "bg-green-50/50 hover:bg-green-100/50";
+    } else {
+      return rowIndex % 2 === 0 ? "bg-background" : "bg-muted/30";
+    }
+  };
+
   return (
     <tr
       className={`
         transition-colors duration-150
-        ${rowIndex % 2 === 0 ? "bg-background" : "bg-muted/30"}
-        hover:bg-primary/5
+        ${getRowBackgroundClass()}
+        relative
       `}
     >
       {showRowNumber && (
         <td className="px-4 py-2.5 text-left border-b border-border/50 text-muted-foreground w-20">
           {rowIndex + 1}
+          {hasChanges && showDataChanges && (
+            <span className="ml-1 inline-block w-2 h-2 bg-red-500 rounded-full" title="已处理"></span>
+          )}
         </td>
       )}
       {Object.entries(row).map(([key]) => (
@@ -357,6 +463,17 @@ function TableRow({ row, rowIndex, amountField, amountFields, showRowNumber }) {
             : row[key]}
         </td>
       ))}
+      {hasChanges && showDataChanges && (
+        <td className="px-4 py-2.5 text-left border-b border-border/50 whitespace-nowrap">
+          <button 
+            onClick={() => onShowModal(sku)}
+            className="text-xs text-muted-foreground hover:text-primary cursor-pointer p-1 rounded hover:bg-muted/50"
+            title="点击查看数据变化详情"
+          >
+            ⓘ
+          </button>
+        </td>
+      )}
     </tr>
   );
 }
