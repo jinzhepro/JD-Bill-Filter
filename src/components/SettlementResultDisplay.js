@@ -77,6 +77,10 @@ export default function SettlementResultDisplay() {
       columnTotals={["应结金额", "直营服务费", "数量", "净结金额"]}
       showStats={false}
       showDataChanges={showDataChanges}
+      columnMapping={{
+        "应结金额": "货款",
+        "净结金额": "收入",
+      }}
       customStats={
         <div className="space-y-4">
           <div className="grid grid-cols-4 gap-4">
@@ -93,7 +97,7 @@ export default function SettlementResultDisplay() {
               </span>
             </div>
             <div className="flex flex-col p-3 rounded-lg bg-purple-100 dark:bg-purple-900/30">
-              <span className="text-xs text-muted-foreground">实际应结</span>
+              <span className="text-xs text-muted-foreground">收入</span>
               <span className="text-xl font-bold text-purple-600 dark:text-purple-400">
                 ¥{finalAmount.toFixed(2)}
               </span>

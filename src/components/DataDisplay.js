@@ -26,6 +26,7 @@ export default function DataDisplay({
   showStats = true,
   children = null,
   showDataChanges = true,
+  columnMapping = null,
 }) {
   const { toast } = useToast();
   const { dataChanges, processingHistory } = useSettlement();
@@ -245,6 +246,7 @@ export default function DataDisplay({
                 )}
                 {processedData.length > 0 &&
                   Object.keys(processedData[0]).map((header) => {
+                    const displayHeader = columnMapping?.[header] || header;
                     const total = columnTotalsResult?.[header];
                     const isTotalColumn = total !== undefined;
                     const isAmtField = amountFields && Array.isArray(amountFields) 
@@ -258,7 +260,7 @@ export default function DataDisplay({
                       >
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-1">
-                            <span>{header}</span>
+                            <span>{displayHeader}</span>
                             {isTotalColumn && (
                               <span className={`text-xs font-mono border rounded px-1.5 py-0.5 ${isAmtField ? "text-green-600 border-green-200 bg-green-50" : "text-blue-600 border-blue-200 bg-blue-50"}`}>
                                 {isAmtField ? formatAmount(total) : total?.toFixed(0)}
@@ -269,7 +271,7 @@ export default function DataDisplay({
                             <button
                               onClick={() => handleSort(header)}
                               className="p-1 rounded hover:bg-muted/50 transition-colors"
-                              title={`点击排序 "${header}"`}
+                              title={`点击排序 "${displayHeader}"`}
                             >
                               {sortConfig.key === header ? (
                                 sortConfig.direction === "asc" ? (
@@ -291,7 +293,7 @@ export default function DataDisplay({
                               <button
                                 onClick={() => handleCopyColumn(header)}
                                 className="p-1 rounded hover:bg-muted/50 transition-colors"
-                                title={`点击复制 "${header}" 列数据`}
+                                title={`点击复制 "${displayHeader}" 列数据`}
                               >
                                 <svg className="w-4 h-4 text-muted-foreground hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -368,7 +370,7 @@ export default function DataDisplay({
                       <div className="text-right font-semibold">{formatNumber(current?.数量)}</div>
                     </div>
                     <div className="grid grid-cols-4 gap-2">
-                      <div className="font-medium">应结金额</div>
+                      <div className="font-medium">货款</div>
                       <div className="text-right">¥{formatNumber(original?.应结金额)}</div>
                       <div className="text-right text-red-600">-¥{formatNumber(deducted?.应结金额)}</div>
                       <div className="text-right font-semibold">¥{formatNumber(current?.应结金额)}</div>
@@ -380,7 +382,7 @@ export default function DataDisplay({
                       <div className="text-right font-semibold">¥{formatNumber(current?.直营服务费)}</div>
                     </div>
                     <div className="grid grid-cols-4 gap-2">
-                      <div className="font-medium">净结金额</div>
+                      <div className="font-medium">收入</div>
                       <div className="text-right">¥{formatNumber(original?.净结金额)}</div>
                       <div className="text-right text-red-600">-¥{formatNumber(deducted?.应结金额 + deducted?.直营服务费)}</div>
                       <div className="text-right font-semibold">¥{formatNumber(current?.净结金额)}</div>

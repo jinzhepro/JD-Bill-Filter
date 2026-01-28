@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 
 /**
  * 结算单处理结果添加表单组件
- * 支持多行输入，用于批量处理SKU、应结金额、数量、直营服务费
+ * 支持多行输入，用于批量处理SKU、货款、数量、直营服务费
  */
 export default function SettlementProcessForm() {
   const { processedData, setProcessedData, addProcessingHistory, addDataChange } = useSettlement();
@@ -296,7 +296,7 @@ export default function SettlementProcessForm() {
         </div>
         <div className="col-span-3">
           <label className="text-xs font-medium text-muted-foreground">
-            应结金额
+            货款
           </label>
         </div>
         <div className="col-span-2">
@@ -334,11 +334,11 @@ export default function SettlementProcessForm() {
               />
             </div>
 
-            {/* 应结金额输入 */}
+            {/* 货款输入 */}
             <div className="col-span-3">
               <Input
                 type="number"
-                placeholder="应结金额"
+                placeholder="货款"
                 value={row.amount}
                 onChange={(e) =>
                   handleInputChange(row.id, "amount", e.target.value)
