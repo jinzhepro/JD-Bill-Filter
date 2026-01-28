@@ -4,11 +4,19 @@ This file provides guidance to agents when working with code in this repository.
 
 ## Build/Lint/Test Commands
 
+### Development Commands
 ```bash
 npm run dev          # Start development server (http://localhost:3000)
 npm run build        # Build for production
 npm start            # Start production server
 npm run lint         # Run ESLint with core-web-vitals preset
+```
+
+### Test Setup
+**Status**: No test framework configured  
+**Recommendation**: Install Vitest + Testing Library to add tests
+```bash
+npm install -D vitest @testing-library/react @testing-library/jest-dom jsdom
 ```
 
 ## Project Overview
@@ -18,6 +26,8 @@ npm run lint         # Run ESLint with core-web-vitals preset
 - **UI Library**: shadcn/ui with Tailwind CSS
 - **Key Libraries**: Decimal.js (math), ExcelJS (file I/O)
 - **Path Alias**: `@/` → `./src/`
+- **State Management**: React Context + useReducer
+- **Icons**: Lucide React
 
 ## Code Style Guidelines
 
@@ -210,3 +220,105 @@ export const LogType = {
 **shadcn/ui**: New York style, JavaScript, semantic colors, Lucide icons  
 **Next.js**: App Router enabled, strict mode, path alias `@/` → `./src/`  
 **Tests**: No framework configured. Install Vitest + Testing Library to add tests.
+
+## Development Workflow
+
+### 1. Setup & Installation
+```bash
+npm install
+```
+
+### 2. Development
+```bash
+npm run dev
+# Access: http://localhost:3000
+```
+
+### 3. Code Quality
+```bash
+npm run lint
+```
+
+### 4. Production Build
+```bash
+npm run build
+npm start
+```
+
+### 5. Adding New Components
+```bash
+npx shadcn@latest add [component-name]
+```
+
+### 6. Adding New Suppliers
+Edit `src/data/suppliers.js`:
+```javascript
+{
+  id: "supplier-xxx",
+  name: "供应商名称",
+  supplierId: "supplier_id",
+  matchString: "匹配字符串"
+}
+```
+
+## Key Features
+
+### Settlement Processing
+- 📤 Upload Excel/CSV settlement statements
+- 🔄 Automatically merge same SKU records
+- 📊 Calculate quantities (negative amounts → negative quantities)
+- 🧮 Handle after-sales compensation
+- 📥 Export merged results
+
+### Supplier Conversion
+- 🏢 Manage supplier information
+- 🔍 Auto-identify suppliers by match strings
+- 📝 Custom supplier matching rules
+- 🔄 Batch convert text to supplier IDs
+
+### File Handling
+- ✅ Support for .xlsx, .xls, .csv formats
+- ✅ 50MB file size limit
+- ✅ UTF-8/GBK encoding detection
+- ✅ Excel formula handling
+- ✅ Product code as text format (prevents auto-conversion)
+
+## Important Notes
+
+### No Tests
+The project currently has **no test framework**. Consider adding:
+- Vitest for unit testing
+- React Testing Library for component testing
+- Playwright for E2E testing
+
+### Database Removed
+All database functionality has been removed. Data is now:
+- Stored in static files (`src/data/suppliers.js`)
+- Processed in-memory
+- Exported to Excel files
+
+### Decimal.js Usage
+**Critical**: All financial calculations must use Decimal.js to avoid floating-point precision issues.
+
+### shadcn/ui Components
+The project uses shadcn/ui with New York style. Components are located in `src/components/ui/` and can be updated using the shadcn CLI.
+
+## Dependencies Summary
+
+### Production Dependencies
+- `next`: 16.0.10
+- `react`: 19.2.0
+- `react-dom`: 19.2.0
+- `tailwindcss`: 3.4.18
+- `decimal.js`: 10.6.0 (high-precision math)
+- `exceljs`: 4.4.0 (Excel file handling)
+- `@radix-ui/*`: UI component primitives
+- `lucide-react`: Icons
+
+### Development Dependencies
+- `eslint`: ^9
+- `eslint-config-next`: 16.0.10
+- `class-variance-authority`: Component variants
+- `clsx`: Class name merging
+- `tailwind-merge`: Tailwind class merging
+- `tailwindcss-animate`: Animations
