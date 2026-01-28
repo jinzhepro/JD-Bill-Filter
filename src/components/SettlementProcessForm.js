@@ -25,6 +25,45 @@ export default function SettlementProcessForm() {
   const generateId = () => Date.now() + Math.random().toString(36).substr(2, 9);
 
   /**
+   * 合并相同SKU的行
+   * @param {Array} rows - 行数据数组
+   * @returns {Array} - 合并后的行数据数组
+   */
+  const mergeSameSkuRows = (rows) => {
+    const skuMap = new Map();
+
+    rows.forEach((row) => {
+      const sku = row.sku.trim();
+      if (!sku) return;
+
+      if (skuMap.has(sku)) {
+        // 合并相同SKU的行
+        const existing = skuMap.get(sku);
+        
+        // 合并数量（累加）
+        const existingQuantity = parseFloat(existing.quantity) || 0;
+        const currentQuantity = parseFloat(row.quantity) || 0;
+        existing.quantity = (existingQuantity + currentQuantity).toString();
+
+        // 合并货款（累加）
+        const existingAmount = parseFloat(existing.amount) || 0;
+        const currentAmount = parseFloat(row.amount) || 0;
+        existing.amount = (existingAmount + currentAmount).toString();
+
+        // 合并直营服务费（累加）
+        const existingServiceFee = parseFloat(existing.serviceFee) || 0;
+        const currentServiceFee = parseFloat(row.serviceFee) || 0;
+        existing.serviceFee = (existingServiceFee + currentServiceFee).toString();
+      } else {
+        // 第一次遇到这个SKU，复制一份
+        skuMap.set(sku, { ...row });
+      }
+    });
+
+    return Array.from(skuMap.values());
+  };
+
+  /**
    * 处理单行输入变化
    * @param {number} id - 行ID
    * @param {string} field - 字段名
@@ -195,8 +234,11 @@ export default function SettlementProcessForm() {
       return;
     }
 
+    // 合并相同SKU的行
+    const mergedRows = mergeSameSkuRows(validRows);
+
     // 预验证所有行
-    for (const row of validRows) {
+    for (const row of mergedRows) {
       const error = validateRow(row);
       if (error) {
         toast({
@@ -209,7 +251,7 @@ export default function SettlementProcessForm() {
 
     // 预检查所有SKU是否存在
     const notFoundSKUs = [];
-    for (const row of validRows) {
+    for (const row of mergedRows) {
       const skuIndex = findSkuIndex(row.sku);
       if (skuIndex === -1) {
         notFoundSKUs.push(row.sku);
@@ -227,7 +269,7 @@ export default function SettlementProcessForm() {
 
     // 预检查所有数量是否足够
     const insufficientSKUs = [];
-    for (const row of validRows) {
+    for (const row of mergedRows) {
       const skuIndex = findSkuIndex(row.sku);
       if (skuIndex !== -1) {
         const targetRow = processedData[skuIndex];
@@ -254,7 +296,7 @@ export default function SettlementProcessForm() {
     const successResults = [];
     const dataChanges = {};
 
-    for (const row of validRows) {
+    for (const row of mergedRows) {
       const result = processRow(row, updatedData);
       if (result.success) {
         successResults.push(row.sku);
@@ -491,7 +533,7 @@ export default function SettlementProcessForm() {
           <span>
             支持多行批量处理。点击&quot;添加行&quot;增加输入行，填写商品编号和数量后点击&quot;处理&quot;。
             直营服务费输入正数可减小服务费扣除金额（例如：-10 输入 5 变为 -5）。
-            如果商品编号未找到或数量不足，系统会显示错误提示。
+            <strong>相同商品编号会自动合并计算</strong>，如果商品编号未找到或数量不足，系统会显示错误提示。
           </span>
         </p>
       </div>
