@@ -101,7 +101,7 @@ export default function SettlementProcessForm() {
     if (skuIndex === -1) {
       return {
         success: false,
-        message: `未找到SKU: ${row.sku}`,
+        message: `未在结算单中找到商品编号: ${row.sku}，请检查输入是否正确`,
         data: updatedData,
         changes: null,
       };
@@ -115,7 +115,7 @@ export default function SettlementProcessForm() {
     if (currentQuantity < deductQuantity) {
       return {
         success: false,
-        message: `SKU ${row.sku} 数量不足，当前: ${currentQuantity}，需要: ${deductQuantity}`,
+        message: `商品编号 ${row.sku} 数量不足，当前数量: ${currentQuantity}，需要扣减: ${deductQuantity}`,
         data: updatedData,
         changes: null,
       };
@@ -195,6 +195,7 @@ export default function SettlementProcessForm() {
       return;
     }
 
+    // 预验证所有行
     for (const row of validRows) {
       const error = validateRow(row);
       if (error) {
@@ -206,9 +207,51 @@ export default function SettlementProcessForm() {
       }
     }
 
+    // 预检查所有SKU是否存在
+    const notFoundSKUs = [];
+    for (const row of validRows) {
+      const skuIndex = findSkuIndex(row.sku);
+      if (skuIndex === -1) {
+        notFoundSKUs.push(row.sku);
+      }
+    }
+
+    if (notFoundSKUs.length > 0) {
+      toast({
+        variant: "destructive",
+        title: `以下商品编号未找到: ${notFoundSKUs.join(", ")}`,
+        description: "请检查输入是否正确，或从结算单中查找正确的商品编号",
+      });
+      return;
+    }
+
+    // 预检查所有数量是否足够
+    const insufficientSKUs = [];
+    for (const row of validRows) {
+      const skuIndex = findSkuIndex(row.sku);
+      if (skuIndex !== -1) {
+        const targetRow = processedData[skuIndex];
+        const currentQuantity = parseFloat(targetRow["数量"] || 0);
+        const deductQuantity = parseFloat(row.quantity);
+        
+        if (currentQuantity < deductQuantity) {
+          insufficientSKUs.push(`${row.sku} (当前: ${currentQuantity}, 需要: ${deductQuantity})`);
+        }
+      }
+    }
+
+    if (insufficientSKUs.length > 0) {
+      toast({
+        variant: "destructive",
+        title: `以下商品编号数量不足:`,
+        description: insufficientSKUs.join("; "),
+      });
+      return;
+    }
+
+    // 所有验证通过，开始处理
     let updatedData = [...processedData];
     const successResults = [];
-    const errorResults = [];
     const dataChanges = {};
 
     for (const row of validRows) {
@@ -219,8 +262,6 @@ export default function SettlementProcessForm() {
         if (result.changes) {
           dataChanges[row.sku] = result.changes;
         }
-      } else {
-        errorResults.push({ sku: row.sku, message: result.message });
       }
     }
 
@@ -241,15 +282,6 @@ export default function SettlementProcessForm() {
       toast({
         title: `成功处理 ${successResults.length} 条记录`,
         description: successResults.join(", "),
-      });
-    }
-
-    if (errorResults.length > 0) {
-      errorResults.forEach((error) => {
-        toast({
-          variant: "destructive",
-          title: error.message,
-        });
       });
     }
 
@@ -457,8 +489,9 @@ export default function SettlementProcessForm() {
             />
           </svg>
           <span>
-            支持多行批量处理。点击&quot;添加行&quot;增加输入行，填写SKU和数量后点击&quot;处理&quot;。
+            支持多行批量处理。点击&quot;添加行&quot;增加输入行，填写商品编号和数量后点击&quot;处理&quot;。
             直营服务费输入正数可减小服务费扣除金额（例如：-10 输入 5 变为 -5）。
+            如果商品编号未找到或数量不足，系统会显示错误提示。
           </span>
         </p>
       </div>
