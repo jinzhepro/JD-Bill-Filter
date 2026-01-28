@@ -93,7 +93,6 @@ export async function processSettlementData(data) {
 
   // 计算售后卖家赔付费总额（没有商品编号信息）
   let totalAfterSalesCompensation = new Decimal(0);
-  let hasProcessedAfterSalesCompensation = false;
 
   // 遍历数据，只处理费用名称为"货款"的记录，合并金额和数量
   let processedCount = 0;
@@ -121,17 +120,11 @@ export async function processSettlementData(data) {
         continue;
       }
 
-      // 处理售后卖家赔付费记录（只处理一次，累加总额，没有商品编号信息）
+      // 处理售后卖家赔付费记录（每个记录都处理一次，累加总额，没有商品编号信息）
       if (feeName === "售后卖家赔付费") {
-        // 确保每个赔付费只处理一次
-        if (!hasProcessedAfterSalesCompensation) {
-          const cleanAmountValue = cleanAmount(row[actualAmountColumn] || 0);
-          totalAfterSalesCompensation = totalAfterSalesCompensation.plus(new Decimal(cleanAmountValue));
-          logger.log(`settlementProcessor - 售后卖家赔付费: ${cleanAmountValue}, 累计总额: ${totalAfterSalesCompensation.toNumber()}`);
-          hasProcessedAfterSalesCompensation = true;
-        } else {
-          logger.log(`settlementProcessor - 跳过已处理的售后卖家赔付费记录`);
-        }
+        const cleanAmountValue = cleanAmount(row[actualAmountColumn] || 0);
+        totalAfterSalesCompensation = totalAfterSalesCompensation.plus(new Decimal(cleanAmountValue));
+        logger.log(`settlementProcessor - 售后卖家赔付费: ${cleanAmountValue}, 累计总额: ${totalAfterSalesCompensation.toNumber()}`);
         skippedCount++;
         continue;
       }
