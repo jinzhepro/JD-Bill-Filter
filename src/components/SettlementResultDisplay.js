@@ -4,7 +4,12 @@ import React from "react";
 import { useSettlement } from "@/context/SettlementContext";
 import { downloadExcel } from "@/lib/excelHandler";
 import DataDisplay from "./DataDisplay";
+import SettlementProcessForm from "./SettlementProcessForm";
 
+/**
+ * 结算单结果显示组件
+ * 显示处理后的结算单数据，并包含处理表单用于调整SKU数量
+ */
 export default function SettlementResultDisplay() {
   const { originalData, processedData, resetSettlement } = useSettlement();
 
@@ -98,6 +103,9 @@ export default function SettlementResultDisplay() {
           </div>
         </div>
       }
-    />
+    >
+      {/* 标题下方的结算单处理表单 */}
+      <SettlementProcessForm />
+    </DataDisplay>
   );
 }

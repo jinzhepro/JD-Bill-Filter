@@ -23,6 +23,7 @@ export default function DataDisplay({
   columnTotals = null,
   calculatedTotals = null,
   showStats = true,
+  children = null,
 }) {
   const { toast } = useToast();
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
@@ -182,6 +183,9 @@ export default function DataDisplay({
         <h1 className="text-2xl font-bold text-foreground">{title}</h1>
         <div></div>
       </div>
+
+      {/* 标题下方的自定义内容（如表单） */}
+      {children}
 
       <section className="bg-card rounded-lg border border-border p-6">
         {showStats && (
