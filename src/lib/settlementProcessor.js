@@ -91,6 +91,9 @@ export async function processSettlementData(data) {
   // 使用 Map 存储按商品编号分组的直营服务费
   const selfOperationFeeMap = new Map();
 
+  // 计算售后卖家赔付费总额（没有商品编号信息）
+  let totalAfterSalesCompensation = new Decimal(0);
+
   // 遍历数据，只处理费用名称为"货款"的记录，合并金额和数量
   let processedCount = 0;
   let skippedCount = 0;
@@ -99,8 +102,8 @@ export async function processSettlementData(data) {
     const productNo = cleanString(row["商品编号"]);
     const feeName = cleanString(row["费用名称"]);
 
-    // 如果存在费用名称列，只处理"货款"记录
-    if (hasFeeNameColumn && feeName !== SETTLEMENT_FEE_NAME_FILTER) {
+    // 如果存在费用名称列
+    if (hasFeeNameColumn) {
       // 处理直营服务费记录（按商品编号分组）
       if (feeName === SETTLEMENT_SELF_OPERATION_FEE && productNo) {
         const cleanAmountValue = cleanAmount(row[actualAmountColumn] || 0);
@@ -113,9 +116,24 @@ export async function processSettlementData(data) {
             直营服务费: new Decimal(cleanAmountValue),
           });
         }
+        skippedCount++;
+        continue;
       }
-      skippedCount++;
-      continue;
+
+      // 处理售后卖家赔付费记录（累加总额，没有商品编号信息）
+      if (feeName === "售后卖家赔付费") {
+        const cleanAmountValue = cleanAmount(row[actualAmountColumn] || 0);
+        totalAfterSalesCompensation = totalAfterSalesCompensation.plus(new Decimal(cleanAmountValue));
+        logger.log(`settlementProcessor - 售后卖家赔付费: ${cleanAmountValue}, 累计总额: ${totalAfterSalesCompensation.toNumber()}`);
+        skippedCount++;
+        continue;
+      }
+
+      // 如果不是货款记录，跳过
+      if (feeName !== SETTLEMENT_FEE_NAME_FILTER) {
+        skippedCount++;
+        continue;
+      }
     }
 
     processedCount++;
@@ -160,6 +178,23 @@ export async function processSettlementData(data) {
   const result = [];
 
   logger.log("settlementProcessor - mergedData.size:", mergedData.size);
+  logger.log("settlementProcessor - totalAfterSalesCompensation:", totalAfterSalesCompensation.toNumber());
+
+  // 计算售后卖家赔付费总额
+  const totalCompensation = totalAfterSalesCompensation.toNumber();
+
+  // 查找可以扣除赔付费的商品（应结金额 > 赔付费的绝对值）
+  let compensationDeductedFromSku = null;
+  if (totalCompensation !== 0) {
+    const compensationAbs = totalAfterSalesCompensation.abs();
+    for (const item of mergedData.values()) {
+      if (item.应结金额.gt(compensationAbs)) {
+        compensationDeductedFromSku = item.商品编号;
+        logger.log(`settlementProcessor - 选择商品编号 ${item.商品编号} 扣除赔付费: ${totalCompensation}`);
+        break;
+      }
+    }
+  }
 
   for (const item of mergedData.values()) {
     // 跳过金额为0的记录
@@ -168,9 +203,19 @@ export async function processSettlementData(data) {
       continue;
     }
 
+    // 计算赔付费扣除：如果当前商品是被选中的商品，则扣除赔付费
+    let compensationDeducted = new Decimal(0);
+    if (compensationDeductedFromSku === item.商品编号 && totalCompensation !== 0) {
+      compensationDeducted = totalAfterSalesCompensation;
+      logger.log(`settlementProcessor - 商品编号 ${item.商品编号} 扣除赔付费: ${compensationDeducted.toNumber()}`);
+    }
+
+    // 计算货款：应结金额 + 赔付费（赔付费是负数，所以是减去绝对值）
+    const finalAmount = item.应结金额.plus(compensationDeducted);
+
     const resultItem = {
       商品编号: item.商品编号,
-      应结金额: item.应结金额.toNumber(),
+      应结金额: finalAmount.toNumber(),
     };
 
     // 如果存在数量列，添加到结果中
@@ -185,8 +230,8 @@ export async function processSettlementData(data) {
       resultItem.直营服务费 = 0;
     }
 
-    // 计算净结金额（应结金额 + 直营服务费，直营服务费为负数）
-    const netAmount = item.应结金额.plus(new Decimal(resultItem.直营服务费));
+    // 计算净结金额（货款 + 直营服务费，直营服务费为负数）
+    const netAmount = finalAmount.plus(new Decimal(resultItem.直营服务费));
     resultItem.净结金额 = netAmount.toNumber();
 
     result.push(resultItem);
