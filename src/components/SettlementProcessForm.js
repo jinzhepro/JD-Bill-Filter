@@ -3,12 +3,13 @@
 import React, { useState } from "react";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
+import { Textarea } from "./ui/textarea";
 import { useSettlement } from "@/context/SettlementContext";
 import { useToast } from "@/hooks/use-toast";
 
 /**
  * 结算单处理结果添加表单组件
- * 支持多行输入，用于批量处理SKU、货款、数量、直营服务费
+ * 支持多行输入和粘贴，用于批量处理SKU、货款、数量、直营服务费
  */
 export default function SettlementProcessForm() {
   const { processedData, setProcessedData, addProcessingHistory, addDataChange } = useSettlement();
@@ -19,10 +20,121 @@ export default function SettlementProcessForm() {
     { id: 1, sku: "", amount: "", quantity: "", serviceFee: "" },
   ]);
 
+  // 粘贴输入框内容
+  const [pasteContent, setPasteContent] = useState("");
+
   /**
    * 生成唯一ID
    */
   const generateId = () => Date.now() + Math.random().toString(36).substr(2, 9);
+
+  /**
+   * 解析粘贴的多行数据
+   * 支持格式：
+   * 1. 制表符分隔：SKU\t货款\t数量\t服务费
+   * 2. 空格分隔：SKU 货款 数量 服务费
+   * 3. 逗号分隔：SKU,货款,数量,服务费
+   * 4. 竖线分隔：SKU|货款|数量|服务费
+   * @param {string} content - 粘贴的内容
+   * @returns {Array} - 解析后的行数据数组
+   */
+  const parsePastedContent = (content) => {
+    if (!content.trim()) {
+      return [];
+    }
+
+    const lines = content.split(/\r?\n/).filter((line) => line.trim());
+    const parsedRows = [];
+
+    for (const line of lines) {
+      // 尝试不同的分隔符
+      let parts = line.split(/\t/); // 制表符优先
+      if (parts.length === 1) {
+        parts = line.split(/[,|]/); // 逗号或竖线
+      }
+      if (parts.length === 1) {
+        parts = line.split(/\s+/); // 空格
+      }
+
+      // 清理每个部分，移除前后空格
+      parts = parts.map((part) => part.trim()).filter((part) => part !== "");
+
+      if (parts.length >= 2) {
+        let sku, amount, quantity, serviceFee;
+        
+        if (parts.length === 2) {
+          sku = parts[0];
+          quantity = parts[1];
+          amount = "";
+          serviceFee = "";
+        } else if (parts.length === 3) {
+          sku = parts[0];
+          amount = parts[1];
+          quantity = parts[2];
+          serviceFee = "";
+        } else {
+          sku = parts[0];
+          amount = parts[1];
+          quantity = parts[2];
+          serviceFee = parts[3];
+        }
+        
+        const row = {
+          id: generateId(),
+          sku: sku || "",
+          amount: amount || "",
+          quantity: quantity || "",
+          serviceFee: serviceFee || "",
+        };
+        parsedRows.push(row);
+      }
+    }
+
+    return parsedRows;
+  };
+
+  /**
+   * 处理解析并填充按钮点击
+   */
+  const handleParseAndFill = () => {
+    if (!pasteContent.trim()) {
+      toast({
+        variant: "destructive",
+        title: "请输入要粘贴的内容",
+      });
+      return;
+    }
+
+    const parsedRows = parsePastedContent(pasteContent);
+    if (parsedRows.length > 0) {
+      setRows(parsedRows);
+      setPasteContent("");
+      toast({
+        title: `成功解析 ${parsedRows.length} 行数据`,
+        description: "已自动填充到表格中",
+      });
+    } else {
+      toast({
+        variant: "destructive",
+        title: "解析失败",
+        description: "请检查粘贴内容格式是否正确",
+      });
+    }
+  };
+
+  /**
+   * 处理粘贴输入框内容变化
+   */
+  const handlePasteContentChange = (e) => {
+    setPasteContent(e.target.value);
+  };
+
+  /**
+   * 清空粘贴输入框
+   */
+  const handleClearPaste = () => {
+    setPasteContent("");
+  };
 
   /**
    * 合并相同SKU的行
@@ -339,9 +451,58 @@ export default function SettlementProcessForm() {
 
   return (
     <div className="bg-card rounded-lg border border-border p-6">
+      <div className="mb-6">
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="text-sm font-semibold text-foreground">
+            快速粘贴（支持多行）
+          </h3>
+          <div className="flex gap-2">
+            {pasteContent && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearPaste}
+                className="h-7 px-2 text-xs"
+              >
+                清空
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleParseAndFill}
+              disabled={!pasteContent.trim()}
+              className="h-7 px-2 text-xs"
+            >
+              解析并填充
+            </Button>
+          </div>
+        </div>
+        <Textarea
+          placeholder="粘贴多行数据，支持格式：
+• 制表符分隔：SKU\t货款\t数量\t服务费
+• 空格分隔：SKU 货款 数量 服务费
+• 逗号分隔：SKU,货款,数量,服务费
+• 竖线分隔：SKU|货款|数量|服务费
+
+示例（空格分隔）：
+A001 100.50 5 10.00
+A002 200.00 3 15.00
+
+示例（只有SKU和数量）：
+A001 5
+A002 3"
+          value={pasteContent}
+          onChange={handlePasteContentChange}
+          className="h-32 text-sm font-mono"
+        />
+      </div>
+
+      <div className="border-t border-border mb-6"></div>
+
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold text-foreground">
-          结算单处理结果添加
+          手动输入
         </h3>
         <Button variant="outline" size="sm" onClick={handleAddRow}>
           <svg
@@ -531,8 +692,8 @@ export default function SettlementProcessForm() {
             />
           </svg>
           <span>
-            支持多行批量处理。点击&quot;添加行&quot;增加输入行，填写商品编号和数量后点击&quot;处理&quot;。
-            直营服务费输入正数可减小服务费扣除金额（例如：-10 输入 5 变为 -5）。
+            支持多行批量处理。推荐使用上方的<strong>快速粘贴</strong>功能，直接粘贴多行数据（支持制表符、空格、逗号、竖线分隔），系统会自动识别每一行并填充到表格中。
+            也可以点击&quot;添加行&quot;手动输入。直营服务费输入正数可减小服务费扣除金额（例如：-10 输入 5 变为 -5）。
             <strong>相同商品编号会自动合并计算</strong>，如果商品编号未找到或数量不足，系统会显示错误提示。
           </span>
         </p>

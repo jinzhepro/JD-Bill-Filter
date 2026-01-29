@@ -168,9 +168,9 @@ export default function SupplierManager() {
                   </Button>
                 </div>
                 <div className="bg-muted rounded-md p-3 max-h-64 overflow-y-auto">
-                  {results.map((result) => (
+                  {results.map((result, index) => (
                     <div
-                      key={result.originalText}
+                      key={`${result.originalText}-${index}`}
                       className={`flex items-center justify-between py-1.5 px-2 mb-1.5 rounded text-xs ${
                         result.matched ? "bg-primary/10" : "bg-destructive/10"
                       }`}
