@@ -24,6 +24,7 @@ const initialState = {
   processedTotal: 0,
   processingHistory: [],
   dataChanges: {},
+  pasteHistory: [],
 };
 
 const ActionTypes = {
@@ -50,6 +51,9 @@ const ActionTypes = {
   SET_DATA_CHANGES: "SET_DATA_CHANGES",
   ADD_PROCESSING_HISTORY: "ADD_PROCESSING_HISTORY",
   ADD_DATA_CHANGE: "ADD_DATA_CHANGE",
+  SET_PASTE_HISTORY: "SET_PASTE_HISTORY",
+  ADD_PASTE_HISTORY: "ADD_PASTE_HISTORY",
+  CLEAR_PASTE_HISTORY: "CLEAR_PASTE_HISTORY",
 };
 
 function settlementReducer(state, action) {
@@ -145,6 +149,25 @@ function settlementReducer(state, action) {
         },
       };
 
+    case ActionTypes.SET_PASTE_HISTORY:
+      return { ...state, pasteHistory: action.payload };
+
+    case ActionTypes.ADD_PASTE_HISTORY:
+      const newHistory = [...state.pasteHistory, action.payload];
+      if (typeof window !== "undefined") {
+        localStorage.setItem("pasteHistory", JSON.stringify(newHistory));
+      }
+      return {
+        ...state,
+        pasteHistory: newHistory,
+      };
+
+    case ActionTypes.CLEAR_PASTE_HISTORY:
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("pasteHistory");
+      }
+      return { ...state, pasteHistory: [] };
+
     case ActionTypes.RESET:
       return initialState;
 
@@ -174,7 +197,28 @@ function settlementReducer(state, action) {
 const SettlementContext = createContext();
 
 export function SettlementProvider({ children }) {
-  const [state, dispatch] = useReducer(settlementReducer, initialState);
+  const loadPasteHistoryFromStorage = () => {
+    if (typeof window === "undefined") {
+      return [];
+    }
+    try {
+      const stored = localStorage.getItem("pasteHistory");
+      if (stored) {
+        return JSON.parse(stored);
+      }
+      return [];
+    } catch (error) {
+      console.error("Failed to load paste history from localStorage:", error);
+      return [];
+    }
+  };
+
+  const initialStateWithStorage = {
+    ...initialState,
+    pasteHistory: loadPasteHistoryFromStorage(),
+  };
+
+  const [state, dispatch] = useReducer(settlementReducer, initialStateWithStorage);
 
   const actions = {
     setFile: useCallback((file) => {
@@ -267,6 +311,18 @@ export function SettlementProvider({ children }) {
 
     addDataChange: useCallback((sku, changes) => {
       dispatch({ type: ActionTypes.ADD_DATA_CHANGE, payload: { sku, changes } });
+    }, []),
+
+    setPasteHistory: useCallback((history) => {
+      dispatch({ type: ActionTypes.SET_PASTE_HISTORY, payload: history });
+    }, []),
+
+    addPasteHistory: useCallback((historyItem) => {
+      dispatch({ type: ActionTypes.ADD_PASTE_HISTORY, payload: historyItem });
+    }, []),
+
+    clearPasteHistory: useCallback(() => {
+      dispatch({ type: ActionTypes.CLEAR_PASTE_HISTORY });
     }, []),
   };
 

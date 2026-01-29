@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
  * 支持多行输入和粘贴，用于批量处理SKU、货款、数量、直营服务费
  */
 export default function SettlementProcessForm() {
-  const { processedData, setProcessedData, addProcessingHistory, addDataChange } = useSettlement();
+  const { processedData, setProcessedData, addProcessingHistory, addDataChange, pasteHistory, addPasteHistory, clearPasteHistory } = useSettlement();
   const { toast } = useToast();
 
   // 多行表单状态，初始有一行空数据
@@ -108,6 +108,16 @@ export default function SettlementProcessForm() {
     const parsedRows = parsePastedContent(pasteContent);
     if (parsedRows.length > 0) {
       setRows(parsedRows);
+      
+      const historyItem = {
+        id: Date.now(),
+        timestamp: new Date().toISOString(),
+        content: pasteContent,
+        rowCount: parsedRows.length,
+        preview: parsedRows.slice(0, 3).map(r => r.sku).join(", ") + (parsedRows.length > 3 ? "..." : ""),
+      };
+      addPasteHistory(historyItem);
+      
       setPasteContent("");
       toast({
         title: `成功解析 ${parsedRows.length} 行数据`,
@@ -134,6 +144,27 @@ export default function SettlementProcessForm() {
    */
   const handleClearPaste = () => {
     setPasteContent("");
+  };
+
+  /**
+   * 从历史记录加载数据
+   */
+  const handleLoadFromHistory = (historyItem) => {
+    setPasteContent(historyItem.content);
+    toast({
+      title: "已加载历史记录",
+      description: `已将 ${historyItem.rowCount} 行数据填充到输入框`,
+    });
+  };
+
+  /**
+   * 清空历史记录
+   */
+  const handleClearHistory = () => {
+    clearPasteHistory();
+    toast({
+      title: "历史记录已清空",
+    });
   };
 
   /**
@@ -497,6 +528,54 @@ A002 3"
           className="h-32 text-sm font-mono"
         />
       </div>
+
+      {pasteHistory.length > 0 && (
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-sm font-semibold text-foreground">
+              粘贴历史记录
+            </h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearHistory}
+              className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+            >
+              清空历史
+            </Button>
+          </div>
+          <div className="bg-muted/30 rounded-lg border border-border overflow-hidden">
+            {pasteHistory.slice().reverse().map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center justify-between p-3 border-b border-border last:border-b-0 hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-medium text-foreground">
+                      {item.rowCount} 行
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(item.timestamp).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {item.preview}
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleLoadFromHistory(item)}
+                  className="h-7 px-2 text-xs ml-2"
+                >
+                  加载
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="border-t border-border mb-6"></div>
 
