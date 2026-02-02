@@ -8,6 +8,26 @@ import {
 } from "react";
 import { LogType } from "@/types";
 
+/**
+ * 结算单状态管理初始状态
+ * @typedef {Object} SettlementState
+ * @property {Array} uploadedFiles - 上传的文件列表
+ * @property {Array} originalData - 原始结算单数据
+ * @property {Array} processedData - 处理后的结算单数据
+ * @property {boolean} isProcessing - 是否正在处理
+ * @property {Array} logs - 处理日志
+ * @property {string|null} error - 错误信息
+ * @property {boolean} mergeMode - 是否合并模式
+ * @property {Array} mergedData - 合并后的数据
+ * @property {Array} fileDataArray - 文件数据数组
+ * @property {number} originalCount - 原始数据行数
+ * @property {number} processedCount - 处理后数据行数
+ * @property {number} originalTotal - 原始总金额
+ * @property {number} processedTotal - 处理后总金额
+ * @property {Array} processingHistory - 处理历史
+ * @property {Object} dataChanges - 数据变更记录
+ * @property {Array} pasteHistory - 粘贴历史
+ */
 const initialState = {
   uploadedFiles: [],
   originalData: [],
