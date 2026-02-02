@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
  * 支持多行输入和粘贴，用于批量处理SKU、货款、数量、直营服务费
  */
 export default function SettlementProcessForm() {
-  const { processedData, setProcessedData, addProcessingHistory, addDataChange, pasteHistory, addPasteHistory, clearPasteHistory } = useSettlement();
+  const { processedData, setProcessedData, addProcessingHistory, addDataChange, pasteHistory, setPasteHistory, clearPasteHistory } = useSettlement();
   const { toast } = useToast();
 
   // 多行表单状态，初始有一行空数据
@@ -109,6 +109,17 @@ export default function SettlementProcessForm() {
     if (parsedRows.length > 0) {
       setRows(parsedRows);
       
+      // 检查是否已存在相同内容的历史记录，如果存在则移除旧的
+      const existingIndex = pasteHistory.findIndex(
+        item => item.content === pasteContent
+      );
+      
+      let newHistory = [...pasteHistory];
+      if (existingIndex !== -1) {
+        // 移除旧的相同记录
+        newHistory.splice(existingIndex, 1);
+      }
+      
       const historyItem = {
         id: Date.now(),
         timestamp: new Date().toISOString(),
@@ -116,7 +127,12 @@ export default function SettlementProcessForm() {
         rowCount: parsedRows.length,
         preview: parsedRows.slice(0, 3).map(r => r.sku).join(", ") + (parsedRows.length > 3 ? "..." : ""),
       };
-      addPasteHistory(historyItem);
+      
+      // 添加新记录
+      newHistory.push(historyItem);
+      
+      // 更新历史记录（一次性更新，避免多次状态更新）
+      setPasteHistory(newHistory);
       
       setPasteContent("");
       toast({
