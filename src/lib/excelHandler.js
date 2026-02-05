@@ -304,9 +304,11 @@ export async function downloadExcel(data, fileName, totals = null, dataChanges =
     });
 
     // 添加标题行
-    const titleRow = worksheet.insertRow(1, ["青云通销售订单"]);
+    const totalAmount = totals?.应结金额 || 0;
+    const titleText = `青云通销售订单（${Number(totalAmount).toFixed(2)}）`;
+    const titleRow = worksheet.insertRow(1, [titleText]);
     titleRow.eachCell((cell) => {
-      cell.font = { bold: true, size: 16 };
+      cell.font = { bold: true, size: 14 };
       cell.alignment = { horizontal: "center", vertical: "center" };
     });
     worksheet.mergeCells(1, 1, 1, displayHeaders.length);
@@ -362,85 +364,6 @@ export async function downloadExcel(data, fileName, totals = null, dataChanges =
       });
       // 第一个单元格（总计文字）左对齐
       totalRowObj.getCell(1).alignment = { horizontal: "left" };
-    }
-
-    // 添加减去的数据行
-    if (dataChanges && typeof dataChanges === "object" && Object.keys(dataChanges).length > 0) {
-      // 添加空行
-      worksheet.addRow([]);
-      
-      // 添加标题行
-      const titleRow = worksheet.addRow(["下游开票记录"]);
-      titleRow.eachCell((cell) => {
-        cell.font = { bold: true, size: 12 };
-        cell.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: "FFE0E0E0" },
-        };
-        cell.alignment = { horizontal: "left" };
-        cell.border = {
-          top: { style: "thin" },
-          bottom: { style: "thin" },
-          left: { style: "thin" },
-          right: { style: "thin" },
-        };
-      });
-      // 合并单元格
-      worksheet.mergeCells(titleRow.number, 1, titleRow.number, displayHeaders.length);
-
-      // 添加减去的数据行
-      Object.entries(dataChanges).forEach(([sku, change]) => {
-        const { deducted } = change;
-        const row = worksheet.addRow([
-          sku,
-          deducted.应结金额 || 0,
-          deducted.数量 || 0,
-          deducted.直营服务费 || 0,
-        ]);
-        row.eachCell((cell) => {
-          cell.border = {
-            top: { style: "thin" },
-            bottom: { style: "thin" },
-            left: { style: "thin" },
-            right: { style: "thin" },
-          };
-          // 金额列右对齐
-          if (cell.col > 2) {
-            cell.alignment = { horizontal: "right" };
-          }
-        });
-      });
-
-      // 添加合计行
-      let totalQuantity = 0;
-      let totalAmount = 0;
-      let totalServiceFee = 0;
-      Object.values(dataChanges).forEach((change) => {
-        const { deducted } = change;
-        totalQuantity += parseFloat(deducted.数量) || 0;
-        totalAmount += parseFloat(deducted.应结金额) || 0;
-        totalServiceFee += parseFloat(deducted.直营服务费) || 0;
-      });
-
-      const totalRow = worksheet.addRow(["合计", totalAmount, totalQuantity, totalServiceFee]);
-      totalRow.eachCell((cell) => {
-        cell.font = { bold: true };
-        cell.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: "FFE0E0E0" },
-        };
-        cell.border = {
-          top: { style: "thin" },
-          bottom: { style: "thin" },
-          left: { style: "thin" },
-          right: { style: "thin" },
-        };
-        if (cell.col > 1) {
-          cell.alignment = { horizontal: "right" };
-        }
-      });
     }
 
     // 添加空行
