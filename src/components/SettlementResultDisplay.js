@@ -26,7 +26,7 @@ export default function SettlementResultDisplay() {
       const fileName = `结算单合并结果_${new Date()
         .toISOString()
         .slice(0, 10)}.xlsx`;
-      downloadExcel(processedData, fileName);
+      downloadExcel(processedData, fileName, calculatedTotals);
     } catch (error) {
       console.error("Excel下载失败:", error);
     }

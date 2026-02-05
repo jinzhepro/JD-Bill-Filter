@@ -318,8 +318,8 @@ export default function DataDisplay({
                    }}
                  />
                ))}
-             </tbody>
-          </table>
+              </tbody>
+            </table>
         </div>
       </section>
 

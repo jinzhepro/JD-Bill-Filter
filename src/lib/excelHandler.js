@@ -222,7 +222,7 @@ function parseCSVText(csvText, resolve, reject) {
 }
 
 // 下载Excel文件
-export async function downloadExcel(data, fileName) {
+export async function downloadExcel(data, fileName, totals = null) {
   let url = null;
   let link = null;
 
@@ -238,13 +238,22 @@ export async function downloadExcel(data, fileName) {
     // 获取表头
     const headers = Object.keys(data[0]);
 
+    // 列名映射：显示名称
+    const columnMapping = {
+      "应结金额": "货款",
+      "净结金额": "收入",
+    };
+
+    // 映射后的表头
+    const displayHeaders = headers.map((h) => columnMapping[h] || h);
+
     // 找到商品编码列的索引
     const productCodeColumnIndex = headers.findIndex((h) =>
       PRODUCT_CODE_COLUMNS.includes(h)
     );
 
-    // 设置列属性
-    worksheet.columns = headers.map((header) => ({
+    // 设置列属性（使用映射后的表头）
+    worksheet.columns = displayHeaders.map((header) => ({
       header,
       key: header,
       width: 20,
@@ -272,7 +281,8 @@ export async function downloadExcel(data, fileName) {
     // 逐行添加数据，确保各列正确处理
     data.forEach((item) => {
       const rowValues = [];
-      headers.forEach((header) => {
+      headers.forEach((header, index) => {
+        const displayHeader = displayHeaders[index];
         let value = item[header];
         if (PRODUCT_CODE_COLUMNS.includes(header)) {
           value = String(value || "");
@@ -281,8 +291,70 @@ export async function downloadExcel(data, fileName) {
         }
         rowValues.push(value);
       });
-      worksheet.addRow(rowValues);
+      const row = worksheet.addRow(rowValues);
+      // 设置数据行边框
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: "thin" },
+          bottom: { style: "thin" },
+          left: { style: "thin" },
+          right: { style: "thin" },
+        };
+      });
     });
+
+    // 设置表头样式
+    const headerRow = worksheet.getRow(1);
+    headerRow.eachCell((cell) => {
+      cell.font = { bold: true };
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFE0E0E0" },
+      };
+      cell.alignment = { horizontal: "center" };
+      cell.border = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
+    });
+
+    // 添加总计行
+    if (totals && typeof totals === "object") {
+      const totalRow = [];
+      headers.forEach((header, index) => {
+        const displayHeader = displayHeaders[index];
+        if (header === "商品编号") {
+          totalRow.push("总计");
+        } else if (totals[header] !== undefined) {
+          const value = cleanAmount(totals[header]);
+          totalRow.push(value);
+        } else {
+          totalRow.push("");
+        }
+      });
+      const totalRowObj = worksheet.addRow(totalRow);
+      // 设置总计行样式
+      totalRowObj.eachCell((cell) => {
+        cell.font = { bold: true };
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FFE0E0E0" },
+        };
+        cell.alignment = { horizontal: "right" };
+        cell.border = {
+          top: { style: "thin" },
+          bottom: { style: "thin" },
+          left: { style: "thin" },
+          right: { style: "thin" },
+        };
+      });
+      // 第一个单元格（总计文字）左对齐
+      totalRowObj.getCell(1).alignment = { horizontal: "left" };
+    }
 
     // 生成文件
     const buffer = await workbook.xlsx.writeBuffer();
