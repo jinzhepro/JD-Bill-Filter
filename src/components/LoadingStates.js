@@ -3,6 +3,7 @@
 import React from "react";
 import { Skeleton } from "./ui/skeleton";
 import { Button } from "./ui/button";
+import { ArrowLeft } from "lucide-react";
 
 /**
  * 通用加载状态骨架屏组件
@@ -111,9 +112,7 @@ export function ProcessingState({ progress = 0, message = "处理中..." }) {
       {/* 返回按钮和标题 */}
       <div className="flex justify-between items-center">
         <Button variant="outline" disabled>
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
+          <ArrowLeft className="w-4 h-4 mr-2" />
           返回
         </Button>
         <h1 className="text-2xl font-bold text-foreground">处理中...</h1>

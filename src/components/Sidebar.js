@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { FileSpreadsheet, ArrowLeftRight } from "lucide-react";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -12,40 +13,12 @@ export function Sidebar() {
     {
       name: "结算单处理",
       href: "/",
-      icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
-          />
-        </svg>
-      ),
+      icon: <FileSpreadsheet className="w-5 h-5" />,
     },
     {
       name: "供应商转换",
       href: "/suppliers",
-      icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-          />
-        </svg>
-      ),
+      icon: <ArrowLeftRight className="w-5 h-5" />,
     },
   ];
 
@@ -55,19 +28,7 @@ export function Sidebar() {
       <div className="p-5 border-b border-border">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-            <svg
-              className="w-6 h-6 text-primary-foreground"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-              />
-            </svg>
+            <FileSpreadsheet className="w-6 h-6 text-primary-foreground" />
           </div>
           <div>
             <h2 className="text-sm font-semibold text-foreground">

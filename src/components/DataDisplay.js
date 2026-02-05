@@ -5,6 +5,15 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useSettlement } from "@/context/SettlementContext";
+import { 
+  ArrowLeft, 
+  Download, 
+  RefreshCcw, 
+  Copy, 
+  ArrowUp, 
+  ArrowDown, 
+  ChevronsUpDown 
+} from "lucide-react";
 
 export default function DataDisplay({
   title = "处理结果",
@@ -145,7 +154,7 @@ export default function DataDisplay({
     if (num < 0) {
       return <span className="text-destructive font-medium">-¥{formatted}</span>;
     }
-    return <span className="text-green-600 font-medium">¥{formatted}</span>;
+    return <span className="text-primary font-medium">¥{formatted}</span>;
   };
 
   const statsContent = customStats || (
@@ -181,9 +190,7 @@ export default function DataDisplay({
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <Button onClick={handleReset} variant="outline">
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
+          <ArrowLeft className="w-4 h-4 mr-2" />
           返回
         </Button>
         <h1 className="text-2xl font-bold text-foreground">{title}</h1>
@@ -205,15 +212,11 @@ export default function DataDisplay({
 
         <div className="mb-6 flex gap-3 flex-wrap">
           <Button variant="outline" onClick={handleDownloadExcel}>
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
+            <Download className="w-4 h-4 mr-2" />
             {downloadButtonText}
           </Button>
           <Button variant="outline" onClick={handleReset}>
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
+            <RefreshCcw className="w-4 h-4 mr-2" />
             {resetButtonText}
           </Button>
         </div>
@@ -221,15 +224,11 @@ export default function DataDisplay({
         {showCopyColumn && (
           <div className="mb-4 p-3 bg-muted/50 rounded-lg flex items-center gap-4 text-sm">
             <div className="flex items-center gap-2 text-muted-foreground">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
+              <Copy className="w-4 h-4" />
               <span>点击 <span className="font-medium">复制图标</span> 复制列数据</span>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-              </svg>
+              <ChevronsUpDown className="w-4 h-4" />
               <span>点击 <span className="font-medium">排序图标</span> 排序</span>
             </div>
           </div>
@@ -262,7 +261,7 @@ export default function DataDisplay({
                           <div className="flex items-center gap-1">
                             <span>{displayHeader}</span>
                             {isTotalColumn && (
-                              <span className={`text-xs font-mono border rounded px-1.5 py-0.5 ${isAmtField ? "text-green-600 border-green-200 bg-green-50" : "text-blue-600 border-blue-200 bg-blue-50"}`}>
+                              <span className={`text-xs font-mono border rounded px-1.5 py-0.5 ${isAmtField ? "bg-primary/10 text-primary border-primary/20" : "bg-muted/50 text-muted-foreground border-border"}`}>
                                 {isAmtField ? formatAmount(total) : total?.toFixed(0)}
                               </span>
                             )}
@@ -275,18 +274,12 @@ export default function DataDisplay({
                             >
                               {sortConfig.key === header ? (
                                 sortConfig.direction === "asc" ? (
-                                  <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                                  </svg>
+                                  <ArrowUp className="w-4 h-4 text-primary" />
                                 ) : (
-                                  <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                  </svg>
+                                  <ArrowDown className="w-4 h-4 text-primary" />
                                 )
                               ) : (
-                                <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                                </svg>
+                                <ChevronsUpDown className="w-4 h-4 text-muted-foreground" />
                               )}
                             </button>
                             {showCopyColumn && (
@@ -295,9 +288,7 @@ export default function DataDisplay({
                                 className="p-1 rounded hover:bg-muted/50 transition-colors"
                                 title={`点击复制 "${displayHeader}" 列数据`}
                               >
-                                <svg className="w-4 h-4 text-muted-foreground hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                </svg>
+                                <Copy className="w-4 h-4 text-muted-foreground hover:text-primary transition-colors" />
                               </button>
                             )}
                           </div>
@@ -366,25 +357,25 @@ export default function DataDisplay({
                     <div className="grid grid-cols-4 gap-2">
                       <div className="font-medium">数量</div>
                       <div className="text-right">{formatNumber(original?.数量)}</div>
-                      <div className="text-right text-red-600">-{formatNumber(deducted?.数量)}</div>
+                      <div className="text-right text-destructive">-{formatNumber(deducted?.数量)}</div>
                       <div className="text-right font-semibold">{formatNumber(current?.数量)}</div>
                     </div>
                     <div className="grid grid-cols-4 gap-2">
                       <div className="font-medium">货款</div>
                       <div className="text-right">¥{formatNumber(original?.应结金额)}</div>
-                      <div className="text-right text-red-600">-¥{formatNumber(deducted?.应结金额)}</div>
+                      <div className="text-right text-destructive">-¥{formatNumber(deducted?.应结金额)}</div>
                       <div className="text-right font-semibold">¥{formatNumber(current?.应结金额)}</div>
                     </div>
                     <div className="grid grid-cols-4 gap-2">
                       <div className="font-medium">直营服务费</div>
                       <div className="text-right">¥{formatNumber(original?.直营服务费)}</div>
-                      <div className="text-right text-red-600">-¥{formatNumber(deducted?.直营服务费)}</div>
+                      <div className="text-right text-destructive">-¥{formatNumber(deducted?.直营服务费)}</div>
                       <div className="text-right font-semibold">¥{formatNumber(current?.直营服务费)}</div>
                     </div>
                     <div className="grid grid-cols-4 gap-2">
                       <div className="font-medium">收入</div>
                       <div className="text-right">¥{formatNumber(original?.净结金额)}</div>
-                      <div className="text-right text-red-600">-¥{formatNumber(deducted?.应结金额 + deducted?.直营服务费)}</div>
+                      <div className="text-right text-destructive">-¥{formatNumber(deducted?.应结金额 + deducted?.直营服务费)}</div>
                       <div className="text-right font-semibold">¥{formatNumber(current?.净结金额)}</div>
                     </div>
                     <div className="pt-3 mt-3 border-t border-border text-xs text-muted-foreground">
@@ -410,7 +401,7 @@ function TableRow({ row, rowIndex, amountField, amountFields, showRowNumber, sho
     if (num < 0) {
       return <span className="text-destructive font-medium">-¥{formatted}</span>;
     }
-    return <span className="text-green-600 font-medium">¥{formatted}</span>;
+    return <span className="text-primary font-medium">¥{formatted}</span>;
   };
 
   const isAmountField = (key) => {
@@ -434,9 +425,9 @@ function TableRow({ row, rowIndex, amountField, amountFields, showRowNumber, sho
     const originalQuantity = lastChange.original?.数量 || 0;
 
     if (currentQuantity < originalQuantity) {
-      return "bg-red-50/50 hover:bg-red-100/50";
+      return "bg-destructive/10 hover:bg-destructive/20";
     } else if (currentQuantity > originalQuantity) {
-      return "bg-green-50/50 hover:bg-green-100/50";
+      return "bg-primary/10 hover:bg-primary/20";
     } else {
       return rowIndex % 2 === 0 ? "bg-background" : "bg-muted/30";
     }
@@ -454,7 +445,7 @@ function TableRow({ row, rowIndex, amountField, amountFields, showRowNumber, sho
         <td className="px-4 py-2.5 text-left border-b border-border/50 text-muted-foreground w-20">
           {rowIndex + 1}
           {hasChanges && showDataChanges && (
-            <span className="ml-1 inline-block w-2 h-2 bg-red-500 rounded-full" title="已处理"></span>
+            <span className="ml-1 inline-block w-2 h-2 bg-destructive rounded-full" title="已处理"></span>
           )}
         </td>
       )}

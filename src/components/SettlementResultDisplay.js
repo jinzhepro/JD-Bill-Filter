@@ -100,27 +100,27 @@ export default function SettlementResultDisplay() {
       customStats={
         <div className="space-y-4">
           <div className="grid grid-cols-4 gap-4">
-            <div className="flex flex-col p-3 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+            <div className="flex flex-col p-3 rounded-lg bg-primary/10 border border-primary/20">
               <span className="text-xs text-muted-foreground">货款合计</span>
-              <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
+              <span className="text-xl font-bold text-primary">
                 ¥{totalAmount.toFixed(2)}
               </span>
             </div>
-            <div className="flex flex-col p-3 rounded-lg bg-orange-100 dark:bg-orange-900/30">
+            <div className="flex flex-col p-3 rounded-lg bg-destructive/10 border border-destructive/20">
               <span className="text-xs text-muted-foreground">直营服务费</span>
-              <span className="text-xl font-bold text-orange-600 dark:text-orange-400">
+              <span className="text-xl font-bold text-destructive">
                 ¥{selfOperationAmount.toFixed(2)}
               </span>
             </div>
-            <div className="flex flex-col p-3 rounded-lg bg-purple-100 dark:bg-purple-900/30">
+            <div className="flex flex-col p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
               <span className="text-xs text-muted-foreground">收入</span>
-              <span className="text-xl font-bold text-purple-600 dark:text-purple-400">
+              <span className="text-xl font-bold text-purple-500 dark:text-purple-400">
                 ¥{finalAmount.toFixed(2)}
               </span>
             </div>
-            <div className="flex flex-col p-3 rounded-lg bg-green-100 dark:bg-green-900/30">
+            <div className="flex flex-col p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
               <span className="text-xs text-muted-foreground">数量合计</span>
-              <span className="text-xl font-bold text-green-600 dark:text-green-400">
+              <span className="text-xl font-bold text-blue-500 dark:text-blue-400">
                 {totalQuantity.toFixed(0)}
               </span>
             </div>

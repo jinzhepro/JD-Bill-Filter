@@ -3,6 +3,7 @@
 import React, { useState, useRef, useCallback } from "react";
 import { Button } from "./ui/button";
 import { isValidFileExtension } from "@/lib/fileValidation";
+import { Upload, FileSpreadsheet, FileText, Trash2 } from "lucide-react";
 
 /**
  * 通用文件上传组件
@@ -132,19 +133,9 @@ export default function FileUploader({
   const getFileIcon = (fileName) => {
     const ext = fileName.split(".").pop().toLowerCase();
     if (["xlsx", "xls"].includes(ext)) {
-      return (
-        <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2l5 5h-5V4zM6 20V4h6v6h6v10H6z" />
-          <path d="M8 12h8v2H8zm0 4h8v2H8z" />
-        </svg>
-      );
+      return <FileSpreadsheet className="w-5 h-5 text-green-600 dark:text-green-400" />;
     }
-    return (
-      <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2l5 5h-5V4zM6 20V4h6v6h6v10H6z" />
-        <path d="M8 12h8v2H8zm0 4h8v2H8z" />
-      </svg>
-    );
+    return <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />;
   };
 
   // 格式化文件大小
@@ -176,19 +167,7 @@ export default function FileUploader({
         >
           <div className="flex justify-center mb-4">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <svg
-                className="w-8 h-8 text-primary"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                />
-              </svg>
+              <Upload className="w-8 h-8 text-primary" />
             </div>
           </div>
           <h3 className="text-lg font-semibold text-foreground mb-2">
@@ -198,9 +177,7 @@ export default function FileUploader({
             {description}
           </p>
           <Button size="lg" variant="outline" disabled={disabled} className="min-w-[140px]">
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-            </svg>
+            <Upload className="w-4 h-4 mr-2" />
             {buttonText}
           </Button>
         </div>
@@ -247,9 +224,7 @@ export default function FileUploader({
                       handleRemoveFile(index);
                     }}
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
+                    <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
               ))}
