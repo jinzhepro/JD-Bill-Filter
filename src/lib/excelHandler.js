@@ -303,8 +303,16 @@ export async function downloadExcel(data, fileName, totals = null, dataChanges =
       });
     });
 
+    // 添加标题行
+    const titleRow = worksheet.insertRow(1, ["青云通销售订单"]);
+    titleRow.eachCell((cell) => {
+      cell.font = { bold: true, size: 16 };
+      cell.alignment = { horizontal: "center", vertical: "center" };
+    });
+    worksheet.mergeCells(1, 1, 1, displayHeaders.length);
+
     // 设置表头样式
-    const headerRow = worksheet.getRow(1);
+    const headerRow = worksheet.getRow(2);
     headerRow.eachCell((cell) => {
       cell.font = { bold: true };
       cell.fill = {
@@ -402,6 +410,36 @@ export async function downloadExcel(data, fileName, totals = null, dataChanges =
             cell.alignment = { horizontal: "right" };
           }
         });
+      });
+
+      // 添加合计行
+      let totalQuantity = 0;
+      let totalAmount = 0;
+      let totalServiceFee = 0;
+      Object.values(dataChanges).forEach((change) => {
+        const { deducted } = change;
+        totalQuantity += parseFloat(deducted.数量) || 0;
+        totalAmount += parseFloat(deducted.应结金额) || 0;
+        totalServiceFee += parseFloat(deducted.直营服务费) || 0;
+      });
+
+      const totalRow = worksheet.addRow(["合计", totalAmount, totalQuantity, totalServiceFee]);
+      totalRow.eachCell((cell) => {
+        cell.font = { bold: true };
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FFE0E0E0" },
+        };
+        cell.border = {
+          top: { style: "thin" },
+          bottom: { style: "thin" },
+          left: { style: "thin" },
+          right: { style: "thin" },
+        };
+        if (cell.col > 1) {
+          cell.alignment = { horizontal: "right" };
+        }
       });
     }
 
