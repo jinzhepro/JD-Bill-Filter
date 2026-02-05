@@ -223,6 +223,9 @@ function parseCSVText(csvText, resolve, reject) {
 
 // 下载Excel文件
 export async function downloadExcel(data, fileName) {
+  let url = null;
+  let link = null;
+
   try {
     // 创建工作簿
     const workbook = new ExcelJS.Workbook();
@@ -288,17 +291,34 @@ export async function downloadExcel(data, fileName) {
     const blob = new Blob([buffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
+    url = URL.createObjectURL(blob);
+    link = document.createElement("a");
     link.href = url;
     link.download = fileName;
+
+    // 使用一次性事件监听器确保清理
+    const cleanup = () => {
+      requestAnimationFrame(() => {
+        URL.revokeObjectURL(url);
+        link?.remove();
+      });
+    };
+
+    link.addEventListener("click", cleanup, { once: true });
     link.click();
-    URL.revokeObjectURL(url);
 
     return true;
   } catch (error) {
     logger.error("下载过程中发生错误:", error);
     throw new Error(`文件下载失败: ${error.message}`);
+  } finally {
+    // 确保在任何情况下都清理资源
+    if (url) {
+      URL.revokeObjectURL(url);
+    }
+    if (link) {
+      link.remove();
+    }
   }
 }
 

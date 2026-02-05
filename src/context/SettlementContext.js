@@ -5,6 +5,7 @@ import {
   useContext,
   useReducer,
   useCallback,
+  useMemo,
 } from "react";
 import { LogType } from "@/types";
 
@@ -20,13 +21,12 @@ import { LogType } from "@/types";
  * @property {boolean} mergeMode - 是否合并模式
  * @property {Array} mergedData - 合并后的数据
  * @property {Array} fileDataArray - 文件数据数组
- * @property {number} originalCount - 原始数据行数
- * @property {number} processedCount - 处理后数据行数
- * @property {number} originalTotal - 原始总金额
- * @property {number} processedTotal - 处理后总金额
  * @property {Array} processingHistory - 处理历史
  * @property {Object} dataChanges - 数据变更记录
  * @property {Array} pasteHistory - 粘贴历史
+ *
+ * @note 派生数据（originalCount, processedCount, originalTotal, processedTotal）
+ *       已移除，应使用 useMemo 在组件层派生计算，避免状态冗余
  */
 const initialState = {
   uploadedFiles: [],
@@ -38,15 +38,14 @@ const initialState = {
   mergeMode: false,
   mergedData: [],
   fileDataArray: [],
-  originalCount: 0,
-  processedCount: 0,
-  originalTotal: 0,
-  processedTotal: 0,
   processingHistory: [],
   dataChanges: {},
   pasteHistory: [],
 };
 
+/**
+ * Action Types - 使用常量字符串避免拼写错误
+ */
 const ActionTypes = {
   SET_FILE: "SET_FILE",
   ADD_FILE: "ADD_FILE",
@@ -63,10 +62,6 @@ const ActionTypes = {
   SET_MERGE_MODE: "SET_MERGE_MODE",
   SET_MERGED_DATA: "SET_MERGED_DATA",
   SET_FILE_DATA_ARRAY: "SET_FILE_DATA_ARRAY",
-  SET_ORIGINAL_COUNT: "SET_ORIGINAL_COUNT",
-  SET_PROCESSED_COUNT: "SET_PROCESSED_COUNT",
-  SET_ORIGINAL_TOTAL: "SET_ORIGINAL_TOTAL",
-  SET_PROCESSED_TOTAL: "SET_PROCESSED_TOTAL",
   SET_PROCESSING_HISTORY: "SET_PROCESSING_HISTORY",
   SET_DATA_CHANGES: "SET_DATA_CHANGES",
   ADD_PROCESSING_HISTORY: "ADD_PROCESSING_HISTORY",
@@ -136,18 +131,6 @@ function settlementReducer(state, action) {
     case ActionTypes.SET_FILE_DATA_ARRAY:
       return { ...state, fileDataArray: action.payload };
 
-    case ActionTypes.SET_ORIGINAL_COUNT:
-      return { ...state, originalCount: action.payload };
-
-    case ActionTypes.SET_PROCESSED_COUNT:
-      return { ...state, processedCount: action.payload };
-
-    case ActionTypes.SET_ORIGINAL_TOTAL:
-      return { ...state, originalTotal: action.payload };
-
-    case ActionTypes.SET_PROCESSED_TOTAL:
-      return { ...state, processedTotal: action.payload };
-
     case ActionTypes.SET_PROCESSING_HISTORY:
       return { ...state, processingHistory: action.payload };
 
@@ -201,10 +184,6 @@ function settlementReducer(state, action) {
         mergeMode: false,
         mergedData: [],
         fileDataArray: [],
-        originalCount: 0,
-        processedCount: 0,
-        originalTotal: 0,
-        processedTotal: 0,
         processingHistory: [],
         dataChanges: {},
       };
@@ -293,22 +272,6 @@ export function SettlementProvider({ children }) {
       dispatch({ type: ActionTypes.SET_FILE_DATA_ARRAY, payload: data });
     }, []),
 
-    setOriginalCount: useCallback((count) => {
-      dispatch({ type: ActionTypes.SET_ORIGINAL_COUNT, payload: count });
-    }, []),
-
-    setProcessedCount: useCallback((count) => {
-      dispatch({ type: ActionTypes.SET_PROCESSED_COUNT, payload: count });
-    }, []),
-
-    setOriginalTotal: useCallback((total) => {
-      dispatch({ type: ActionTypes.SET_ORIGINAL_TOTAL, payload: total });
-    }, []),
-
-    setProcessedTotal: useCallback((total) => {
-      dispatch({ type: ActionTypes.SET_PROCESSED_TOTAL, payload: total });
-    }, []),
-
     reset: useCallback(() => {
       dispatch({ type: ActionTypes.RESET });
     }, []),
@@ -346,10 +309,26 @@ export function SettlementProvider({ children }) {
     }, []),
   };
 
-  const value = {
+  // 使用 useMemo 优化，避免不必要的重渲染
+  // 只在 state 或 actions 变化时重新创建 value 对象
+  const value = useMemo(() => ({
     ...state,
     ...actions,
-  };
+  }), [
+    state.uploadedFiles,
+    state.originalData,
+    state.processedData,
+    state.isProcessing,
+    state.logs,
+    state.error,
+    state.mergeMode,
+    state.mergedData,
+    state.fileDataArray,
+    state.processingHistory,
+    state.dataChanges,
+    state.pasteHistory,
+    // actions 都是 useCallback 创建的稳定引用，不需要添加到依赖数组
+  ]);
 
   return <SettlementContext.Provider value={value}>{children}</SettlementContext.Provider>;
 }

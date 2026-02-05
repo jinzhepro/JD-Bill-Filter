@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useSettlement } from "@/context/SettlementContext";
 import { downloadExcel } from "@/lib/excelHandler";
 import DataDisplay from "./DataDisplay";
@@ -32,33 +32,49 @@ export default function SettlementResultDisplay() {
     }
   };
 
-  // 检查处理后的数据是否包含数量字段
-  const hasQuantity = processedData && processedData.length > 0 && "数量" in processedData[0];
+  // 使用 useMemo 优化派生计算，避免不必要的重复计算
+  const hasQuantity = useMemo(() =>
+    processedData && processedData.length > 0 && "数量" in processedData[0],
+    [processedData]
+  );
 
-  // 计算数量合计
-  const totalQuantity = processedData?.reduce((sum, item) => sum + (parseFloat(item.数量) || 0), 0) || 0;
+  const totalQuantity = useMemo(() =>
+    processedData?.reduce((sum, item) => sum + (parseFloat(item.数量) || 0), 0) || 0,
+    [processedData]
+  );
 
-  // 计算货款合计
-  const totalAmount = processedData?.reduce((sum, item) => sum + (parseFloat(item.应结金额) || 0), 0) || 0;
+  const totalAmount = useMemo(() =>
+    processedData?.reduce((sum, item) => sum + (parseFloat(item.应结金额) || 0), 0) || 0,
+    [processedData]
+  );
 
-  // 计算直营服务费合计（从processedData中直接获取，因为已经按SKU分配）
-  const selfOperationAmount = processedData?.reduce((sum, item) => sum + (parseFloat(item.直营服务费) || 0), 0) || 0;
+  const selfOperationAmount = useMemo(() =>
+    processedData?.reduce((sum, item) => sum + (parseFloat(item.直营服务费) || 0), 0) || 0,
+    [processedData]
+  );
 
-  // 计算实际应结金额（货款合计 + 直营服务费，直营服务费是负数）
-  const finalAmount = totalAmount + selfOperationAmount;
+  const finalAmount = useMemo(() =>
+    totalAmount + selfOperationAmount,
+    [totalAmount, selfOperationAmount]
+  );
 
-  // 计算需要显示总和的列
-  const columns = ["应结金额", "直营服务费", "数量", "净结金额"];
-  const totals = {};
-  columns.forEach((column) => {
-    const total = processedData?.reduce((sum, row) => {
-      const value = parseFloat(row[column] || 0);
-      return sum + (isNaN(value) ? 0 : value);
-    }, 0) || 0;
-    totals[column] = total;
-  });
+  // 使用 calculatedTotals 传递预计算的总和对象
+  const calculatedTotals = useMemo(() => {
+    const totals = {};
+    ["应结金额", "直营服务费", "数量", "净结金额"].forEach((column) => {
+      const total = processedData?.reduce((sum, row) => {
+        const value = parseFloat(row[column] || 0);
+        return sum + (isNaN(value) ? 0 : value);
+      }, 0) || 0;
+      totals[column] = total;
+    });
+    return totals;
+  }, [processedData]);
 
-  const dataChangesCount = Object.keys(dataChanges).length;
+  const dataChangesCount = useMemo(() =>
+    Object.keys(dataChanges).length,
+    [dataChanges]
+  );
 
   return (
     <DataDisplay
@@ -74,7 +90,7 @@ export default function SettlementResultDisplay() {
       amountField="应结金额"
       amountFields={["单价", "总价", "应结金额", "直营服务费", "净结金额"]}
       showRowNumber={true}
-      columnTotals={["应结金额", "直营服务费", "数量", "净结金额"]}
+      calculatedTotals={calculatedTotals}
       showStats={false}
       showDataChanges={showDataChanges}
       columnMapping={{
