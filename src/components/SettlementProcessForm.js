@@ -6,6 +6,7 @@ import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { useSettlement } from "@/context/SettlementContext";
 import { useToast } from "@/hooks/use-toast";
+import { Plus, Trash2, Check, RefreshCcw, Info, CheckCircle } from "lucide-react";
 
 /**
  * 结算单处理结果添加表单组件
@@ -281,8 +282,14 @@ export default function SettlementProcessForm() {
     if (!row.sku.trim()) {
       return { id: row.id, message: "请输入SKU" };
     }
+    if (!row.amount.trim() || isNaN(parseFloat(row.amount))) {
+      return { id: row.id, message: "请输入有效的货款" };
+    }
     if (!row.quantity.trim() || isNaN(parseFloat(row.quantity))) {
       return { id: row.id, message: "请输入有效的数量" };
+    }
+    if (!row.serviceFee.trim() || isNaN(parseFloat(row.serviceFee))) {
+      return { id: row.id, message: "请输入有效的直营服务费" };
     }
     return null;
   };
@@ -527,18 +534,12 @@ export default function SettlementProcessForm() {
         </div>
         <Textarea
           placeholder="粘贴多行数据，支持格式：
-• 制表符分隔：SKU\t货款\t数量\t服务费
-• 空格分隔：SKU 货款 数量 服务费
-• 逗号分隔：SKU,货款,数量,服务费
-• 竖线分隔：SKU|货款|数量|服务费
+• 制表符分隔：SKU* 货款* 数量* 服务费*
+• 空格分隔：SKU* 货款* 数量* 服务费*
+• 逗号分隔：SKU*,货款*,数量*,服务费*
+• 竖线分隔：SKU*|货款*|数量*|服务费*
 
-示例（空格分隔）：
-A001 100.50 5 10.00
-A002 200.00 3 15.00
-
-示例（只有SKU和数量）：
-A001 5
-A002 3"
+* 为必填项"
           value={pasteContent}
           onChange={handlePasteContentChange}
           className="h-32 text-sm font-mono"
@@ -600,19 +601,7 @@ A002 3"
           手动输入
         </h3>
         <Button variant="outline" size="sm" onClick={handleAddRow}>
-          <svg
-            className="w-4 h-4 mr-1"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
+          <Plus className="w-4 h-4 mr-1" />
           添加行
         </Button>
       </div>
@@ -626,7 +615,7 @@ A002 3"
         </div>
         <div className="col-span-3">
           <label className="text-xs font-medium text-muted-foreground">
-            货款
+            货款 <span className="text-destructive">*</span>
           </label>
         </div>
         <div className="col-span-2">
@@ -636,7 +625,7 @@ A002 3"
         </div>
         <div className="col-span-3">
           <label className="text-xs font-medium text-muted-foreground">
-            直营服务费 <span className="text-xs">(正数减小)</span>
+            直营服务费 (正数减小) <span className="text-destructive">*</span>
           </label>
         </div>
         <div className="col-span-1">
@@ -715,19 +704,7 @@ A002 3"
                 className="p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-colors"
                 title="删除此行"
               >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
+                <Trash2 className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -737,35 +714,11 @@ A002 3"
       {/* 操作按钮 */}
       <div className="flex gap-3 mt-4">
         <Button onClick={handleSubmit} className="flex-1 md:flex-none">
-          <svg
-            className="w-4 h-4 mr-2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-            />
-          </svg>
+          <Check className="w-4 h-4 mr-2" />
           处理 ({rows.filter((r) => r.sku.trim()).length} 行)
         </Button>
         <Button variant="outline" onClick={handleReset}>
-          <svg
-            className="w-4 h-4 mr-2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-            />
-          </svg>
+          <RefreshCcw className="w-4 h-4 mr-2" />
           重置
         </Button>
       </div>
@@ -773,19 +726,7 @@ A002 3"
       {/* 说明文字 */}
       <div className="mt-4 p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
         <p className="flex items-start gap-2">
-          <svg
-            className="w-4 h-4 mt-0.5 flex-shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
+          <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
           <span>
             支持多行批量处理。推荐使用上方的<strong>快速粘贴</strong>功能，直接粘贴多行数据（支持制表符、空格、逗号、竖线分隔），系统会自动识别每一行并填充到表格中。
             也可以点击&quot;添加行&quot;手动输入。直营服务费输入正数可减小服务费扣除金额（例如：-10 输入 5 变为 -5）。
