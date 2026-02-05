@@ -3,7 +3,6 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { FileSpreadsheet, ArrowLeftRight } from "lucide-react";
 
 export function Sidebar() {
@@ -25,10 +24,10 @@ export function Sidebar() {
   return (
     <aside className="bg-card border-r border-border w-64 min-h-screen flex flex-col">
       {/* Logo 区域 */}
-      <div className="p-5 border-b border-border">
+      <div className="h-14 border-b border-border flex items-center px-5">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-            <FileSpreadsheet className="w-6 h-6 text-primary-foreground" />
+          <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
+            <FileSpreadsheet className="w-5 h-5 text-primary-foreground" />
           </div>
           <div>
             <h2 className="text-sm font-semibold text-foreground">
@@ -74,19 +73,6 @@ export function Sidebar() {
           })}
         </ul>
       </nav>
-
-      {/* 底部信息 */}
-      <div className="p-4 border-t border-border space-y-3">
-        {/* 主题切换按钮 */}
-        <div className="flex justify-center">
-          <ThemeToggle />
-        </div>
-        
-        {/* 版本信息 */}
-        <div className="text-xs text-muted-foreground text-center">
-          版本 0.1.0
-        </div>
-      </div>
     </aside>
   );
 }
