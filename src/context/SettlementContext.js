@@ -172,7 +172,11 @@ function settlementReducer(state, action) {
       return { ...state, pasteHistory: [] };
 
     case ActionTypes.RESET:
-      return initialState;
+      return {
+        ...state,
+        ...initialState,
+        pasteHistory: state.pasteHistory,
+      };
 
     case ActionTypes.RESET_SETTLEMENT:
       return {
@@ -186,6 +190,7 @@ function settlementReducer(state, action) {
         fileDataArray: [],
         processingHistory: [],
         dataChanges: {},
+        pasteHistory: state.pasteHistory,
       };
 
     default:
