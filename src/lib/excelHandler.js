@@ -222,7 +222,7 @@ function parseCSVText(csvText, resolve, reject) {
 }
 
 // 下载Excel文件
-export async function downloadExcel(data, fileName, totals = null) {
+export async function downloadExcel(data, fileName, totals = null, dataChanges = null) {
   let url = null;
   let link = null;
 
@@ -355,6 +355,68 @@ export async function downloadExcel(data, fileName, totals = null) {
       // 第一个单元格（总计文字）左对齐
       totalRowObj.getCell(1).alignment = { horizontal: "left" };
     }
+
+    // 添加减去的数据行
+    if (dataChanges && typeof dataChanges === "object" && Object.keys(dataChanges).length > 0) {
+      // 添加空行
+      worksheet.addRow([]);
+      
+      // 添加标题行
+      const titleRow = worksheet.addRow(["下游开票记录"]);
+      titleRow.eachCell((cell) => {
+        cell.font = { bold: true, size: 12 };
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FFE0E0E0" },
+        };
+        cell.alignment = { horizontal: "left" };
+        cell.border = {
+          top: { style: "thin" },
+          bottom: { style: "thin" },
+          left: { style: "thin" },
+          right: { style: "thin" },
+        };
+      });
+      // 合并单元格
+      worksheet.mergeCells(titleRow.number, 1, titleRow.number, displayHeaders.length);
+
+      // 添加减去的数据行
+      Object.entries(dataChanges).forEach(([sku, change]) => {
+        const { deducted } = change;
+        const row = worksheet.addRow([
+          sku,
+          deducted.应结金额 || 0,
+          deducted.数量 || 0,
+          deducted.直营服务费 || 0,
+        ]);
+        row.eachCell((cell) => {
+          cell.border = {
+            top: { style: "thin" },
+            bottom: { style: "thin" },
+            left: { style: "thin" },
+            right: { style: "thin" },
+          };
+          // 金额列右对齐
+          if (cell.col > 2) {
+            cell.alignment = { horizontal: "right" };
+          }
+        });
+      });
+    }
+
+    // 添加空行
+    worksheet.addRow([]);
+
+    // 添加签字区域
+    const signRow = worksheet.addRow(["经办人：", "", "审核人：", ""]);
+    signRow.eachCell((cell) => {
+      cell.font = { size: 11 };
+      cell.alignment = { horizontal: "center", vertical: "bottom" };
+    });
+    // 合并单元格
+    worksheet.mergeCells(signRow.number, 1, signRow.number, 2);
+    worksheet.mergeCells(signRow.number, 3, signRow.number, 4);
 
     // 生成文件
     const buffer = await workbook.xlsx.writeBuffer();
