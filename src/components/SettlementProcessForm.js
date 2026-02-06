@@ -1,12 +1,37 @@
 "use client";
 
 import React, { useState } from "react";
+import Decimal from "decimal.js";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { useSettlement } from "@/context/SettlementContext";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, Check, RefreshCcw, Info, CheckCircle } from "lucide-react";
+
+/**
+ * 清理字符串中的金额值，返回 Decimal 对象
+ * @param {string|number} value - 原始值
+ * @returns {Decimal} 清理后的金额
+ */
+function cleanDecimalValue(value) {
+  if (value instanceof Decimal) return value;
+  if (typeof value === "number") return new Decimal(value);
+  if (typeof value === "string") {
+    const cleaned = parseFloat(value.replace(/[^0-9.-]/g, ""));
+    return new Decimal(isNaN(cleaned) ? 0 : cleaned);
+  }
+  return new Decimal(0);
+}
+
+/**
+ * 安全地将 Decimal 转换为数字
+ * @param {Decimal} decimal - Decimal 对象
+ * @returns {number} 数字值
+ */
+function toNumber(decimal) {
+  return decimal instanceof Decimal ? decimal.toNumber() : decimal;
+}
 
 /**
  * 结算单处理结果添加表单组件
@@ -62,7 +87,7 @@ export default function SettlementProcessForm() {
 
       if (parts.length >= 2) {
         let sku, amount, quantity, serviceFee;
-        
+
         if (parts.length === 2) {
           sku = parts[0];
           quantity = parts[1];
@@ -79,7 +104,7 @@ export default function SettlementProcessForm() {
           quantity = parts[2];
           serviceFee = parts[3];
         }
-        
+
         const row = {
           id: generateId(),
           sku: sku || "",
@@ -109,18 +134,18 @@ export default function SettlementProcessForm() {
     const parsedRows = parsePastedContent(pasteContent);
     if (parsedRows.length > 0) {
       setRows(parsedRows);
-      
+
       // 检查是否已存在相同内容的历史记录，如果存在则移除旧的
       const existingIndex = pasteHistory.findIndex(
         item => item.content === pasteContent
       );
-      
+
       let newHistory = [...pasteHistory];
       if (existingIndex !== -1) {
         // 移除旧的相同记录
         newHistory.splice(existingIndex, 1);
       }
-      
+
       const historyItem = {
         id: Date.now(),
         timestamp: new Date().toISOString(),
@@ -128,13 +153,13 @@ export default function SettlementProcessForm() {
         rowCount: parsedRows.length,
         preview: parsedRows.slice(0, 3).map(r => r.sku).join(", ") + (parsedRows.length > 3 ? "..." : ""),
       };
-      
+
       // 添加新记录
       newHistory.push(historyItem);
-      
+
       // 更新历史记录（一次性更新，避免多次状态更新）
       setPasteHistory(newHistory);
-      
+
       setPasteContent("");
       toast({
         title: `成功解析 ${parsedRows.length} 行数据`,
@@ -199,21 +224,21 @@ export default function SettlementProcessForm() {
       if (skuMap.has(sku)) {
         // 合并相同SKU的行
         const existing = skuMap.get(sku);
-        
+
         // 合并数量（累加）
-        const existingQuantity = parseFloat(existing.quantity) || 0;
-        const currentQuantity = parseFloat(row.quantity) || 0;
-        existing.quantity = (existingQuantity + currentQuantity).toString();
+        const existingQuantity = cleanDecimalValue(existing.quantity);
+        const currentQuantity = cleanDecimalValue(row.quantity);
+        existing.quantity = existingQuantity.plus(currentQuantity).toString();
 
         // 合并货款（累加）
-        const existingAmount = parseFloat(existing.amount) || 0;
-        const currentAmount = parseFloat(row.amount) || 0;
-        existing.amount = (existingAmount + currentAmount).toString();
+        const existingAmount = cleanDecimalValue(existing.amount);
+        const currentAmount = cleanDecimalValue(row.amount);
+        existing.amount = existingAmount.plus(currentAmount).toString();
 
         // 合并直营服务费（累加）
-        const existingServiceFee = parseFloat(existing.serviceFee) || 0;
-        const currentServiceFee = parseFloat(row.serviceFee) || 0;
-        existing.serviceFee = (existingServiceFee + currentServiceFee).toString();
+        const existingServiceFee = cleanDecimalValue(existing.serviceFee);
+        const currentServiceFee = cleanDecimalValue(row.serviceFee);
+        existing.serviceFee = existingServiceFee.plus(currentServiceFee).toString();
       } else {
         // 第一次遇到这个SKU，复制一份
         skuMap.set(sku, { ...row });
@@ -313,62 +338,63 @@ export default function SettlementProcessForm() {
     }
 
     const targetRow = updatedData[skuIndex];
-    const currentQuantity = parseFloat(targetRow["数量"] || 0);
-    const deductQuantity = parseFloat(row.quantity);
+    const currentQuantity = cleanDecimalValue(targetRow["数量"]);
+    const deductQuantity = cleanDecimalValue(row.quantity);
 
     // 检查数量是否足够扣减
     if (currentQuantity < deductQuantity) {
       return {
         success: false,
-        message: `商品编号 ${row.sku} 数量不足，当前数量: ${currentQuantity}，需要扣减: ${deductQuantity}`,
+        message: `商品编号 ${row.sku} 数量不足，当前数量: ${currentQuantity.toNumber()}，需要扣减: ${deductQuantity.toNumber()}`,
         data: updatedData,
         changes: null,
       };
     }
 
     const originalData = {
-      数量: currentQuantity,
-      应结金额: parseFloat(targetRow["应结金额"] || 0),
-      直营服务费: parseFloat(targetRow["直营服务费"] || 0),
-      净结金额: parseFloat(targetRow["净结金额"] || 0),
+      数量: toNumber(currentQuantity),
+      应结金额: toNumber(cleanDecimalValue(targetRow["应结金额"])),
+      直营服务费: toNumber(cleanDecimalValue(targetRow["直营服务费"])),
+      净结金额: toNumber(cleanDecimalValue(targetRow["净结金额"])),
     };
 
-    const newQuantity = currentQuantity - deductQuantity;
+    const newQuantity = currentQuantity.minus(deductQuantity);
 
     updatedData[skuIndex] = {
       ...targetRow,
-      数量: newQuantity,
+      数量: toNumber(newQuantity),
     };
 
     const deductedData = {
-      数量: deductQuantity,
-      应结金额: row.amount.trim() && !isNaN(parseFloat(row.amount)) ? parseFloat(row.amount) : 0,
-      直营服务费: row.serviceFee.trim() && !isNaN(parseFloat(row.serviceFee)) ? parseFloat(row.serviceFee) : 0,
+      数量: toNumber(deductQuantity),
+      应结金额: toNumber(cleanDecimalValue(row.amount)),
+      直营服务费: toNumber(cleanDecimalValue(row.serviceFee)),
     };
 
-    if (row.amount.trim() && !isNaN(parseFloat(row.amount))) {
-      const currentAmount = parseFloat(targetRow["应结金额"] || 0);
-      const newAmount = currentAmount - parseFloat(row.amount);
-      updatedData[skuIndex]["应结金额"] = newAmount;
+    const rowAmount = cleanDecimalValue(row.amount);
+    const rowServiceFee = cleanDecimalValue(row.serviceFee);
+
+    if (!rowAmount.eq(new Decimal(0))) {
+      const currentAmount = cleanDecimalValue(targetRow["应结金额"]);
+      const newAmount = currentAmount.minus(rowAmount);
+      updatedData[skuIndex]["应结金额"] = toNumber(newAmount);
     }
 
-    if (row.serviceFee.trim() && !isNaN(parseFloat(row.serviceFee))) {
-      const currentServiceFee = parseFloat(targetRow["直营服务费"] || 0);
-      const inputServiceFee = parseFloat(row.serviceFee);
-      const newServiceFee = currentServiceFee + Math.abs(inputServiceFee);
-      updatedData[skuIndex]["直营服务费"] = newServiceFee;
+    if (!rowServiceFee.eq(new Decimal(0))) {
+      const currentServiceFee = cleanDecimalValue(targetRow["直营服务费"]);
+      const newServiceFee = currentServiceFee.plus(rowServiceFee.abs());
+      updatedData[skuIndex]["直营服务费"] = toNumber(newServiceFee);
     }
 
-    const finalAmount =
-      parseFloat(updatedData[skuIndex]["应结金额"] || 0) +
-      parseFloat(updatedData[skuIndex]["直营服务费"] || 0);
-    updatedData[skuIndex]["净结金额"] = finalAmount;
+    const finalAmount = cleanDecimalValue(updatedData[skuIndex]["应结金额"])
+      .plus(cleanDecimalValue(updatedData[skuIndex]["直营服务费"]));
+    updatedData[skuIndex]["净结金额"] = toNumber(finalAmount);
 
     const currentData = {
-      数量: newQuantity,
-      应结金额: parseFloat(updatedData[skuIndex]["应结金额"] || 0),
-      直营服务费: parseFloat(updatedData[skuIndex]["直营服务费"] || 0),
-      净结金额: parseFloat(updatedData[skuIndex]["净结金额"] || 0),
+      数量: toNumber(newQuantity),
+      应结金额: toNumber(cleanDecimalValue(updatedData[skuIndex]["应结金额"])),
+      直营服务费: toNumber(cleanDecimalValue(updatedData[skuIndex]["直营服务费"])),
+      净结金额: toNumber(cleanDecimalValue(updatedData[skuIndex]["净结金额"])),
     };
 
     const changes = {
@@ -439,11 +465,11 @@ export default function SettlementProcessForm() {
       const skuIndex = findSkuIndex(row.sku);
       if (skuIndex !== -1) {
         const targetRow = processedData[skuIndex];
-        const currentQuantity = parseFloat(targetRow["数量"] || 0);
-        const deductQuantity = parseFloat(row.quantity);
-        
+        const currentQuantity = cleanDecimalValue(targetRow["数量"]);
+        const deductQuantity = cleanDecimalValue(row.quantity);
+
         if (currentQuantity < deductQuantity) {
-          insufficientSKUs.push(`${row.sku} (当前: ${currentQuantity}, 需要: ${deductQuantity})`);
+          insufficientSKUs.push(`${row.sku} (当前: ${currentQuantity.toNumber()}, 需要: ${deductQuantity.toNumber()})`);
         }
       }
     }
