@@ -22,7 +22,7 @@ npm run lint             # Run ESLint
 
 ## Tech Stack
 
-- **Framework**: Next.js 16.0.10 (App Router, JavaScript only)
+- **Framework**: Next.js 16.0.10 (App Router, JavaScript only, React Strict Mode enabled)
 - **UI**: React 19.2.0 + shadcn/ui (New York style) + Tailwind CSS 3.4.18
 - **State**: React Context + useReducer
 - **Math**: Decimal.js for financial precision
@@ -77,10 +77,26 @@ import { cn } from "@/lib/utils";
 import { MyComponent } from "./MyComponent";
 ```
 
+### Naming Conventions
+
+- **Components**: PascalCase (e.g., `SettlementContent`, `DataDisplay`)
+- **Variables/Functions**: camelCase (e.g., `processedData`, `calculateTotal`)
+- **Constants**: UPPER_SNAKE_CASE (e.g., `SETTLEMENT_FEE_NAME_FILTER`)
+- **Files**: PascalCase for components, camelCase for utilities (`.js` extension)
+
 ### Component Requirements
 
 - **Client Components**: Must start with `"use client"` directive
-- **Naming**: PascalCase for components, camelCase for variables/functions
+- **Function Comments**: Add JSDoc comments for all exported functions
+
+```javascript
+/**
+ * Process settlement data and merge SKUs
+ * @param {Array} data - Raw settlement data
+ * @returns {Promise<Array>} Processed settlement data
+ */
+export async function processSettlementData(data) { ... }
+```
 
 ### Financial Calculations
 
@@ -174,7 +190,7 @@ Run `npm run lint` to check code quality.
 Settlement processing workflow:
 1. Validate required columns (商品编号, amount columns)
 2. Detect fee name (费用名称), quantity (商品总数量)
-3. Group 直营服务费 by SKU
+3. Group 直营服务费 by by SKU
 4. Calculate total 售后卖家赔付费
 5. Merge same SKU, sum 应结金额 and 数量
 6. Deduct compensation proportionally
