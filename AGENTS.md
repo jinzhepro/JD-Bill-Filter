@@ -1,169 +1,177 @@
 # AGENTS.md
 
-This document provides guidelines for AI agents working on this codebase.
+本文件为 AI Agent 提供代码库规范指南。
 
-## Project Overview
+## 项目概览
 
-京东单据处理系统 (JD Bill Filter) - A Next.js 16 React application for processing bills/invoices using Excel files. The project uses Tailwind CSS for styling, Radix UI for accessible components, and web workers for background processing.
+京东单据处理系统 (JD Bill Filter) - 基于 Next.js 16 + React 19 的结算单处理应用。使用 Tailwind CSS + shadcn/ui 构建界面，Decimal.js 处理高精度金额计算，Web Workers 处理 Excel 文件解析。
 
-## Build, Lint, and Test Commands
+## 构建、Lint 和测试命令
 
 ```bash
-# Development
-npm run dev              # Start development server at http://localhost:3000
+# 开发
+npm run dev              # 启动开发服务器 http://localhost:3000
 
-# Production
-npm run build            # Build for production (runs ESLint automatically)
-npm run start            # Start production server
+# 生产构建
+npm run build            # 构建生产版本（自动运行 ESLint）
+npm run start            # 启动生产服务器
 
-# Linting
-npm run lint             # Run ESLint on the entire project
-npx eslint src/file.js   # Lint a specific file
-
-# Type checking (Next.js built-in)
-npm run build            # Type checking is included in build
+# 代码检查
+npm run lint             # 运行 ESLint 检查整个项目
+npx eslint src/file.js   # 检查单个文件
 ```
 
-There are no test commands currently configured in this project.
+**注意**: 本项目目前未配置测试框架。
 
-## Code Style Guidelines
+## 代码风格指南
 
-### General Principles
+### 通用原则
 
-- Write code that is clear, maintainable, and follows existing patterns in the codebase
-- Use Chinese for user-facing text and comments (e.g., error messages, UI labels)
-- Add function-level comments explaining purpose and parameters
-- Keep functions focused and under 50 lines when possible
-- Use early returns to reduce nesting
+- 所有代码使用 JavaScript（非 TypeScript）
+- 用户界面文本和注释使用中文
+- 函数必须添加 JSDoc 注释说明用途、参数和返回值
+- 保持函数精简，尽量不超过 50 行
+- 使用提前返回减少嵌套层级
 
-### Imports
+### 导入顺序
 
-- Use absolute imports with `@/` alias (configured in jsconfig.json)
-- Group imports in this order:
-  1. Next.js/React imports
-  2. Third-party libraries (Radix UI, Lucide icons, etc.)
-  3. Context/State providers
-  4. Components
-  5. Hooks
-  6. Utilities/Lib
-  7. Types
-  8. Styles
+1. React/Next.js → 2. 第三方库 → 3. Context → 4. UI 组件 → 5. Hooks → 6. 工具函数/常量 → 7. 类型定义
+
+### 格式化规范
+
+- 缩进：2 个空格 | 引号：双引号 | 语句末尾使用分号 | 多行对象使用尾随逗号 | 最大行长度：100 字符
+
+### 命名规范
+
+| 类型 | 规范 | 示例 |
+|------|------|------|
+| 组件 | PascalCase | `SettlementProcessor`, `DataTable` |
+| Hooks | camelCase，use 前缀 | `useSettlement`, `useLocalStorage` |
+| 变量/函数 | camelCase | `processedData`, `cleanAmount` |
+| 常量 | UPPER_SNAKE_CASE | `MAX_FILE_SIZE`, `SETTLEMENT_COLUMNS` |
+| 文件 | 组件用 PascalCase，其他用 camelCase | `Button.js`, `settlementProcessor.js` |
+
+### JavaScript 规范
+
+- 使用 JSDoc 添加类型注释
+- 避免使用 `any`，需要时用 `unknown`
+- 可选属性使用 `?` 标记
+- 所有客户端组件必须以 `"use client"` 开头
 
 ```javascript
-import { useState, useCallback } from "react";
-import { X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useBillProcessor } from "@/hooks/useBillProcessor";
-import { formatCurrency } from "@/lib/utils";
-import type { BillItem } from "@/types";
-```
-
-### Formatting
-
-- Use 2 spaces for indentation (project standard)
-- Use single quotes for strings
-- Use semicolons at the end of statements
-- Add trailing commas in multi-line objects and arrays
-- Maximum line length: 100 characters
-
-### Naming Conventions
-
-- **Components**: PascalCase (e.g., `BillProcessor`, `DataTable`)
-- **Hooks**: camelCase with "use" prefix (e.g., `useBillFilter`, `useLocalStorage`)
-- **Variables/Functions**: camelCase (e.g., `filteredBills`, `processExcel`)
-- **Constants**: UPPER_SNAKE_CASE for global constants (e.g., `MAX_FILE_SIZE`)
-- **Files**: kebab-case for non-component files (e.g., `bill-processor.js`)
-- **CSS Classes**: Use utility classes from Tailwind (e.g., `className="flex items-center gap-4"`)
-
-### TypeScript/JavaScript
-
-- Use TypeScript types for function parameters and return values
-- Define shared types in `/src/types` directory
-- Use explicit any sparingly; prefer `unknown` for truly unknown types
-- Use optional properties (`?`) when values may be undefined
-
-```typescript
-interface BillItem {
-  id: string;
-  amount: number;
-  description?: string;
-}
-
-function processBills(items: BillItem[]): ProcessedResult {
-  // ...
+/** 处理结算单数据
+ * @param {Array<Object>} data - 结算单原始数据
+ * @returns {Promise<Array<Object>>} 处理后的数据
+ * @throws {Error} 数据验证失败时抛出
+ */
+export async function processSettlementData(data, options = {}) {
+  // 实现
 }
 ```
 
-### Tailwind CSS
+### Tailwind CSS 规范
 
-- Use utility-first approach with Tailwind classes
-- Extract repeated class combinations with `cn()` utility (uses `clsx` + `tailwind-merge`)
-- Follow shadcn/ui component patterns for consistent styling
-- Use semantic color tokens: `bg-background`, `text-foreground`, `border-input`
+- 使用工具类优先方案
+- 使用 `cn()` 工具合并类名（基于 clsx + tailwind-merge）
+- 遵循 shadcn/ui 设计模式
+- 使用语义化颜色变量
 
 ```jsx
 import { cn } from "@/lib/utils";
 
-function Card({ className, children }) {
-  return (
-    <div className={cn("rounded-lg border bg-card p-6", className)}>
-      {children}
-    </div>
-  );
-}
+// 使用语义化颜色 + cn() 合并类名
+<div className={cn("bg-card text-foreground border-border rounded-lg p-4", className)} />
 ```
 
-### Error Handling
+### 金额计算规范
 
-- Use ErrorBoundary components for catching React rendering errors
-- Wrap async operations (file processing, API calls) in try-catch
-- Provide user-friendly error messages in Chinese
-- Log technical errors with stack traces for debugging
-- Use Toast notifications for user-facing errors
+**必须使用 Decimal.js 避免浮点数精度问题**
 
 ```javascript
+import Decimal from "decimal.js";
+import { cleanAmount } from "@/lib/utils";
+
+// 清理金额字符串
+const cleanValue = cleanAmount("¥1,234.56"); // 1234.56
+
+// 使用 Decimal 进行计算
+const amount = new Decimal(cleanValue);
+const total = amount.plus(new Decimal(100));
+const result = total.toNumber();
+```
+
+### 错误处理规范
+
+```javascript
+// 异步操作使用 try-catch
 try {
-  await processExcelFile(file);
-  showSuccessToast("处理完成");
+  const result = await processExcelFile(file);
+  addLog("处理完成", LogType.SUCCESS);
 } catch (error) {
-  console.error("Excel处理失败:", error);
-  showErrorToast("文件处理失败，请检查格式");
+  console.error("Excel 处理失败:", error);
+  addLog(`文件处理失败: ${error.message}`, LogType.ERROR);
+  setError(error.message);
 }
 ```
 
-### Component Patterns
+### 组件与 Context 模式
 
-- Use functional components with hooks
-- Extract reusable UI components to `/src/components/ui`
-- Use Radix UI primitives for accessible interactive components
-- Use the Slot pattern (`@radix-ui/react-slot`) for polymorphic components
-- Keep business logic in custom hooks, not in components
+```javascript
+"use client";
 
-### File Structure
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { useApp } from "@/context/AppContext";
 
-```
-src/
-├── app/           # Next.js App Router pages
-├── components/
-│   ├── ui/        # Reusable UI components (shadcn/ui style)
-│   └── ...        # Feature-specific components
-├── context/       # React Context providers
-├── hooks/         # Custom React hooks
-├── lib/           # Utility functions
-├── types/         # TypeScript type definitions
-└── workers/       # Web workers for background processing
+export function SettlementProcessor() {
+  const { processedData, addLog } = useApp();
+  // 业务逻辑...
+}
 ```
 
 ### Web Workers
 
-- Place worker files in `/src/workers`
-- Use for CPU-intensive operations (Excel parsing, large data filtering)
-- Communicate via `postMessage` with typed message objects
-- Handle errors gracefully and report back to main thread
+- Worker 文件放在 `/src/workers`，用于 CPU 密集型操作
+- 使用 `postMessage` 通信，优雅处理错误
 
-### React Context
+### 文件处理规范
 
-- Use Context for global state (theme, loading state, app data)
-- Create custom provider components that wrap children
-- Prefix context names with context type (e.g., `AppContext`, `ThemeContext`)
-- Keep context providers at top level in `layout.js`
+- **文件大小限制**: 50MB
+- **支持格式**: .xlsx, .xls, .csv
+- **CSV 编码**: 先尝试 UTF-8，失败后尝试 GBK
+- **商品编号**: 必须强制转为字符串，防止 Excel 自动转数字
+- **Excel 导出**: 商品编号列设置文本格式 `numFmt: '@'`
+
+```javascript
+// 商品编号强制转字符串
+const productCode = String(row["商品编号"] || "");
+
+// 清理 Excel 公式格式
+import { cleanProductCode } from "@/lib/utils";
+const cleanCode = cleanProductCode('="123456"'); // "123456"
+```
+
+## 项目结构
+
+```
+src/
+├── app/                    # Next.js App Router
+├── components/
+│   ├── ui/                # shadcn/ui 基础组件
+│   └── [Feature].js       # 业务组件
+├── context/               # React Context
+├── hooks/                 # 自定义 Hooks
+├── lib/                   # 工具函数和业务逻辑
+├── types/                 # 类型定义（JSDoc）
+└── workers/               # Web Workers
+```
+
+## 关键技术栈
+
+- **框架**: Next.js 16.0.10 (App Router)
+- **UI**: React 19.2.0 + Tailwind CSS 3.4.18 + shadcn/ui
+- **组件库**: Radix UI (Dialog, Select, Checkbox, Toast, Slot)
+- **计算**: Decimal.js (高精度数学)
+- **Excel**: ExcelJS
+- **图标**: Lucide React
+- **Lint**: ESLint 9 (Flat Config)
