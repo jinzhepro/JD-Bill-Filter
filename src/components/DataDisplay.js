@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -15,6 +15,30 @@ import {
   ChevronsUpDown 
 } from "lucide-react";
 
+/**
+ * 数据展示组件，支持排序、复制列数据、查看变化详情等功能
+ * @param {Object} props - 组件属性
+ * @param {string} props.title - 标题
+ * @param {Array} props.originalData - 原始数据
+ * @param {Array} props.processedData - 处理后的数据
+ * @param {Function} props.onReset - 重置回调
+ * @param {Function} props.onDownload - 下载回调
+ * @param {boolean} props.showCopyColumn - 是否显示复制列按钮
+ * @param {Function} props.onCopyColumn - 复制列回调
+ * @param {string} props.downloadButtonText - 下载按钮文本
+ * @param {string} props.resetButtonText - 重置按钮文本
+ * @param {boolean} props.showTotalAmount - 是否显示总金额
+ * @param {string} props.amountField - 金额字段名
+ * @param {React.ReactNode} props.customStats - 自定义统计内容
+ * @param {boolean} props.showRowNumber - 是否显示行号
+ * @param {Array} props.amountFields - 金额字段列表
+ * @param {Array} props.columnTotals - 需要计算总数的列
+ * @param {Object} props.calculatedTotals - 预计算的总数
+ * @param {boolean} props.showStats - 是否显示统计
+ * @param {React.ReactNode} props.children - 子元素
+ * @param {boolean} props.showDataChanges - 是否显示数据变化
+ * @param {Object} props.columnMapping - 列名映射
+ */
 export default function DataDisplay({
   title = "处理结果",
   originalData,
@@ -42,6 +66,38 @@ export default function DataDisplay({
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [showModal, setShowModal] = useState(false);
   const [modalSku, setModalSku] = useState(null);
+
+  /**
+   * 关闭模态框的回调函数
+   */
+  const closeModal = useCallback(() => {
+    setShowModal(false);
+    setModalSku(null);
+  }, []);
+
+  /**
+   * 处理键盘事件，支持 ESC 键关闭模态框
+   * @param {KeyboardEvent} e - 键盘事件
+   */
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Escape' && showModal) {
+      closeModal();
+    }
+  }, [showModal, closeModal]);
+
+  // 监听 ESC 键关闭模态框
+  useEffect(() => {
+    if (showModal) {
+      document.addEventListener('keydown', handleKeyDown);
+      // 防止背景滚动
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [showModal, handleKeyDown]);
 
   const calculateTotalAmount = (data) => {
     if (!data || data.length === 0) return 0;
@@ -324,19 +380,23 @@ export default function DataDisplay({
       </section>
 
       {showModal && modalSku && dataChanges[modalSku] && (
-        <div 
-          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50" 
-          onClick={() => setShowModal(false)}
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
+          onClick={closeModal}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-title"
         >
-          <div 
-            className="bg-card border border-border rounded-lg shadow-xl p-6 max-w-lg w-full mx-4" 
+          <div
+            className="bg-card border border-border rounded-lg shadow-xl p-6 max-w-lg w-full mx-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-4">
-              <div className="font-semibold text-lg text-foreground">数据变化详情</div>
-              <button 
-                onClick={() => setShowModal(false)}
+              <div id="modal-title" className="font-semibold text-lg text-foreground">数据变化详情</div>
+              <button
+                onClick={closeModal}
                 className="text-muted-foreground hover:text-foreground text-xl"
+                aria-label="关闭"
               >
                 ✕
               </button>
