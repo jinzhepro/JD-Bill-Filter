@@ -224,116 +224,103 @@ export function SettlementProvider({ children }) {
 
   const [state, dispatch] = useReducer(settlementReducer, initialStateWithStorage);
 
-  const actions = {
-    setFile: useCallback((file) => {
+  // 使用 useMemo 包装 actions 对象，确保引用稳定性
+  const actions = useMemo(() => ({
+    setFile: (file) => {
       dispatch({ type: ActionTypes.SET_FILE, payload: file });
-    }, []),
+    },
 
-    addFile: useCallback((file) => {
+    addFile: (file) => {
       dispatch({ type: ActionTypes.ADD_FILE, payload: file });
-    }, []),
+    },
 
-    removeFile: useCallback((index) => {
+    removeFile: (index) => {
       dispatch({ type: ActionTypes.REMOVE_FILE, payload: index });
-    }, []),
+    },
 
-    setOriginalData: useCallback((data) => {
+    setOriginalData: (data) => {
       dispatch({ type: ActionTypes.SET_ORIGINAL_DATA, payload: data });
-    }, []),
+    },
 
-    setProcessedData: useCallback((data) => {
+    setProcessedData: (data) => {
       dispatch({ type: ActionTypes.SET_PROCESSED_DATA, payload: data });
-    }, []),
+    },
 
-    setProcessing: useCallback((isProcessing) => {
+    setProcessing: (isProcessing) => {
       dispatch({ type: ActionTypes.SET_PROCESSING, payload: isProcessing });
-    }, []),
+    },
 
-    addLog: useCallback((message, type = LogType.INFO) => {
+    addLog: (message, type = LogType.INFO) => {
       dispatch({ type: ActionTypes.ADD_LOG, payload: { message, type } });
-    }, []),
+    },
 
-    clearLogs: useCallback(() => {
+    clearLogs: () => {
       dispatch({ type: ActionTypes.CLEAR_LOGS });
-    }, []),
+    },
 
-    setError: useCallback((error) => {
+    setError: (error) => {
       dispatch({ type: ActionTypes.SET_ERROR, payload: error });
-    }, []),
+    },
 
-    clearError: useCallback(() => {
+    clearError: () => {
       dispatch({ type: ActionTypes.CLEAR_ERROR });
-    }, []),
+    },
 
-    setMergeMode: useCallback((mergeMode) => {
+    setMergeMode: (mergeMode) => {
       dispatch({ type: ActionTypes.SET_MERGE_MODE, payload: mergeMode });
-    }, []),
+    },
 
-    setMergedData: useCallback((data) => {
+    setMergedData: (data) => {
       dispatch({ type: ActionTypes.SET_MERGED_DATA, payload: data });
-    }, []),
+    },
 
-    setFileDataArray: useCallback((data) => {
+    setFileDataArray: (data) => {
       dispatch({ type: ActionTypes.SET_FILE_DATA_ARRAY, payload: data });
-    }, []),
+    },
 
-    reset: useCallback(() => {
+    reset: () => {
       dispatch({ type: ActionTypes.RESET });
-    }, []),
+    },
 
-    resetSettlement: useCallback(() => {
+    resetSettlement: () => {
       dispatch({ type: ActionTypes.RESET_SETTLEMENT });
-    }, []),
+    },
 
-    setProcessingHistory: useCallback((history) => {
+    setProcessingHistory: (history) => {
       dispatch({ type: ActionTypes.SET_PROCESSING_HISTORY, payload: history });
-    }, []),
+    },
 
-    setDataChanges: useCallback((changes) => {
+    setDataChanges: (changes) => {
       dispatch({ type: ActionTypes.SET_DATA_CHANGES, payload: changes });
-    }, []),
+    },
 
-    addProcessingHistory: useCallback((historyItem) => {
+    addProcessingHistory: (historyItem) => {
       dispatch({ type: ActionTypes.ADD_PROCESSING_HISTORY, payload: historyItem });
-    }, []),
+    },
 
-    addDataChange: useCallback((sku, changes) => {
+    addDataChange: (sku, changes) => {
       dispatch({ type: ActionTypes.ADD_DATA_CHANGE, payload: { sku, changes } });
-    }, []),
+    },
 
-    setPasteHistory: useCallback((history) => {
+    setPasteHistory: (history) => {
       dispatch({ type: ActionTypes.SET_PASTE_HISTORY, payload: history });
-    }, []),
+    },
 
-    addPasteHistory: useCallback((historyItem) => {
+    addPasteHistory: (historyItem) => {
       dispatch({ type: ActionTypes.ADD_PASTE_HISTORY, payload: historyItem });
-    }, []),
+    },
 
-    clearPasteHistory: useCallback(() => {
+    clearPasteHistory: () => {
       dispatch({ type: ActionTypes.CLEAR_PASTE_HISTORY });
-    }, []),
-  };
+    },
+  }), []);
 
   // 使用 useMemo 优化，避免不必要的重渲染
-  // 只在 state 或 actions 变化时重新创建 value 对象
+  // state 变化时重新创建 value，actions 是稳定的 useMemo 引用
   const value = useMemo(() => ({
     ...state,
     ...actions,
-  }), [
-    state.uploadedFiles,
-    state.originalData,
-    state.processedData,
-    state.isProcessing,
-    state.logs,
-    state.error,
-    state.mergeMode,
-    state.mergedData,
-    state.fileDataArray,
-    state.processingHistory,
-    state.dataChanges,
-    state.pasteHistory,
-    // actions 都是 useCallback 创建的稳定引用，不需要添加到依赖数组
-  ]);
+  }), [state, actions]);
 
   return <SettlementContext.Provider value={value}>{children}</SettlementContext.Provider>;
 }

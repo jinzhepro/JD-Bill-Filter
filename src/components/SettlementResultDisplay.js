@@ -8,6 +8,26 @@ import SettlementProcessForm from "./SettlementProcessForm";
 import { Button } from "./ui/button";
 
 /**
+ * 计算列总和的辅助函数
+ * @param {Array} processedData - 处理后的数据
+ * @returns {Object} 各列的总和
+ */
+function calculateColumnTotals(processedData) {
+  const columns = ["应结金额", "直营服务费", "数量", "净结金额"];
+  const totals = {};
+
+  columns.forEach((column) => {
+    const total = processedData?.reduce((sum, row) => {
+      const value = parseFloat(row[column] || 0);
+      return sum + (isNaN(value) ? 0 : value);
+    }, 0) || 0;
+    totals[column] = total;
+  });
+
+  return totals;
+}
+
+/**
  * 结算单结果显示组件
  * 显示处理后的结算单数据，并包含处理表单用于调整SKU数量
  */
@@ -58,18 +78,8 @@ export default function SettlementResultDisplay() {
     [totalAmount, selfOperationAmount]
   );
 
-  // 使用 calculatedTotals 传递预计算的总和对象
-  const calculatedTotals = useMemo(() => {
-    const totals = {};
-    ["应结金额", "直营服务费", "数量", "净结金额"].forEach((column) => {
-      const total = processedData?.reduce((sum, row) => {
-        const value = parseFloat(row[column] || 0);
-        return sum + (isNaN(value) ? 0 : value);
-      }, 0) || 0;
-      totals[column] = total;
-    });
-    return totals;
-  }, [processedData]);
+  // 计算各列总和
+  const calculatedTotals = calculateColumnTotals(processedData);
 
   const dataChangesCount = useMemo(() =>
     Object.keys(dataChanges).length,
