@@ -47,7 +47,7 @@ export default function DataDisplay({
   onDownload,
   showCopyColumn = false,
   onCopyColumn,
-  downloadButtonText = "下载Excel结果 📊",
+  downloadButtonText = "下载Excel结果",
   resetButtonText = "重新上传",
   showTotalAmount = true,
   amountField = "金额",

@@ -49,11 +49,11 @@ export function Sidebar() {
                   href={item.href}
                   className={`
                     flex items-center px-3 py-2.5 rounded-md
-                    transition-all duration-200 ease-in-out
+                    transition-all duration-200 ease-in-out cursor-pointer
                     ${
                       isActive
                         ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground hover:translate-x-1"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     }
                   `}
                 >

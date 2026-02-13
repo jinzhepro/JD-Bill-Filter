@@ -122,15 +122,15 @@ export default function SettlementResultDisplay() {
                 ¥{selfOperationAmount.toFixed(2)}
               </span>
             </div>
-            <div className="flex flex-col p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+            <div className="flex flex-col p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
               <span className="text-xs text-muted-foreground">收入</span>
-              <span className="text-xl font-bold text-purple-500 dark:text-purple-400">
+              <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
                 ¥{finalAmount.toFixed(2)}
               </span>
             </div>
-            <div className="flex flex-col p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+            <div className="flex flex-col p-3 rounded-lg bg-sky-500/10 border border-sky-500/20">
               <span className="text-xs text-muted-foreground">数量合计</span>
-              <span className="text-xl font-bold text-blue-500 dark:text-blue-400">
+              <span className="text-xl font-bold text-sky-600 dark:text-sky-400">
                 {totalQuantity.toFixed(0)}
               </span>
             </div>
