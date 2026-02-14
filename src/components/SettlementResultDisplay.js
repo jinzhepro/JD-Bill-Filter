@@ -110,42 +110,54 @@ export default function SettlementResultDisplay() {
         "净结金额": "收入",
       }}
       customStats={
-        <div className="space-y-4">
+        <div className="space-y-5">
           <div className="grid grid-cols-4 gap-4">
-            <div className="flex flex-col p-3 rounded-lg bg-primary/10 border border-primary/20">
-              <span className="text-xs text-muted-foreground">货款合计</span>
-              <span className="text-xl font-bold text-primary">
+            <div className="relative overflow-hidden flex flex-col p-4 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 shadow-sm hover:shadow-md transition-shadow duration-200">
+              <div className="absolute top-0 right-0 w-16 h-16 bg-primary/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+              <span className="text-xs font-medium text-muted-foreground mb-1">货款合计</span>
+              <span className="text-2xl font-bold text-primary tracking-tight">
                 ¥{totalAmount.toFixed(2)}
               </span>
             </div>
-            <div className="flex flex-col p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-              <span className="text-xs text-muted-foreground">直营服务费</span>
-              <span className="text-xl font-bold text-destructive">
+            <div className="relative overflow-hidden flex flex-col p-4 rounded-xl bg-gradient-to-br from-rose-500/10 to-rose-500/5 border border-rose-500/20 shadow-sm hover:shadow-md transition-shadow duration-200">
+              <div className="absolute top-0 right-0 w-16 h-16 bg-rose-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+              <span className="text-xs font-medium text-muted-foreground mb-1">直营服务费</span>
+              <span className="text-2xl font-bold text-rose-600 dark:text-rose-400 tracking-tight">
                 ¥{selfOperationAmount.toFixed(2)}
               </span>
             </div>
-            <div className="flex flex-col p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-              <span className="text-xs text-muted-foreground">收入</span>
-              <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+            <div className="relative overflow-hidden flex flex-col p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 shadow-sm hover:shadow-md transition-shadow duration-200">
+              <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+              <span className="text-xs font-medium text-muted-foreground mb-1">收入</span>
+              <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
                 ¥{finalAmount.toFixed(2)}
               </span>
             </div>
-            <div className="flex flex-col p-3 rounded-lg bg-sky-500/10 border border-sky-500/20">
-              <span className="text-xs text-muted-foreground">数量合计</span>
-              <span className="text-xl font-bold text-sky-600 dark:text-sky-400">
+            <div className="relative overflow-hidden flex flex-col p-4 rounded-xl bg-gradient-to-br from-sky-500/10 to-sky-500/5 border border-sky-500/20 shadow-sm hover:shadow-md transition-shadow duration-200">
+              <div className="absolute top-0 right-0 w-16 h-16 bg-sky-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+              <span className="text-xs font-medium text-muted-foreground mb-1">数量合计</span>
+              <span className="text-2xl font-bold text-sky-600 dark:text-sky-400 tracking-tight">
                 {totalQuantity.toFixed(0)}
               </span>
             </div>
           </div>
           {dataChangesCount > 0 && (
-            <div className="flex items-center gap-4 p-3 rounded-lg bg-muted/50">
-              <span className="text-sm font-medium text-foreground">
-                已处理: {dataChangesCount} 个SKU
-              </span>
+            <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <span className="text-sm font-medium text-foreground">
+                  已处理 <span className="text-amber-600 dark:text-amber-400 font-bold">{dataChangesCount}</span> 个SKU
+                </span>
+              </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowDataChanges(!showDataChanges)}
+                className="hover:bg-amber-500/10"
               >
                 {showDataChanges ? "隐藏" : "显示"}数据变化
               </Button>
@@ -156,7 +168,10 @@ export default function SettlementResultDisplay() {
     >
       {/* 标题下方的结算单处理按钮 */}
       <div className="flex justify-end mb-4">
-        <Button onClick={() => setIsModalOpen(true)}>
+        <Button 
+          onClick={() => setIsModalOpen(true)}
+          className="shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-200"
+        >
           <Clipboard className="w-4 h-4 mr-2" />
           开票处理
         </Button>

@@ -215,22 +215,22 @@ export default function DataDisplay({
 
   const statsContent = customStats || (
     <div className="grid grid-cols-3 gap-4">
-      <div className="flex flex-col p-3 rounded-lg bg-muted/50">
-        <span className="text-xs text-muted-foreground">原始记录数</span>
-        <span className="text-xl font-bold text-foreground">
+      <div className="flex flex-col p-4 rounded-xl bg-gradient-to-br from-muted/40 to-muted/20 border border-border/50">
+        <span className="text-xs font-medium text-muted-foreground mb-1">原始记录数</span>
+        <span className="text-2xl font-bold text-foreground tracking-tight">
           {originalData?.length || 0}
         </span>
       </div>
-      <div className="flex flex-col p-3 rounded-lg bg-muted/50">
-        <span className="text-xs text-muted-foreground">处理后记录数</span>
-        <span className="text-xl font-bold text-foreground">
+      <div className="flex flex-col p-4 rounded-xl bg-gradient-to-br from-muted/40 to-muted/20 border border-border/50">
+        <span className="text-xs font-medium text-muted-foreground mb-1">处理后记录数</span>
+        <span className="text-2xl font-bold text-foreground tracking-tight">
           {processedData?.length || 0}
         </span>
       </div>
       {showTotalAmount && (
-        <div className="flex flex-col p-3 rounded-lg bg-primary/10">
-          <span className="text-xs text-muted-foreground">总价</span>
-          <span className="text-xl font-bold text-primary">
+        <div className="flex flex-col p-4 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
+          <span className="text-xs font-medium text-muted-foreground mb-1">总价</span>
+          <span className="text-2xl font-bold text-primary tracking-tight">
             ¥{totalAmount.toFixed(2)}
           </span>
         </div>
@@ -245,21 +245,28 @@ export default function DataDisplay({
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <Button onClick={handleReset} variant="outline">
+        <Button 
+          onClick={handleReset} 
+          variant="outline"
+          className="hover:bg-primary/5 transition-colors"
+        >
           <ArrowLeft className="w-4 h-4 mr-2" />
           返回
         </Button>
-        <h1 className="text-2xl font-bold text-foreground">{title}</h1>
+        <h1 className="text-2xl font-bold text-foreground tracking-tight">{title}</h1>
         <div></div>
       </div>
 
       {/* 标题下方的自定义内容（如表单） */}
       {children}
 
-      <section className="bg-card rounded-lg border border-border p-6 pb-2">
+      <section className="bg-card rounded-xl border border-border p-6 pb-2 shadow-sm">
         {showStats && (
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-foreground mb-3">
+            <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+              <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
               处理统计
             </h3>
             {statsContent}
@@ -267,18 +274,22 @@ export default function DataDisplay({
         )}
 
         <div className="mb-6 flex gap-3 flex-wrap">
-          <Button variant="outline" onClick={handleDownloadExcel}>
+          <Button 
+            variant="outline" 
+            onClick={handleDownloadExcel}
+            className="hover:bg-primary/5 transition-colors"
+          >
             <Download className="w-4 h-4 mr-2" />
             {downloadButtonText}
           </Button>
         </div>
 
-        <div className="border border-border rounded-lg overflow-auto" style={{ maxHeight: "calc(100vh - 350px)" }}>
+        <div className="border border-border rounded-xl overflow-hidden shadow-sm">
           <table className="w-full border-collapse text-sm">
-            <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/60 border-b border-border">
+            <thead className="sticky top-0 z-10 bg-gradient-to-r from-muted/95 to-muted/80 backdrop-blur supports-[backdrop-filter]:bg-muted/80 border-b border-border">
               <tr>
                 {showRowNumber && (
-                  <th className="px-4 py-3 text-left font-semibold text-foreground w-20">
+                  <th className="px-4 py-3.5 text-left font-semibold text-foreground w-20 bg-muted/30">
                     序号
                   </th>
                 )}
@@ -294,7 +305,7 @@ export default function DataDisplay({
                     return (
                       <th
                         key={header}
-                        className="px-4 py-3 text-left font-semibold text-foreground whitespace-nowrap"
+                        className="px-4 py-3.5 text-left font-semibold text-foreground whitespace-nowrap bg-muted/30"
                       >
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-1">
@@ -364,28 +375,35 @@ export default function DataDisplay({
 
       {showModal && modalSku && dataChanges[modalSku] && (
         <div
-          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 backdrop-blur-sm"
           onClick={closeModal}
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-title"
         >
           <div
-            className="bg-card border border-border rounded-lg shadow-xl p-6 max-w-lg w-full mx-4"
+            className="bg-card border border-border rounded-2xl shadow-2xl p-6 max-w-lg w-full mx-4 animate-in fade-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center mb-4">
-              <div id="modal-title" className="font-semibold text-lg text-foreground">数据变化详情</div>
+            <div className="flex justify-between items-center mb-6">
+              <div id="modal-title" className="font-bold text-xl text-foreground flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                数据变化详情
+              </div>
               <button
                 onClick={closeModal}
-                className="text-muted-foreground hover:text-foreground text-xl"
+                className="text-muted-foreground hover:text-foreground hover:bg-muted p-2 rounded-lg transition-colors text-xl"
                 aria-label="关闭"
               >
                 ✕
               </button>
             </div>
             <div className="space-y-3 text-sm">
-              <div className="grid grid-cols-4 gap-2 font-medium text-muted-foreground border-b pb-2">
+              <div className="grid grid-cols-4 gap-2 font-semibold text-muted-foreground border-b pb-3">
                 <div>字段</div>
                 <div className="text-right">原始</div>
                 <div className="text-right">减去</div>
@@ -397,31 +415,34 @@ export default function DataDisplay({
                 const formatNumber = (num) => (num !== undefined ? num.toFixed(2) : "0.00");
                 return (
                   <>
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-4 gap-2 py-2">
                       <div className="font-medium">数量</div>
                       <div className="text-right">{formatNumber(original?.数量)}</div>
                       <div className="text-right text-destructive">-{formatNumber(deducted?.数量)}</div>
-                      <div className="text-right font-semibold">{formatNumber(current?.数量)}</div>
+                      <div className="text-right font-bold text-primary">{formatNumber(current?.数量)}</div>
                     </div>
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-4 gap-2 py-2">
                       <div className="font-medium">货款</div>
                       <div className="text-right">¥{formatNumber(original?.应结金额)}</div>
                       <div className="text-right text-destructive">-¥{formatNumber(deducted?.应结金额)}</div>
-                      <div className="text-right font-semibold">¥{formatNumber(current?.应结金额)}</div>
+                      <div className="text-right font-bold text-primary">¥{formatNumber(current?.应结金额)}</div>
                     </div>
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-4 gap-2 py-2">
                       <div className="font-medium">直营服务费</div>
                       <div className="text-right">¥{formatNumber(original?.直营服务费)}</div>
                       <div className="text-right text-destructive">-¥{formatNumber(deducted?.直营服务费)}</div>
-                      <div className="text-right font-semibold">¥{formatNumber(current?.直营服务费)}</div>
+                      <div className="text-right font-bold text-primary">¥{formatNumber(current?.直营服务费)}</div>
                     </div>
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-4 gap-2 py-2">
                       <div className="font-medium">收入</div>
                       <div className="text-right">¥{formatNumber(original?.净结金额)}</div>
                       <div className="text-right text-destructive">-¥{formatNumber(deducted?.应结金额 + deducted?.直营服务费)}</div>
-                      <div className="text-right font-semibold">¥{formatNumber(current?.净结金额)}</div>
+                      <div className="text-right font-bold text-primary">¥{formatNumber(current?.净结金额)}</div>
                     </div>
-                    <div className="pt-3 mt-3 border-t border-border text-xs text-muted-foreground">
+                    <div className="pt-4 mt-4 border-t border-border text-xs text-muted-foreground flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
                       处理时间: {new Date(changes.timestamp).toLocaleString()}
                     </div>
                   </>
@@ -479,34 +500,36 @@ function TableRow({ row, rowIndex, amountField, amountFields, showRowNumber, sho
   return (
     <tr
       className={`
-        transition-colors duration-150
+        transition-all duration-150 hover:shadow-sm
         ${getRowBackgroundClass()}
         relative
       `}
     >
       {showRowNumber && (
-        <td className="px-4 py-2.5 text-left border-b border-border/50 text-muted-foreground w-20">
+        <td className="px-4 py-3 text-left border-b border-border/50 text-muted-foreground w-20 font-medium">
           {rowIndex + 1}
           {hasChanges && showDataChanges && (
-            <span className="ml-1 inline-block w-2 h-2 bg-destructive rounded-full" title="已处理"></span>
+            <span className="ml-1.5 inline-block w-2 h-2 bg-destructive rounded-full" title="已处理"></span>
           )}
         </td>
       )}
       {Object.entries(row).map(([key]) => (
-        <td key={key} className="px-4 py-2.5 text-left border-b border-border/50 whitespace-nowrap">
+        <td key={key} className="px-4 py-3 text-left border-b border-border/50 whitespace-nowrap">
           {isAmountField(key)
             ? formatAmount(row[key])
             : row[key]}
         </td>
       ))}
       {hasChanges && showDataChanges && (
-        <td className="px-4 py-2.5 text-left border-b border-border/50 whitespace-nowrap">
+        <td className="px-4 py-3 text-left border-b border-border/50 whitespace-nowrap">
           <button
             onClick={() => onShowModal(sku)}
-            className="text-xs text-muted-foreground hover:text-primary cursor-pointer p-1 rounded hover:bg-muted/50"
+            className="text-xs text-muted-foreground hover:text-primary cursor-pointer p-1.5 rounded-md hover:bg-primary/10 transition-colors"
             title="点击查看数据变化详情"
           >
-            ⓘ
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
           </button>
         </td>
       )}

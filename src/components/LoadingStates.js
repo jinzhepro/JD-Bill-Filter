@@ -63,23 +63,23 @@ export function LoadingSkeleton({ type = "default" }) {
 
   if (type === "upload") {
     return (
-      <section className="bg-card rounded-lg border border-border p-6">
+      <section className="bg-card rounded-xl border border-border p-8 shadow-sm">
         <div className="text-center">
           {/* 拖拽区域 */}
-          <div className="border-2 border-dashed border-border rounded-lg p-10 bg-muted/50">
-            <div className="flex justify-center mb-4">
-              <Skeleton className="w-16 h-16 rounded-full" />
+          <div className="border-2 border-dashed border-border rounded-xl p-12 bg-gradient-to-br from-muted/30 to-muted/50">
+            <div className="flex justify-center mb-6">
+              <Skeleton className="w-20 h-20 rounded-2xl" />
             </div>
-            <Skeleton className="h-6 w-48 mx-auto mb-2" />
-            <Skeleton className="h-4 w-64 mx-auto mb-4" />
-            <Skeleton className="h-10 w-32 mx-auto" />
+            <Skeleton className="h-6 w-48 mx-auto mb-3 rounded-lg" />
+            <Skeleton className="h-4 w-64 mx-auto mb-4 rounded-lg" />
+            <Skeleton className="h-11 w-40 mx-auto rounded-lg" />
           </div>
 
           {/* 提示信息 */}
-          <div className="mt-6">
-            <Skeleton className="h-4 w-56 mx-auto" />
-            <Skeleton className="h-4 w-40 mx-auto mt-2" />
-            <Skeleton className="h-4 w-48 mx-auto mt-2" />
+          <div className="mt-8">
+            <Skeleton className="h-4 w-56 mx-auto rounded-lg" />
+            <Skeleton className="h-4 w-40 mx-auto mt-3 rounded-lg" />
+            <Skeleton className="h-4 w-48 mx-auto mt-3 rounded-lg" />
           </div>
         </div>
       </section>
@@ -90,14 +90,14 @@ export function LoadingSkeleton({ type = "default" }) {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <Skeleton className="h-10 w-24" />
-        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-10 w-24 rounded-lg" />
+        <Skeleton className="h-8 w-48 rounded-lg" />
         <div></div>
       </div>
 
-      <div className="bg-card rounded-lg border border-border p-6">
-        <Skeleton className="h-6 w-32 mb-4" />
-        <Skeleton className="h-32 w-full" />
+      <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
+        <Skeleton className="h-6 w-32 mb-4 rounded-lg" />
+        <Skeleton className="h-32 w-full rounded-xl" />
       </div>
     </div>
   );
@@ -105,42 +105,47 @@ export function LoadingSkeleton({ type = "default" }) {
 
 /**
  * 处理中状态组件
+ * @param {number} progress - 进度百分比 (0-100)
+ * @param {string} message - 处理消息
  */
 export function ProcessingState({ progress = 0, message = "处理中..." }) {
   return (
     <div className="space-y-6">
       {/* 返回按钮和标题 */}
       <div className="flex justify-between items-center">
-        <Button variant="outline" disabled>
+        <Button variant="outline" disabled className="rounded-lg">
           <ArrowLeft className="w-4 h-4 mr-2" />
           返回
         </Button>
-        <h1 className="text-2xl font-bold text-foreground">处理中...</h1>
+        <h1 className="text-2xl font-bold text-foreground tracking-tight">处理中...</h1>
         <div></div>
       </div>
 
       {/* 处理状态 */}
-      <div className="bg-card rounded-lg border border-border p-8">
+      <div className="bg-card rounded-xl border border-border p-8 shadow-lg">
         <div className="text-center py-8">
           {/* 加载动画 */}
-          <div className="relative w-20 h-20 mx-auto mb-6">
+          <div className="relative w-24 h-24 mx-auto mb-6">
             <div className="absolute inset-0 border-4 border-primary/20 rounded-full"></div>
             <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <div className="absolute inset-2 flex items-center justify-center">
+              <div className="w-3 h-3 bg-primary rounded-full animate-pulse"></div>
+            </div>
           </div>
 
           {/* 进度条 */}
-          <div className="max-w-md mx-auto mb-4">
-            <div className="h-2 bg-muted rounded-full overflow-hidden">
+          <div className="max-w-md mx-auto mb-6">
+            <div className="h-3 bg-muted rounded-full overflow-hidden shadow-inner">
               <div
-                className="h-full bg-primary transition-all duration-300 ease-out"
+                className="h-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-500 ease-out rounded-full shadow-sm"
                 style={{ width: `${progress}%` }}
               ></div>
             </div>
-            <p className="text-sm text-muted-foreground mt-2">{message}</p>
+            <p className="text-sm text-muted-foreground mt-3 font-medium">{message}</p>
           </div>
 
           {/* 进度百分比 */}
-          <p className="text-3xl font-bold text-primary">{progress}%</p>
+          <p className="text-4xl font-bold text-primary tracking-tight">{progress}%</p>
         </div>
       </div>
     </div>

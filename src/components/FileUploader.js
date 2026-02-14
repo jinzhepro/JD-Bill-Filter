@@ -8,6 +8,16 @@ import { Upload, FileSpreadsheet, FileText, Trash2 } from "lucide-react";
 /**
  * 通用文件上传组件
  * 支持拖拽上传、文件夹上传、单文件上传
+ * @param {string} title - 标题
+ * @param {string} description - 描述文字
+ * @param {string} buttonText - 按钮文字
+ * @param {Function} onFilesSelected - 文件选择回调
+ * @param {string} accept - 接受的文件类型
+ * @param {boolean} multiple - 是否支持多文件
+ * @param {boolean} supportFolder - 是否支持文件夹
+ * @param {boolean} showTips - 是否显示提示
+ * @param {Array} tips - 提示列表
+ * @param {boolean} disabled - 是否禁用
  */
 export default function FileUploader({
   title = "上传文件",
@@ -148,15 +158,15 @@ export default function FileUploader({
   };
 
   return (
-    <section className="bg-card rounded-lg border border-border p-6">
+    <section className="bg-card rounded-xl border border-border p-8 shadow-sm">
       <div className="text-center">
         {/* 拖拽区域 */}
         <div
           className={`
-            border-2 border-dashed rounded-lg p-10 transition-all duration-300 cursor-pointer
+            relative overflow-hidden rounded-xl border-2 border-dashed p-12 transition-all duration-300 cursor-pointer
             ${isDragOver
-              ? "border-primary bg-primary/5 scale-[1.02]"
-              : "border-border bg-muted/50 hover:border-primary/50 hover:bg-muted/80"
+              ? "border-primary bg-primary/5 scale-[1.01] shadow-lg shadow-primary/10"
+              : "border-border bg-gradient-to-br from-muted/30 to-muted/60 hover:border-primary/40 hover:bg-gradient-to-br hover:from-muted/50 hover:to-muted/70 hover:shadow-md"
             }
             ${disabled ? "opacity-50 cursor-not-allowed" : ""}
           `}
@@ -165,18 +175,36 @@ export default function FileUploader({
           onDrop={handleDrop}
           onClick={!disabled ? handleButtonClick : undefined}
         >
-          <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <Upload className="w-8 h-8 text-primary" />
+          {/* 背景装饰 */}
+          <div className="absolute inset-0 -z-10 opacity-30">
+            <div className="absolute top-0 left-0 w-32 h-32 bg-primary/20 rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2" />
+            <div className="absolute bottom-0 right-0 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl transform translate-x-1/2 translate-y-1/2" />
+          </div>
+
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shadow-lg">
+                <Upload className="w-10 h-10 text-primary" />
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center shadow-md">
+                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </div>
             </div>
           </div>
-          <h3 className="text-lg font-semibold text-foreground mb-2">
+          <h3 className="text-xl font-bold text-foreground mb-3 tracking-tight">
             {title}
           </h3>
-          <p className="text-sm text-muted-foreground mb-4">
+          <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto leading-relaxed">
             {description}
           </p>
-          <Button size="lg" variant="outline" disabled={disabled} className="min-w-[140px]">
+          <Button
+            size="lg"
+            variant="default"
+            disabled={disabled}
+            className="min-w-[160px] h-11 rounded-lg font-medium shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all duration-200 hover:-translate-y-0.5"
+          >
             <Upload className="w-4 h-4 mr-2" />
             {buttonText}
           </Button>
@@ -194,20 +222,64 @@ export default function FileUploader({
         />
 
         {showTips && (
-          <div className="mt-6 text-xs text-muted-foreground">
-            <p>支持的文件格式：.xlsx, .xls, .csv</p>
-            <p>最大文件大小：50MB</p>
-            {supportFolder && <p>支持递归处理文件夹中的所有文件</p>}
-            {multiple && <p>支持同时上传多个文件</p>}
+          <div className="mt-8 flex flex-wrap justify-center gap-3 text-xs">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-muted/60 rounded-full text-muted-foreground">
+              <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              .xlsx
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-muted/60 rounded-full text-muted-foreground">
+              <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              .xls
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-muted/60 rounded-full text-muted-foreground">
+              <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              .csv
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-full text-amber-700 dark:text-amber-400">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              最大 50MB
+            </span>
+            {supportFolder && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 rounded-full text-blue-700 dark:text-blue-400">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                </svg>
+                支持文件夹
+              </span>
+            )}
+            {multiple && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/10 rounded-full text-purple-700 dark:text-purple-400">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                多文件
+              </span>
+            )}
           </div>
         )}
 
         {tips.length > 0 && (
-          <div className="mt-6 p-4 bg-primary/5 rounded-lg text-left">
-            <h4 className="text-xs font-medium text-foreground mb-2">处理说明</h4>
-            <ul className="text-xs text-muted-foreground space-y-1">
-              {tips.map((tip) => (
-                <li key={tip}>• {tip}</li>
+          <div className="mt-6 p-5 bg-gradient-to-r from-primary/5 to-blue-500/5 rounded-xl border border-primary/10 text-left">
+            <h4 className="text-xs font-semibold text-foreground mb-3 flex items-center gap-2">
+              <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              处理说明
+            </h4>
+            <ul className="text-xs text-muted-foreground space-y-2">
+              {tips.map((tip, index) => (
+                <li key={index} className="flex items-start gap-2">
+                  <span className="text-primary font-medium">{index + 1}.</span>
+                  <span>{tip}</span>
+                </li>
               ))}
             </ul>
           </div>
