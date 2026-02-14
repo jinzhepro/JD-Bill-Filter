@@ -5,14 +5,14 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useSettlement } from "@/context/SettlementContext";
-import { 
-  ArrowLeft, 
-  Download, 
-  RefreshCcw, 
-  Copy, 
-  ArrowUp, 
-  ArrowDown, 
-  ChevronsUpDown 
+import {
+  ArrowLeft,
+  Download,
+  RefreshCcw,
+  Copy,
+  ArrowUp,
+  ArrowDown,
+  ChevronsUpDown
 } from "lucide-react";
 
 /**
@@ -114,10 +114,10 @@ export default function DataDisplay({
     if (calculatedTotals && typeof calculatedTotals === 'object') {
       return calculatedTotals;
     }
-    
+
     // 否则根据 columnTotals 数组计算
     if (!columnTotals || !processedData || processedData.length === 0) return null;
-    
+
     const totals = {};
     columnTotals.forEach((column) => {
       const total = processedData.reduce((sum, row) => {
@@ -256,7 +256,7 @@ export default function DataDisplay({
       {/* 标题下方的自定义内容（如表单） */}
       {children}
 
-      <section className="bg-card rounded-lg border border-border p-6">
+      <section className="bg-card rounded-lg border border-border p-6 pb-2">
         {showStats && (
           <div className="mb-6">
             <h3 className="text-sm font-medium text-foreground mb-3">
@@ -271,26 +271,9 @@ export default function DataDisplay({
             <Download className="w-4 h-4 mr-2" />
             {downloadButtonText}
           </Button>
-          <Button variant="outline" onClick={handleReset}>
-            <RefreshCcw className="w-4 h-4 mr-2" />
-            {resetButtonText}
-          </Button>
         </div>
 
-        {showCopyColumn && (
-          <div className="mb-4 p-3 bg-muted/50 rounded-lg flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Copy className="w-4 h-4" />
-              <span>点击 <span className="font-medium">复制图标</span> 复制列数据</span>
-            </div>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <ChevronsUpDown className="w-4 h-4" />
-              <span>点击 <span className="font-medium">排序图标</span> 排序</span>
-            </div>
-          </div>
-        )}
-
-        <div className="border border-border rounded-lg overflow-hidden">
+        <div className="border border-border rounded-lg overflow-auto" style={{ maxHeight: "calc(100vh - 350px)" }}>
           <table className="w-full border-collapse text-sm">
             <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/60 border-b border-border">
               <tr>
@@ -304,10 +287,10 @@ export default function DataDisplay({
                     const displayHeader = columnMapping?.[header] || header;
                     const total = columnTotalsResult?.[header];
                     const isTotalColumn = total !== undefined;
-                    const isAmtField = amountFields && Array.isArray(amountFields) 
-                      ? amountFields.includes(header) 
+                    const isAmtField = amountFields && Array.isArray(amountFields)
+                      ? amountFields.includes(header)
                       : header === "单价" || header === "总价" || header === amountField;
-                    
+
                     return (
                       <th
                         key={header}
@@ -358,24 +341,24 @@ export default function DataDisplay({
               </tr>
             </thead>
 
-               <tbody>
-               {sortedData.map((row, rowIndex) => (
-                 <TableRow
-                   key={row["商品编号"] || rowIndex}
-                   row={row}
-                   rowIndex={rowIndex}
-                   amountField={amountField}
-                   amountFields={amountFields}
-                   showRowNumber={showRowNumber}
-                   showDataChanges={showDataChanges}
-                   onShowModal={(sku) => {
-                     setModalSku(sku);
-                     setShowModal(true);
-                   }}
-                 />
-               ))}
-              </tbody>
-            </table>
+            <tbody>
+              {sortedData.map((row, rowIndex) => (
+                <TableRow
+                  key={row["商品编号"] || rowIndex}
+                  row={row}
+                  rowIndex={rowIndex}
+                  amountField={amountField}
+                  amountFields={amountFields}
+                  showRowNumber={showRowNumber}
+                  showDataChanges={showDataChanges}
+                  onShowModal={(sku) => {
+                    setModalSku(sku);
+                    setShowModal(true);
+                  }}
+                />
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
 
@@ -518,7 +501,7 @@ function TableRow({ row, rowIndex, amountField, amountFields, showRowNumber, sho
       ))}
       {hasChanges && showDataChanges && (
         <td className="px-4 py-2.5 text-left border-b border-border/50 whitespace-nowrap">
-          <button 
+          <button
             onClick={() => onShowModal(sku)}
             className="text-xs text-muted-foreground hover:text-primary cursor-pointer p-1 rounded hover:bg-muted/50"
             title="点击查看数据变化详情"
