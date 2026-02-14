@@ -4,8 +4,9 @@ import React, { useState, useMemo } from "react";
 import { useSettlement } from "@/context/SettlementContext";
 import { downloadExcel } from "@/lib/excelHandler";
 import DataDisplay from "./DataDisplay";
-import SettlementProcessForm from "./SettlementProcessForm";
+import SettlementProcessModal from "./SettlementProcessModal";
 import { Button } from "./ui/button";
+import { Clipboard } from "lucide-react";
 
 /**
  * 计算列总和的辅助函数
@@ -34,6 +35,7 @@ function calculateColumnTotals(processedData) {
 export default function SettlementResultDisplay() {
   const { originalData, processedData, resetSettlement, processingHistory, dataChanges } = useSettlement();
   const [showDataChanges, setShowDataChanges] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleReset = () => {
     resetSettlement();
@@ -152,8 +154,17 @@ export default function SettlementResultDisplay() {
         </div>
       }
     >
-      {/* 标题下方的结算单处理表单 */}
-      <SettlementProcessForm />
+      {/* 标题下方的结算单处理按钮 */}
+      <div className="flex justify-end mb-4">
+        <Button onClick={() => setIsModalOpen(true)}>
+          <Clipboard className="w-4 h-4 mr-2" />
+          开票处理
+        </Button>
+      </div>
+      <SettlementProcessModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
     </DataDisplay>
   );
 }
