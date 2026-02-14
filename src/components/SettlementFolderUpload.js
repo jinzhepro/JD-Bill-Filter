@@ -9,6 +9,7 @@ import {
 } from "@/lib/settlementProcessor";
 import FileUploader from "./FileUploader";
 import { useErrorHandler } from "./ErrorBoundary";
+import { useToast } from "@/hooks/use-toast";
 
 /**
  * 处理单个文件的读取和验证
@@ -93,6 +94,7 @@ export default function SettlementFolderUpload() {
   } = useSettlement();
 
   const { handleError } = useErrorHandler();
+  const { toast } = useToast();
 
   // 处理文件
   const handleFiles = useCallback(
@@ -115,9 +117,14 @@ export default function SettlementFolderUpload() {
         if (allData.length === 0) {
           const errorMsg =
             errors.length > 0
-              ? `所有文件处理失败:\n${errors.join("\n")}`
+              ? errors.join("\n")
               : "没有找到有效的文件数据";
-          handleError(new Error(errorMsg), "文件处理");
+
+          toast({
+            variant: "destructive",
+            title: "文件处理失败",
+            description: errorMsg.length > 100 ? errorMsg.substring(0, 100) + "..." : errorMsg,
+          });
           return;
         }
 

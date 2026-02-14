@@ -193,45 +193,6 @@ export default function FileUploader({
           className="hidden"
         />
 
-        {/* 已选文件列表 */}
-        {selectedFiles.length > 0 && (
-          <div className="mt-6">
-            <h4 className="text-sm font-medium text-foreground mb-3">
-              已选择 {selectedFiles.length} 个文件
-            </h4>
-            <div className="max-h-48 overflow-auto space-y-2 text-left">
-              {selectedFiles.map((item, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-2 rounded-md bg-muted/50 hover:bg-muted transition-colors"
-                >
-                  <div className="flex items-center gap-2 overflow-hidden">
-                    {getFileIcon(item.file.name)}
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">
-                        {item.path}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatFileSize(item.file.size)}
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemoveFile(index);
-                    }}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {showTips && (
           <div className="mt-6 text-xs text-muted-foreground">
             <p>支持的文件格式：.xlsx, .xls, .csv</p>

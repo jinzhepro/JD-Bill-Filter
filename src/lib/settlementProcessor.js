@@ -28,7 +28,11 @@ export function validateSettlementDataStructure(data) {
   const firstRow = data[0];
 
   if (!("商品编号" in firstRow)) {
-    throw new Error("缺少必要的列: 商品编号");
+    // 检查是否是已处理过的文件
+    if ("SKU" in firstRow) {
+      throw new Error("检测到已处理过的合并结果文件，请上传原始结算单文件");
+    }
+    throw new Error("缺少必要的列: 商品编号，请确保上传的是京东结算单原始文件");
   }
 
   const hasAmountColumn = SETTLEMENT_AMOUNT_COLUMNS.some((col) => col in firstRow);
@@ -112,7 +116,7 @@ function mergeSKUData(data, actualAmountColumn, hasFeeNameColumn, hasQuantityCol
 
     // 跳过非货款记录
     if (hasFeeNameColumn && feeName !== SETTLEMENT_FEE_NAME_FILTER &&
-        feeName !== SETTLEMENT_SELF_OPERATION_FEE && feeName !== "售后卖家赔付费") {
+      feeName !== SETTLEMENT_SELF_OPERATION_FEE && feeName !== "售后卖家赔付费") {
       skippedCount++;
       continue;
     }
