@@ -357,11 +357,6 @@ export default function DataDisplay({
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-1">
                               <span>{displayHeader}</span>
-                              {isTotalColumn && (
-                                <span className={`text-xs font-mono border rounded px-1.5 py-0.5 ${isAmtField ? "bg-primary/10 text-primary border-primary/20" : "bg-muted/50 text-muted-foreground border-border"}`}>
-                                  {isAmtField ? formatAmount(total, header === "直营服务费") : total?.toFixed(0)}
-                                </span>
-                              )}
                             </div>
                             <div className="flex items-center gap-1">
                               <button
@@ -416,6 +411,48 @@ export default function DataDisplay({
                   />
                 ))}
               </tbody>
+              {columnTotalsResult && Object.keys(columnTotalsResult).length > 0 && (
+                <tfoot className="sticky bottom-0 z-10 bg-white border-t-2 border-gray-300">
+                  <tr>
+                    {showRowNumber && (
+                      <td className="px-4 py-3 text-left font-bold text-foreground w-20 bg-white">
+                        合计
+                      </td>
+                    )}
+                    {processedData.length > 0 &&
+                      Object.keys(processedData[0]).map((header) => {
+                        const total = columnTotalsResult?.[header];
+                        const isAmtField = amountFields && Array.isArray(amountFields)
+                          ? amountFields.includes(header)
+                          : header === "单价" || header === "总价" || header === amountField;
+                        
+                        return (
+                          <td
+                            key={header}
+                            className="px-4 py-3 text-left font-bold text-foreground whitespace-nowrap bg-white"
+                          >
+                            {total !== undefined ? (
+                              isAmtField ? (
+                                <span className="text-primary font-mono">
+                                  {formatAmount(total, header === "直营服务费")}
+                                </span>
+                              ) : (
+                                <span className="font-mono">
+                                  {total?.toFixed(0)}
+                                </span>
+                              )
+                            ) : (
+                              "-"
+                            )}
+                          </td>
+                        );
+                      })}
+                    <td className="px-4 py-3 text-left font-bold text-foreground whitespace-nowrap bg-white">
+                      -
+                    </td>
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
         </div>
