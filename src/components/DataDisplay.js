@@ -12,7 +12,9 @@ import {
   Copy,
   ArrowUp,
   ArrowDown,
-  ChevronsUpDown
+  ChevronsUpDown,
+  Search,
+  X
 } from "lucide-react";
 
 /**
@@ -66,6 +68,7 @@ export default function DataDisplay({
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [showModal, setShowModal] = useState(false);
   const [modalSku, setModalSku] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   /**
    * 关闭模态框的回调函数
@@ -156,6 +159,18 @@ export default function DataDisplay({
         : String(bVal).localeCompare(String(aVal));
     });
   }, [processedData, sortConfig]);
+
+  // 全局搜索过滤
+  const filteredData = React.useMemo(() => {
+    if (!searchQuery || !sortedData) return sortedData;
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return sortedData;
+    return sortedData.filter(row =>
+      Object.values(row).some(val =>
+        String(val).toLowerCase().includes(query)
+      )
+    );
+  }, [sortedData, searchQuery]);
 
   const handleCopyColumn = async (columnName) => {
     try {
@@ -273,7 +288,7 @@ export default function DataDisplay({
           </div>
         )}
 
-        <div className="mb-6 flex gap-3 flex-wrap">
+        <div className="mb-6 flex gap-3 flex-wrap items-center justify-between">
           <Button
             variant="outline"
             onClick={handleDownloadExcel}
@@ -282,7 +297,37 @@ export default function DataDisplay({
             <Download className="w-4 h-4 mr-2" />
             {downloadButtonText}
           </Button>
+
+          {/* 全局搜索框 */}
+          <div className="relative flex-1 max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="搜索商品编号、金额等..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-10 py-2 rounded-lg border border-border bg-background text-sm
+                focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary
+                placeholder:text-muted-foreground/60 transition-all duration-200"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-muted transition-colors"
+                title="清除搜索"
+              >
+                <X className="w-4 h-4 text-muted-foreground" />
+              </button>
+            )}
+          </div>
         </div>
+
+        {searchQuery && (
+          <p className="mb-4 text-sm text-muted-foreground">
+            找到 <span className="font-medium text-primary">{filteredData.length}</span> 条结果，
+            共 <span className="font-medium">{processedData.length}</span> 条数据
+          </p>
+        )}
 
         <div className="border border-border rounded-xl overflow-hidden shadow-sm">
           <div className="max-h-[calc(100vh-380px)] overflow-auto">
@@ -354,7 +399,7 @@ export default function DataDisplay({
               </thead>
 
               <tbody>
-                {sortedData.map((row, rowIndex) => (
+                {filteredData.map((row, rowIndex) => (
                   <TableRow
                     key={row["商品编号"] || rowIndex}
                     row={row}
