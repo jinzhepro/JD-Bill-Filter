@@ -245,8 +245,8 @@ export default function DataDisplay({
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <Button 
-          onClick={handleReset} 
+        <Button
+          onClick={handleReset}
           variant="outline"
           className="hover:bg-primary/5 transition-colors"
         >
@@ -274,8 +274,8 @@ export default function DataDisplay({
         )}
 
         <div className="mb-6 flex gap-3 flex-wrap">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={handleDownloadExcel}
             className="hover:bg-primary/5 transition-colors"
           >
@@ -285,91 +285,93 @@ export default function DataDisplay({
         </div>
 
         <div className="border border-border rounded-xl overflow-hidden shadow-sm">
-          <table className="w-full border-collapse text-sm">
-            <thead className="sticky top-0 z-10 bg-gradient-to-r from-muted/95 to-muted/80 backdrop-blur supports-[backdrop-filter]:bg-muted/80 border-b border-border">
-              <tr>
-                {showRowNumber && (
-                  <th className="px-4 py-3.5 text-left font-semibold text-foreground w-20 bg-muted/30">
-                    序号
-                  </th>
-                )}
-                {processedData.length > 0 &&
-                  Object.keys(processedData[0]).map((header) => {
-                    const displayHeader = columnMapping?.[header] || header;
-                    const total = columnTotalsResult?.[header];
-                    const isTotalColumn = total !== undefined;
-                    const isAmtField = amountFields && Array.isArray(amountFields)
-                      ? amountFields.includes(header)
-                      : header === "单价" || header === "总价" || header === amountField;
+          <div className="max-h-[calc(100vh-380px)] overflow-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead className="sticky top-0 z-10 bg-gradient-to-r from-muted/95 to-muted/80 backdrop-blur supports-[backdrop-filter]:bg-muted/80 border-b border-border">
+                <tr>
+                  {showRowNumber && (
+                    <th className="px-4 py-3.5 text-left font-semibold text-foreground w-20 bg-muted/30">
+                      序号
+                    </th>
+                  )}
+                  {processedData.length > 0 &&
+                    Object.keys(processedData[0]).map((header) => {
+                      const displayHeader = columnMapping?.[header] || header;
+                      const total = columnTotalsResult?.[header];
+                      const isTotalColumn = total !== undefined;
+                      const isAmtField = amountFields && Array.isArray(amountFields)
+                        ? amountFields.includes(header)
+                        : header === "单价" || header === "总价" || header === amountField;
 
-                    return (
-                      <th
-                        key={header}
-                        className="px-4 py-3.5 text-left font-semibold text-foreground whitespace-nowrap bg-muted/30"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1">
-                            <span>{displayHeader}</span>
-                            {isTotalColumn && (
-                              <span className={`text-xs font-mono border rounded px-1.5 py-0.5 ${isAmtField ? "bg-primary/10 text-primary border-primary/20" : "bg-muted/50 text-muted-foreground border-border"}`}>
-                                {isAmtField ? formatAmount(total) : total?.toFixed(0)}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => handleSort(header)}
-                              className="p-1 rounded hover:bg-muted/50 transition-colors"
-                              title={`点击排序 "${displayHeader}"`}
-                            >
-                              {sortConfig.key === header ? (
-                                sortConfig.direction === "asc" ? (
-                                  <ArrowUp className="w-4 h-4 text-primary" />
-                                ) : (
-                                  <ArrowDown className="w-4 h-4 text-primary" />
-                                )
-                              ) : (
-                                <ChevronsUpDown className="w-4 h-4 text-muted-foreground" />
+                      return (
+                        <th
+                          key={header}
+                          className="px-4 py-3.5 text-left font-semibold text-foreground whitespace-nowrap bg-muted/30"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1">
+                              <span>{displayHeader}</span>
+                              {isTotalColumn && (
+                                <span className={`text-xs font-mono border rounded px-1.5 py-0.5 ${isAmtField ? "bg-primary/10 text-primary border-primary/20" : "bg-muted/50 text-muted-foreground border-border"}`}>
+                                  {isAmtField ? formatAmount(total) : total?.toFixed(0)}
+                                </span>
                               )}
-                            </button>
-                            {showCopyColumn && (
+                            </div>
+                            <div className="flex items-center gap-1">
                               <button
-                                onClick={() => handleCopyColumn(header)}
+                                onClick={() => handleSort(header)}
                                 className="p-1 rounded hover:bg-muted/50 transition-colors"
-                                title={`点击复制 "${displayHeader}" 列数据`}
+                                title={`点击排序 "${displayHeader}"`}
                               >
-                                <Copy className="w-4 h-4 text-muted-foreground hover:text-primary transition-colors" />
+                                {sortConfig.key === header ? (
+                                  sortConfig.direction === "asc" ? (
+                                    <ArrowUp className="w-4 h-4 text-primary" />
+                                  ) : (
+                                    <ArrowDown className="w-4 h-4 text-primary" />
+                                  )
+                                ) : (
+                                  <ChevronsUpDown className="w-4 h-4 text-muted-foreground" />
+                                )}
                               </button>
-                            )}
+                              {showCopyColumn && (
+                                <button
+                                  onClick={() => handleCopyColumn(header)}
+                                  className="p-1 rounded hover:bg-muted/50 transition-colors"
+                                  title={`点击复制 "${displayHeader}" 列数据`}
+                                >
+                                  <Copy className="w-4 h-4 text-muted-foreground hover:text-primary transition-colors" />
+                                </button>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </th>
-                    );
-                  })}
-                <th className="px-4 py-3 text-left font-semibold text-foreground whitespace-nowrap">
-                  变化详情
-                </th>
-              </tr>
-            </thead>
+                        </th>
+                      );
+                    })}
+                  <th className="px-4 py-3 text-left font-semibold text-foreground whitespace-nowrap">
+                    变化详情
+                  </th>
+                </tr>
+              </thead>
 
-            <tbody>
-              {sortedData.map((row, rowIndex) => (
-                <TableRow
-                  key={row["商品编号"] || rowIndex}
-                  row={row}
-                  rowIndex={rowIndex}
-                  amountField={amountField}
-                  amountFields={amountFields}
-                  showRowNumber={showRowNumber}
-                  showDataChanges={showDataChanges}
-                  onShowModal={(sku) => {
-                    setModalSku(sku);
-                    setShowModal(true);
-                  }}
-                />
-              ))}
-            </tbody>
-          </table>
+              <tbody>
+                {sortedData.map((row, rowIndex) => (
+                  <TableRow
+                    key={row["商品编号"] || rowIndex}
+                    row={row}
+                    rowIndex={rowIndex}
+                    amountField={amountField}
+                    amountFields={amountFields}
+                    showRowNumber={showRowNumber}
+                    showDataChanges={showDataChanges}
+                    onShowModal={(sku) => {
+                      setModalSku(sku);
+                      setShowModal(true);
+                    }}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
