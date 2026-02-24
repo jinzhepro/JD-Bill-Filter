@@ -219,13 +219,14 @@ export default function DataDisplay({
     if (onReset) onReset();
   };
 
-  const formatAmount = (value) => {
+  const formatAmount = (value, forcePositive = false) => {
     const num = parseFloat(value || 0);
     const formatted = Math.abs(num).toFixed(2);
-    if (num < 0) {
-      return <span className="text-destructive font-medium">-¥{formatted}</span>;
+    // 直营服务费始终显示为正数
+    if (forcePositive || num >= 0) {
+      return <span className="text-primary font-medium">¥{formatted}</span>;
     }
-    return <span className="text-primary font-medium">¥{formatted}</span>;
+    return <span className="text-destructive font-medium">-¥{formatted}</span>;
   };
 
   const statsContent = customStats || (
@@ -358,7 +359,7 @@ export default function DataDisplay({
                               <span>{displayHeader}</span>
                               {isTotalColumn && (
                                 <span className={`text-xs font-mono border rounded px-1.5 py-0.5 ${isAmtField ? "bg-primary/10 text-primary border-primary/20" : "bg-muted/50 text-muted-foreground border-border"}`}>
-                                  {isAmtField ? formatAmount(total) : total?.toFixed(0)}
+                                  {isAmtField ? formatAmount(total, header === "直营服务费") : total?.toFixed(0)}
                                 </span>
                               )}
                             </div>
@@ -476,14 +477,14 @@ export default function DataDisplay({
                     </div>
                     <div className="grid grid-cols-4 gap-2 py-2">
                       <div className="font-medium">直营服务费</div>
-                      <div className="text-right">¥{formatNumber(original?.直营服务费)}</div>
-                      <div className="text-right text-destructive">-¥{formatNumber(deducted?.直营服务费)}</div>
-                      <div className="text-right font-bold text-primary">¥{formatNumber(current?.直营服务费)}</div>
+                      <div className="text-right">¥{Math.abs(original?.直营服务费 || 0).toFixed(2)}</div>
+                      <div className="text-right text-destructive">-¥{Math.abs(deducted?.直营服务费 || 0).toFixed(2)}</div>
+                      <div className="text-right font-bold text-primary">¥{Math.abs(current?.直营服务费 || 0).toFixed(2)}</div>
                     </div>
                     <div className="grid grid-cols-4 gap-2 py-2">
                       <div className="font-medium">收入</div>
                       <div className="text-right">¥{formatNumber(original?.净结金额)}</div>
-                      <div className="text-right text-destructive">-¥{formatNumber(deducted?.应结金额 + deducted?.直营服务费)}</div>
+                      <div className="text-right text-destructive">-¥{formatNumber(deducted?.应结金额 + Math.abs(deducted?.直营服务费 || 0))}</div>
                       <div className="text-right font-bold text-primary">¥{formatNumber(current?.净结金额)}</div>
                     </div>
                     <div className="pt-4 mt-4 border-t border-border text-xs text-muted-foreground flex items-center gap-2">
@@ -506,13 +507,14 @@ export default function DataDisplay({
 function TableRow({ row, rowIndex, amountField, amountFields, showRowNumber, showDataChanges, onShowModal }) {
   const { dataChanges } = useSettlement();
 
-  const formatAmount = (value) => {
+  const formatAmount = (value, forcePositive = false) => {
     const num = parseFloat(value || 0);
     const formatted = Math.abs(num).toFixed(2);
-    if (num < 0) {
-      return <span className="text-destructive font-medium">-¥{formatted}</span>;
+    // 直营服务费始终显示为正数
+    if (forcePositive || num >= 0) {
+      return <span className="text-primary font-medium">¥{formatted}</span>;
     }
-    return <span className="text-primary font-medium">¥{formatted}</span>;
+    return <span className="text-destructive font-medium">-¥{formatted}</span>;
   };
 
   const isAmountField = (key) => {
@@ -563,7 +565,7 @@ function TableRow({ row, rowIndex, amountField, amountFields, showRowNumber, sho
       {Object.entries(row).map(([key]) => (
         <td key={key} className="px-4 py-3 text-left border-b border-border/50 whitespace-nowrap">
           {isAmountField(key)
-            ? formatAmount(row[key])
+            ? formatAmount(row[key], key === "直营服务费")
             : row[key]}
         </td>
       ))}
