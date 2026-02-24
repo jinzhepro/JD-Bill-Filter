@@ -497,17 +497,32 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
             </Button>
           </div>
           <Textarea
-            placeholder="粘贴多行数据，支持格式：
-• 制表符分隔：SKU* 货款* 数量* 服务费*
-• 空格分隔：SKU* 货款* 数量* 服务费*
-• 逗号分隔：SKU*,货款*,数量*,服务费*
-• 竖线分隔：SKU*|货款*|数量*|服务费*
-
-* 为必填项"
+            placeholder="SKU 货款 数量 直营服务费，每行一条数据..."
             value={pasteContent}
             onChange={handlePasteContentChange}
             className="h-40 text-sm font-mono"
           />
+        </div>
+
+        {/* 数据格式说明 */}
+        <div className="p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
+          <p className="flex items-start gap-2">
+            <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <span>
+              支持多行粘贴，<strong>相同商品编号会自动合并计算</strong>。直营服务费输入正数可减小服务费扣除金额（例如：-10 输入 5 变为 -5）。
+            </span>
+          </p>
+        </div>
+
+        {/* 数据格式详情 */}
+        <div className="text-xs text-muted-foreground space-y-1">
+          <p className="font-medium text-foreground">支持格式：</p>
+          <ul className="list-disc list-inside space-y-0.5 pl-2">
+            <li>制表符分隔：SKU<span className="text-foreground">\t</span>货款<span className="text-foreground">\t</span>数量<span className="text-foreground">\t</span>服务费</li>
+            <li>空格分隔：SKU<span className="text-foreground"> </span>货款<span className="text-foreground"> </span>数量<span className="text-foreground"> </span>服务费</li>
+            <li>逗号分隔：SKU<span className="text-foreground">,</span>货款<span className="text-foreground">,</span>数量<span className="text-foreground">,</span>服务费</li>
+            <li>竖线分隔：SKU<span className="text-foreground">|</span>货款<span className="text-foreground">|</span>数量<span className="text-foreground">|</span>服务费</li>
+          </ul>
         </div>
 
         {/* 历史记录 */}
@@ -551,17 +566,6 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
             </div>
           </div>
         )}
-
-        {/* 说明文字 */}
-        <div className="p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
-          <p className="flex items-start gap-2">
-            <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <span>
-              直接粘贴多行数据（支持制表符、空格、逗号、竖线分隔），点击"粘贴处理"即可完成。
-              <strong>相同商品编号会自动合并计算</strong>。直营服务费输入正数可减小服务费扣除金额（例如：-10 输入 5 变为 -5）。
-            </span>
-          </p>
-        </div>
 
         {/* 操作按钮 */}
         <div className="flex gap-3 pt-2">
