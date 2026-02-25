@@ -6,7 +6,7 @@ import { downloadExcel } from "@/lib/excelHandler";
 import DataDisplay from "./DataDisplay";
 import SettlementProcessModal from "./SettlementProcessModal";
 import { Button } from "./ui/button";
-import { Clipboard } from "lucide-react";
+import { Clipboard, CheckCircle2 } from "lucide-react";
 
 /**
  * 计算列总和的辅助函数
@@ -145,9 +145,7 @@ export default function SettlementResultDisplay() {
             <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center">
-                  <svg className="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+                  <CheckCircle2 className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                 </div>
                 <span className="text-sm font-medium text-foreground">
                   已处理 <span className="text-amber-600 dark:text-amber-400 font-bold">{dataChangesCount}</span> 个SKU

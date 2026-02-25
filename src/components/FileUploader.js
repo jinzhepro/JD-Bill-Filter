@@ -3,7 +3,7 @@
 import React, { useState, useRef, useCallback } from "react";
 import { Button } from "./ui/button";
 import { isValidFileExtension } from "@/lib/fileValidation";
-import { Upload, FileSpreadsheet, FileText, Trash2 } from "lucide-react";
+import { Upload, FileSpreadsheet, FileText, Trash2, Plus, CheckCircle2, Clock, FolderOpen, Files, AlertCircle, Info } from "lucide-react";
 
 /**
  * 通用文件上传组件
@@ -187,9 +187,7 @@ export default function FileUploader({
                 <Upload className="w-10 h-10 text-primary" />
               </div>
               <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center shadow-md">
-                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
+                <Plus className="w-4 h-4 text-white" />
               </div>
             </div>
           </div>
@@ -224,42 +222,30 @@ export default function FileUploader({
         {showTips && (
           <div className="mt-8 flex flex-wrap justify-center gap-3 text-xs">
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-muted/60 rounded-full text-muted-foreground">
-              <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
               .xlsx
             </span>
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-muted/60 rounded-full text-muted-foreground">
-              <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
               .xls
             </span>
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-muted/60 rounded-full text-muted-foreground">
-              <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
               .csv
             </span>
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-full text-amber-700 dark:text-amber-400">
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <Clock className="w-3.5 h-3.5" />
               最大 50MB
             </span>
             {supportFolder && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 rounded-full text-blue-700 dark:text-blue-400">
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                </svg>
+                <FolderOpen className="w-3.5 h-3.5" />
                 支持文件夹
               </span>
             )}
             {multiple && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/10 rounded-full text-purple-700 dark:text-purple-400">
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                </svg>
+                <Files className="w-3.5 h-3.5" />
                 多文件
               </span>
             )}
@@ -269,9 +255,7 @@ export default function FileUploader({
         {tips.length > 0 && (
           <div className="mt-6 p-5 bg-gradient-to-r from-primary/5 to-blue-500/5 rounded-xl border border-primary/10 text-left">
             <h4 className="text-xs font-semibold text-foreground mb-3 flex items-center gap-2">
-              <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <Info className="w-4 h-4 text-primary" />
               处理说明
             </h4>
             <ul className="text-xs text-muted-foreground space-y-2">

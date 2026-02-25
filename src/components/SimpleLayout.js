@@ -3,6 +3,7 @@
 import React from "react";
 import { Sidebar } from "./Sidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { FileText } from "lucide-react";
 
 /**
  * 简单的布局组件
@@ -16,9 +17,7 @@ export function SimpleLayout({ children }) {
       <div className="flex-1 flex flex-col">
         <header className="h-16 border-b border-border bg-card/80 backdrop-blur-sm flex items-center justify-end px-6 gap-4 flex-shrink-0 sticky top-0 z-40">
           <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
-            </svg>
+            <FileText className="w-3.5 h-3.5" />
             版本 0.1.0
           </div>
           <ThemeToggle />
