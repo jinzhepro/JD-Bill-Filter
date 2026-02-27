@@ -6,7 +6,12 @@ import {
   useReducer,
   useCallback,
 } from "react";
-import { LogType } from "@/types";
+const LogType = {
+  INFO: "info",
+  SUCCESS: "success",
+  ERROR: "error",
+  WARNING: "warning",
+};
 
 // 初始状态
 const initialState = {

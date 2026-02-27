@@ -1,8 +1,5 @@
 import ExcelJS from "exceljs";
 import {
-  FILE_SIZE_LIMIT,
-  VALID_FILE_TYPES,
-  VALID_FILE_EXTENSIONS,
   NUMERIC_COLUMNS,
   PRODUCT_CODE_COLUMNS,
   EXPORT_NUMERIC_FORMAT,
@@ -13,21 +10,21 @@ import { logger } from "./logger";
 
 function getCellValue(cell) {
   const value = cell.value;
-  
+
   if (value === null || value === undefined) {
     return "";
   }
-  
+
   // 处理公式对象 { formula: '...', result: ... }
   if (typeof value === 'object' && 'result' in value) {
     return value.result;
   }
-  
+
   // 处理日期对象
   if (value instanceof Date) {
     return value.toLocaleDateString('zh-CN');
   }
-  
+
   return value;
 }
 
@@ -215,10 +212,10 @@ function parseCSVText(csvText, resolve, reject) {
     }
 
     resolve(jsonData);
-} catch (error) {
-      logger.error("CSV解析失败:", error);
-      reject(new Error(`CSV解析失败: ${error.message}`));
-    }
+  } catch (error) {
+    logger.error("CSV解析失败:", error);
+    reject(new Error(`CSV解析失败: ${error.message}`));
+  }
 }
 
 // 下载Excel文件
@@ -417,15 +414,3 @@ export async function downloadExcel(data, fileName, totals = null, dataChanges =
   }
 }
 
-// 验证文件类型
-export function validateFileType(file) {
-  return (
-    VALID_FILE_TYPES.includes(file.type) ||
-    VALID_FILE_EXTENSIONS.some((ext) => file.name.toLowerCase().endsWith(ext))
-  );
-}
-
-// 验证文件大小
-export function validateFileSize(file) {
-  return file.size <= FILE_SIZE_LIMIT;
-}

@@ -8,7 +8,6 @@ import { useSettlement } from "@/context/SettlementContext";
 import {
   ArrowLeft,
   Download,
-  RefreshCcw,
   Copy,
   ArrowUp,
   ArrowDown,
@@ -427,7 +426,7 @@ export default function DataDisplay({
                         const isAmtField = amountFields && Array.isArray(amountFields)
                           ? amountFields.includes(header)
                           : header === "单价" || header === "总价" || header === amountField;
-                        
+
                         return (
                           <td
                             key={header}

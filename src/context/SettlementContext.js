@@ -7,7 +7,12 @@ import {
   useCallback,
   useMemo,
 } from "react";
-import { LogType } from "@/types";
+const LogType = {
+  INFO: "info",
+  SUCCESS: "success",
+  ERROR: "error",
+  WARNING: "warning",
+};
 
 /**
  * 结算单状态管理初始状态

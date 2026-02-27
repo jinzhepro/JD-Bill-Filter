@@ -2,7 +2,8 @@
 
 import React, { useCallback } from "react";
 import { useSettlement } from "@/context/SettlementContext";
-import { validateFileSize, readFile } from "@/lib/excelHandler";
+import { readFile } from "@/lib/excelHandler";
+import { isValidFileSize } from "@/lib/fileValidation";
 import {
   validateSettlementDataStructure,
   processSettlementData,
@@ -24,7 +25,9 @@ async function processSingleFile(fileWithPath, index, totalFiles, addLog) {
 
   addLog(`处理第 ${index + 1}/${totalFiles} 个文件: ${path}`, "info");
 
-  if (!validateFileSize(file)) {
+  try {
+    isValidFileSize(file);
+  } catch (error) {
     const errorMsg = `文件过大（超过50MB），已跳过: ${path}`;
     addLog(errorMsg, "warning");
     return { error: errorMsg };

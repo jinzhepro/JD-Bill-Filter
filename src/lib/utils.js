@@ -54,3 +54,34 @@ export function cleanProductCode(value) {
   }
   return strValue;
 }
+
+/**
+ * 格式化金额显示
+ * @param {number} value - 金额值
+ * @param {boolean} forcePositive - 是否强制显示为正数
+ * @returns {string} 格式化后的金额字符串
+ * @example
+ * formatAmount(1234.56) // "¥1,234.56"
+ * formatAmount(-500, true) // "¥500.00"
+ */
+export function formatAmount(value, forcePositive = false) {
+  const num = parseFloat(value || 0);
+  const formatted = Math.abs(num).toLocaleString('zh-CN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+  if (forcePositive || num >= 0) {
+    return `¥${formatted}`;
+  }
+  return `-¥${formatted}`;
+}
+
+/**
+ * 生成唯一ID
+ * @returns {string} 唯一标识符
+ * @example
+ * generateId() // "1709123456789-abc123xyz"
+ */
+export function generateId() {
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}

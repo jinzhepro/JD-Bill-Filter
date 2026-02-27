@@ -3,7 +3,7 @@
 import React, { useState, useRef, useCallback } from "react";
 import { Button } from "./ui/button";
 import { isValidFileExtension } from "@/lib/fileValidation";
-import { Upload, FileSpreadsheet, FileText, Trash2, Plus, CheckCircle2, Clock, FolderOpen, Files, AlertCircle, Info } from "lucide-react";
+import { Upload, Plus, CheckCircle2, Clock, FolderOpen, Files, Info } from "lucide-react";
 
 /**
  * 通用文件上传组件
@@ -32,7 +32,6 @@ export default function FileUploader({
   disabled = false,
 }) {
   const [isDragOver, setIsDragOver] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState([]);
   const inputRef = useRef(null);
 
   const isValidFileExtensionMemo = useCallback((fileName) => {
@@ -66,8 +65,6 @@ export default function FileUploader({
           file,
           path: file.webkitRelativePath || file.name,
         }));
-
-        setSelectedFiles(filesWithPath);
 
         if (onFilesSelected) {
           onFilesSelected(filesWithPath);
@@ -108,8 +105,6 @@ export default function FileUploader({
           path: file.name,
         }));
 
-        setSelectedFiles(filesWithPath);
-
         if (onFilesSelected) {
           onFilesSelected(filesWithPath);
         }
@@ -133,29 +128,6 @@ export default function FileUploader({
   const handleButtonClick = useCallback(() => {
     inputRef.current?.click();
   }, []);
-
-  // 移除文件
-  const handleRemoveFile = useCallback((index) => {
-    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
-  }, []);
-
-  // 获取文件图标
-  const getFileIcon = (fileName) => {
-    const ext = fileName.split(".").pop().toLowerCase();
-    if (["xlsx", "xls"].includes(ext)) {
-      return <FileSpreadsheet className="w-5 h-5 text-green-600 dark:text-green-400" />;
-    }
-    return <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />;
-  };
-
-  // 格式化文件大小
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return "0 B";
-    const k = 1024;
-    const sizes = ["B", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-  };
 
   return (
     <section className="bg-card rounded-xl border border-border p-8 shadow-sm">

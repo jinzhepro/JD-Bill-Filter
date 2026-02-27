@@ -8,30 +8,13 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 const ThemeContext = createContext();
 
 /**
- * 主题主题类型定义
+ * 主题类型定义
  */
 export const ThemeType = {
   LIGHT: "light",
   DARK: "dark",
   SYSTEM: "system",
 };
-
-/**
- * 主题Reducer - 处理主题状态变更
- */
-function themeReducer(state, action) {
-  switch (action.type) {
-    case "SET_THEME":
-      return { ...state, theme: action.payload };
-    case "TOGGLE_THEME":
-      return {
-        ...state,
-        theme: state.theme === ThemeType.LIGHT ? ThemeType.DARK : ThemeType.LIGHT,
-      };
-    default:
-      return state;
-  }
-}
 
 /**
  * 初始化主题状态 - 从localStorage读取用户偏好
@@ -75,30 +58,11 @@ export function ThemeProvider({ children }) {
   const isClient = useIsClient();
 
   /**
-   * 应用主题到DOM
-   */
-  const applyTheme = (themeValue) => {
-    if (!isClient) return;
-    
-    const root = document.documentElement;
-    
-    if (themeValue === ThemeType.DARK) {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
-    
-    // 保存到localStorage
-    localStorage.setItem("theme", themeValue);
-  };
-
-  /**
    * 设置主题
    * @param {string} newTheme - 新主题
    */
   const handleSetTheme = (newTheme) => {
     setTheme(newTheme);
-    applyTheme(newTheme);
   };
 
   /**
@@ -184,17 +148,6 @@ export function useTheme() {
   }
   
   return context;
-}
-
-/**
- * 获取当前主题的CSS类名
- * @param {string} lightClass - 亮色模式CSS类名
- * @param {string} darkClass - 暗色模式CSS类名
- * @returns {string} 对应当前主题的CSS类名
- */
-export function getThemeClass(lightClass, darkClass) {
-  // 这里会在运行时通过useTheme hook获取实际主题
-  return lightClass; // 实际使用时需要通过useTheme hook
 }
 
 export default ThemeContext;
