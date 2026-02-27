@@ -3,7 +3,7 @@
 import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./dialog";
 import { Button } from "./button";
-import { AlertTriangle, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 
 
 export default function Modal({
@@ -39,47 +39,6 @@ export default function Modal({
         )}
 
         <div className="p-6">{children}</div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// 确认对话框组件
-export function ConfirmModal({
-  isOpen,
-  onClose,
-  onConfirm,
-  title = "确认操作",
-  message,
-  confirmText = "确认",
-  cancelText = "取消",
-  confirmVariant = "default",
-  isLoading = false,
-}) {
-  return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md p-0">
-        <div className="text-center p-6">
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-muted mb-4">
-            <AlertTriangle className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <DialogTitle className="text-lg font-medium text-foreground mb-2">
-            {title}
-          </DialogTitle>
-          <p className="text-sm text-muted-foreground mb-6">{message}</p>
-          <div className="flex gap-3 justify-center">
-            <Button variant="outline" onClick={onClose} disabled={isLoading}>
-              {cancelText}
-            </Button>
-            <Button
-              variant={confirmVariant}
-              onClick={onConfirm}
-              disabled={isLoading}
-            >
-              {isLoading ? "处理中..." : confirmText}
-            </Button>
-          </div>
-        </div>
       </DialogContent>
     </Dialog>
   );

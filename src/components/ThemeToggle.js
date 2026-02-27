@@ -51,42 +51,4 @@ export function ThemeToggle() {
   );
 }
 
-/**
- * 高级主题选择器组件
- * 提供亮色、暗色、跟随系统三种模式选择
- */
-export function ThemeSelector() {
-  const { theme, setTheme } = useTheme();
-
-  const themes = [
-    { value: "light", label: "亮色", icon: "☀️" },
-    { value: "dark", label: "暗色", icon: "🌙" },
-    { value: "system", label: "跟随系统", icon: "💻" },
-  ];
-
-  return (
-    <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1 shadow-sm">
-      {themes.map((themeOption) => (
-        <button
-          key={themeOption.value}
-          onClick={() => setTheme(themeOption.value)}
-          className={`
-            flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium
-            transition-all duration-200 ease-in-out
-            ${
-              theme === themeOption.value
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted"
-            }
-          `}
-          aria-label={`选择${themeOption.label}主题`}
-        >
-          <span className="text-base">{themeOption.icon}</span>
-          <span className="hidden sm:inline">{themeOption.label}</span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
 export default ThemeToggle;

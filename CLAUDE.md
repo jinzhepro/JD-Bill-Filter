@@ -19,21 +19,20 @@ npm run lint    # Run ESLint
 - `src/app/` - Next.js App Router pages (`page.js` = home route for settlement processing, `suppliers/page.js` = supplier management)
 - `src/components/` - React components (`ui/` = shadcn/ui primitives, others = feature components)
 - `src/context/` - State management via React Context + useReducer
-  - `SettlementContext` - Settlement sheet state (uploads, processing, history)
+  - `SettlementContext` - Settlement sheet state (uploads, processing, history) - **Main Context**
   - `SupplierContext` - Supplier data and matching logic
-  - `AppContext` - Global app state (legacy, some duplication with SettlementContext)
   - `ThemeContext` - Dark/light theme
   - `LoadingContext` - Loading states
 - `src/lib/` - Core business logic
   - `settlementProcessor.js` - SKU merging, compensation deduction, self-operation fees
+  - `settlementHelpers.js` - Helper functions for settlement processing
   - `excelHandler.js` - Excel/CSV file I/O via ExcelJS
-  - `fileValidation.js` - File type/size validation
+  - `fileValidation.js` - File type/size validation (only `isValidFileExtension`, `isValidFileSize`)
   - `utils.js` - Helpers (`cn`, `cleanAmount`, `cleanProductCode`, `formatAmount`)
   - `constants.js` - Column names, file limits, format strings
   - `logger.js` - Conditional logging (dev only)
 - `src/data/` - Static data (`suppliers.js` - supplier configs)
-- `src/hooks/` - Custom hooks (`use-toast.js`, `useStreaming.js`, `useExcelWorker.js`)
-- `src/workers/` - Web Worker for Excel processing (`excelProcessor.worker.js`)
+- `src/hooks/` - Custom hooks (`use-toast.js`)
 
 ## Key Patterns
 

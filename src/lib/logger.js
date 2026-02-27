@@ -32,30 +32,4 @@ function createLogger() {
 
 export const logger = createLogger();
 
-/**
- * 便捷的调试日志函数 - 只在开发环境输出
- * @param {string} prefix - 日志前缀
- * @param {...any} args - 日志参数
- */
-export function debugLog(prefix, ...args) {
-  if (isDevelopment) {
-    console.log(`${prefix}:`, ...args);
-  }
-}
-
-/**
- * 性能日志 - 用于测量函数执行时间
- * @param {string} label - 性能测量标签
- * @returns {Function} 结束测量的函数
- */
-export function performanceLog(label) {
-  if (isDevelopment) {
-    console.time(label);
-    return () => {
-      console.timeEnd(label);
-    };
-  }
-  return () => {};
-}
-
 export default logger;

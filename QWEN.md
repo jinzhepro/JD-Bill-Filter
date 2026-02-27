@@ -47,26 +47,26 @@ JD-Bill-Filter/
 │   │   ├── SettlementContent.js
 │   │   ├── SettlementFolderUpload.js
 │   │   ├── SettlementResultDisplay.js
-│   │   ├── SettlementProcessForm.js
+│   │   ├── SettlementProcessModal.js
 │   │   ├── SupplierManager.js
 │   │   └── ...
 │   ├── context/                # React Context state management
-│   │   ├── AppContext.js
-│   │   ├── SettlementContext.js
+│   │   ├── SettlementContext.js  # Main context for settlement processing
 │   │   ├── SupplierContext.js
-│   │   └── ThemeContext.js
+│   │   ├── ThemeContext.js
+│   │   └── LoadingContext.js
 │   ├── lib/                    # Core business logic
 │   │   ├── settlementProcessor.js
+│   │   ├── settlementHelpers.js
 │   │   ├── excelHandler.js
 │   │   ├── fileValidation.js
 │   │   ├── utils.js
-│   │   └── constants.js
+│   │   ├── constants.js
+│   │   └── logger.js
 │   ├── data/                   # Static data
 │   │   └── suppliers.js
-│   ├── hooks/                  # Custom Hooks
-│   │   └── use-toast.js
-│   └── types/                  # JSDoc type definitions
-│       └── index.js
+│   └── hooks/                  # Custom Hooks
+│       └── use-toast.js
 ├── public/                     # Static assets
 ├── package.json
 ├── tailwind.config.js
@@ -89,7 +89,7 @@ JD-Bill-Filter/
 ```javascript
 import React, { useState, useReducer } from "react";
 import Decimal from "decimal.js";
-import { useApp } from "@/context/AppContext";
+import { useSettlement } from "@/context/SettlementContext";
 import { Button } from "@/components/ui/button";
 import { cn, cleanAmount } from "@/lib/utils";
 ```
@@ -106,6 +106,19 @@ const cleanValue = cleanAmount("¥1,234.56");
 const amount = new Decimal(cleanValue);
 const total = amount.plus(new Decimal(100));
 const result = total.toNumber();
+```
+
+### State Management
+
+**SettlementContext** is the main context for settlement processing:
+
+```javascript
+import { useSettlement } from "@/context/SettlementContext";
+
+function MyComponent() {
+  const { processedData, setProcessedData, addLog } = useSettlement();
+  // ...
+}
 ```
 
 ### Product Code Handling
@@ -197,7 +210,7 @@ export function AppProvider({ children }) {
     setData: useCallback((data) => dispatch({ type: ActionTypes.SET_DATA, payload: data }), []),
     reset: useCallback(() => dispatch({ type: ActionTypes.RESET }), []),
   }), []);
-  
+
   const value = useMemo(() => ({ ...state, ...actions }), [state, actions]);
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
@@ -208,6 +221,8 @@ export function useApp() {
   return context;
 }
 ```
+
+**Note**: The main context used in the application is `SettlementContext` which follows this same pattern.
 
 ## Related Documentation
 

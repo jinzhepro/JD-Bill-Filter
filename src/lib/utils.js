@@ -33,7 +33,7 @@ export function cleanAmount(value) {
 
 /**
  * 清理商品编号，处理 Excel 自动添加的等号前缀
- * 例如: ="123456" -> 123456
+ * 例如：="123456" -> 123456
  * @param {string|number} value - 商品编号值
  * @returns {string} 清理后的商品编号
  * @example
@@ -45,7 +45,7 @@ export function cleanProductCode(value) {
     return "";
   }
   const strValue = String(value);
-  // 处理格式: ="123456" 或 ="数字"
+  // 处理格式：="123456" 或="数字"
   if (strValue.startsWith('=') && strValue.includes('"')) {
     const match = strValue.match(/^="([^"]+)"$/);
     if (match) {
@@ -74,14 +74,4 @@ export function formatAmount(value, forcePositive = false) {
     return `¥${formatted}`;
   }
   return `-¥${formatted}`;
-}
-
-/**
- * 生成唯一ID
- * @returns {string} 唯一标识符
- * @example
- * generateId() // "1709123456789-abc123xyz"
- */
-export function generateId() {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }

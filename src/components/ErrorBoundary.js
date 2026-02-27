@@ -1,8 +1,7 @@
 "use client";
 
 import React from "react";
-import { logger } from "@/lib/logger";
-import { useApp } from "@/context/AppContext";
+import { useSettlement } from "@/context/SettlementContext";
 import { Button } from "./ui/button";
 
 /**
@@ -106,7 +105,7 @@ export class ErrorBoundary extends React.Component {
  * 用于包装异步操作，统一错误处理
  */
 export function useErrorHandler() {
-  const { setError, addLog } = useApp();
+  const { setError, addLog } = useSettlement();
 
   const handleError = React.useCallback(
     (error, context = "操作") => {
@@ -140,31 +139,4 @@ export function useErrorHandler() {
   );
 
   return { handleError, withErrorHandling };
-}
-
-/**
- * 包装异步操作的 HOC
- * 自动处理错误和加载状态
- */
-export function withAsyncOperation(Component) {
-  return function WrappedComponent(props) {
-    const { setProcessing, setError, clearError, addLog } = useApp();
-    const { withErrorHandling } = useErrorHandler();
-
-    const executeAsync = React.useCallback(
-      async (asyncFn, context = "操作") => {
-        setProcessing(true);
-        clearError();
-
-        try {
-          return await withErrorHandling(asyncFn, context);
-        } finally {
-          setProcessing(false);
-        }
-      },
-      [setProcessing, clearError, withErrorHandling]
-    );
-
-    return <Component {...props} executeAsync={executeAsync} />;
-  };
 }

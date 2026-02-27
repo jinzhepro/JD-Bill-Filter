@@ -94,6 +94,7 @@ JD-Bill-Filter/
 │   ├── app/                    # Next.js App Router 页面
 │   │   ├── page.js            # 首页（结算单处理）
 │   │   ├── suppliers/         # 供应商转换页面
+│   │   │   └── page.js        # 供应商管理页面
 │   │   ├── layout.js          # 根布局
 │   │   └── globals.css        # 全局样式（shadcn/ui）
 │   ├── components/            # React 组件
@@ -102,42 +103,44 @@ JD-Bill-Filter/
 │   │   │   ├── input.js      # 输入框组件
 │   │   │   ├── table.js      # 表格组件
 │   │   │   ├── toast.js      # Toast 提示
-│   │   │   └── modal.js      # 模态框组件
+│   │   │   └── modal.js      # 模态框组件（含 ErrorModal）
 │   │   ├── SettlementContent.js        # 结算单内容
 │   │   ├── SettlementFolderUpload.js   # 结算单文件夹上传
 │   │   ├── SettlementResultDisplay.js  # 结算单结果展示
-│   │   ├── SettlementProcessForm.js    # 结算单手动处理表单
+│   │   ├── SettlementProcessModal.js   # 结算单处理模态框
 │   │   ├── Sidebar.js        # 侧边栏导航
 │   │   ├── SupplierManager.js # 供应商管理
 │   │   ├── FileUploader.js   # 文件上传
 │   │   ├── DataDisplay.js    # 数据展示
 │   │   ├── SimpleLayout.js   # 简单布局
 │   │   ├── ErrorBoundary.js  # 错误边界
+│   │   ├── LoadingOverlay.js # 加载遮罩
+│   │   ├── LoadingStates.js  # 加载状态
 │   │   └── ThemeToggle.js    # 主题切换
 │   ├── context/              # React Context 状态管理
-│   │   ├── AppContext.js     # 全局应用状态
-│   │   ├── SettlementContext.js # 结算单状态
+│   │   ├── SettlementContext.js # 结算单状态（核心）
 │   │   ├── SupplierContext.js # 供应商状态
-│   │   └── ThemeContext.js   # 主题状态
+│   │   ├── ThemeContext.js   # 主题状态
+│   │   └── LoadingContext.js # 全局加载状态
 │   ├── lib/                  # 核心业务逻辑
 │   │   ├── settlementProcessor.js # 结算单数据处理
+│   │   ├── settlementHelpers.js   # 结算辅助函数
 │   │   ├── excelHandler.js   # Excel 文件处理
-│   │   ├── fileValidation.js # 文件验证
+│   │   ├── fileValidation.js # 文件验证（仅保留必要函数）
 │   │   ├── logger.js         # 日志工具
-│   │   ├── utils.js          # 工具函数
+│   │   ├── utils.js          # 工具函数（cn, cleanAmount, cleanProductCode, formatAmount）
 │   │   └── constants.js      # 常量定义
 │   ├── data/                 # 静态数据
 │   │   └── suppliers.js      # 供应商数据
-│   ├── hooks/                # 自定义 Hooks
-│   │   └── use-toast.js      # Toast 提示
-│   └── types/                # 类型定义
-│       └── index.js
+│   └── hooks/                # 自定义 Hooks
+│       └── use-toast.js      # Toast 提示
 ├── public/                   # 静态资源
 ├── package.json
 ├── tailwind.config.js        # Tailwind 配置
 ├── next.config.mjs           # Next.js 配置
 ├── components.json           # shadcn/ui 配置
 ├── eslint.config.mjs         # ESLint 配置
+├── jsconfig.json             # JavaScript 配置
 ├── AGENTS.md                 # Agent 指南
 ├── IFLOW.md                  # 详细文档
 └── README.md                 # 本文档
@@ -192,7 +195,7 @@ import Decimal from "decimal.js";
 import ExcelJS from "exceljs";
 
 // 3. 项目内部（使用 @/ 别名）
-import { useApp } from "@/context/AppContext";
+import { useSettlement } from "@/context/SettlementContext";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -240,15 +243,17 @@ try {
 
 ```javascript
 // 使用自定义 Hook 访问 Context
-import { useApp } from "@/context/AppContext";
+import { useSettlement } from "@/context/SettlementContext";
 
 function MyComponent() {
-  const { processedData, setProcessedData, addLog } = useApp();
+  const { processedData, setProcessedData, addLog } = useSettlement();
   // ...
 }
 
 // CRITICAL: 永远不要直接修改 state，始终使用 Context actions
 ```
+
+**注意**: `SettlementContext` 是主要的状态管理 Context，包含了结算单处理所需的所有状态和方法。
 
 ### 样式规范
 
@@ -269,12 +274,13 @@ function MyComponent() {
 - **CSV 编码**: 先尝试 UTF-8，失败后尝试 GBK
 - **Excel 数字列**: 商品编号设置为文本格式 (`numFmt: '@'`)
 - **Excel 公式**: 处理 `{ formula: '...', result: ... }` 对象
+- **文件验证**: 使用 `isValidFileExtension` 和 `isValidFileSize` 进行验证
 
 ## 🔒 安全注意事项
 
 - ✅ 文件大小限制（50MB）
 - ✅ 支持的文件类型验证（.xlsx, .xls, .csv）
-- ✅ 文件类型 MIME 验证
+- ✅ 文件扩展名验证
 - ✅ 无数据库依赖，数据仅在内存中处理
 - ✅ 生产环境建议添加身份验证和授权
 
