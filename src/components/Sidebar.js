@@ -81,7 +81,7 @@ export function Sidebar() {
       {/* 底部版权信息 */}
       <div className="p-4 border-t border-border">
         <p className="text-xs text-muted-foreground text-center">
-          © 2024 JD Bill Filter
+          © {new Date().getFullYear()} JD Bill Filter
         </p>
       </div>
     </aside>

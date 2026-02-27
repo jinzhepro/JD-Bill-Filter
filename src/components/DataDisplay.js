@@ -310,7 +310,7 @@ export default function DataDisplay({
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-10 py-2 rounded-lg border border-border bg-background text-sm
                 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary
-                placeholder:text-muted-foreground/60 transition-all duration-200"
+                placeholder:text-muted-foreground transition-all duration-200"
             />
             {searchQuery && (
               <button
@@ -413,10 +413,10 @@ export default function DataDisplay({
                 ))}
               </tbody>
               {columnTotalsResult && Object.keys(columnTotalsResult).length > 0 && (
-                <tfoot className="sticky bottom-0 z-10 bg-white border-t-2 border-gray-300">
+                <tfoot className="sticky bottom-0 z-10 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 border-t-2 border-border">
                   <tr>
                     {showRowNumber && (
-                      <td className="px-4 py-3 text-left font-bold text-foreground w-20 bg-white">
+                      <td className="px-4 py-3 text-left font-bold text-foreground w-20 bg-card/95">
                         合计
                       </td>
                     )}
@@ -430,7 +430,7 @@ export default function DataDisplay({
                         return (
                           <td
                             key={header}
-                            className="px-4 py-3 text-left font-bold text-foreground whitespace-nowrap bg-white"
+                            className="px-4 py-3 text-left font-bold text-foreground whitespace-nowrap bg-card/95"
                           >
                             {total !== undefined ? (
                               isAmtField ? (
@@ -448,7 +448,7 @@ export default function DataDisplay({
                           </td>
                         );
                       })}
-                    <td className="px-4 py-3 text-left font-bold text-foreground whitespace-nowrap bg-white">
+                    <td className="px-4 py-3 text-left font-bold text-foreground whitespace-nowrap bg-card/95">
                       -
                     </td>
                   </tr>
@@ -480,10 +480,10 @@ export default function DataDisplay({
               </div>
               <button
                 onClick={closeModal}
-                className="text-muted-foreground hover:text-foreground hover:bg-muted p-2 rounded-lg transition-colors text-xl"
+                className="text-muted-foreground hover:text-foreground hover:bg-muted p-2 rounded-lg transition-colors"
                 aria-label="关闭"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
             <div className="space-y-3 text-sm">
