@@ -194,29 +194,29 @@ export default function FileUploader({
         {showTips && (
           <div className="mt-8 flex flex-wrap justify-center gap-3 text-xs">
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-muted/60 rounded-full text-muted-foreground">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+              <CheckCircle2 className="w-3.5 h-3.5 text-success" />
               .xlsx
             </span>
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-muted/60 rounded-full text-muted-foreground">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+              <CheckCircle2 className="w-3.5 h-3.5 text-success" />
               .xls
             </span>
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-muted/60 rounded-full text-muted-foreground">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+              <CheckCircle2 className="w-3.5 h-3.5 text-success" />
               .csv
             </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-full text-amber-700 dark:text-amber-400">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-warning/10 rounded-full text-warning">
               <Clock className="w-3.5 h-3.5" />
               最大 50MB
             </span>
             {supportFolder && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 rounded-full text-blue-700 dark:text-blue-400">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-info/10 rounded-full text-info">
                 <FolderOpen className="w-3.5 h-3.5" />
                 支持文件夹
               </span>
             )}
             {multiple && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/10 rounded-full text-purple-700 dark:text-purple-400">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 rounded-full text-primary">
                 <Files className="w-3.5 h-3.5" />
                 多文件
               </span>

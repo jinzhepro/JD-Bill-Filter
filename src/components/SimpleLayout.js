@@ -2,7 +2,6 @@
 
 import React from "react";
 import { Sidebar } from "./Sidebar";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { FileText } from "lucide-react";
 
 /**
@@ -20,7 +19,6 @@ export function SimpleLayout({ children }) {
             <FileText className="w-3.5 h-3.5" />
             版本 0.1.0
           </div>
-          <ThemeToggle />
         </header>
         <main className="flex-1 bg-gradient-to-br from-background to-muted/20 p-6">
           {children}

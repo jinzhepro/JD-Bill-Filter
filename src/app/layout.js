@@ -1,7 +1,6 @@
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { SettlementProvider } from "@/context/SettlementContext";
-import { ThemeProvider } from "@/context/ThemeContext";
 import { LoadingProvider } from "@/context/LoadingContext";
 import LoadingOverlay from "@/components/LoadingOverlay";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -13,19 +12,17 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="zh-CN" suppressHydrationWarning>
+    <html lang="zh-CN">
       <body className="antialiased bg-background text-foreground overflow-hidden">
-        <ThemeProvider>
-          <SettlementProvider>
-            <LoadingProvider>
-              <ErrorBoundary>
-                {children}
-                <LoadingOverlay />
-                <Toaster />
-              </ErrorBoundary>
-            </LoadingProvider>
-          </SettlementProvider>
-        </ThemeProvider>
+        <SettlementProvider>
+          <LoadingProvider>
+            <ErrorBoundary>
+              {children}
+              <LoadingOverlay />
+              <Toaster />
+            </ErrorBoundary>
+          </LoadingProvider>
+        </SettlementProvider>
       </body>
     </html>
   );

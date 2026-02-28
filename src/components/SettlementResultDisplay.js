@@ -103,40 +103,40 @@ export default function SettlementResultDisplay() {
             <div className="relative overflow-hidden flex flex-col p-4 rounded-xl bg-gradient-to-br from-rose-500/10 to-rose-500/5 border border-rose-500/20 shadow-sm hover:shadow-md transition-shadow duration-200">
               <div className="absolute top-0 right-0 w-16 h-16 bg-rose-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
               <span className="text-xs font-medium text-muted-foreground mb-1">直营服务费</span>
-              <span className="text-2xl font-bold text-rose-600 dark:text-rose-400 tracking-tight">
+              <span className="text-2xl font-bold text-destructive tracking-tight">
                 ¥{selfOperationAmount.toFixed(2)}
               </span>
             </div>
             <div className="relative overflow-hidden flex flex-col p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 shadow-sm hover:shadow-md transition-shadow duration-200">
               <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
               <span className="text-xs font-medium text-muted-foreground mb-1">收入</span>
-              <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
+              <span className="text-2xl font-bold text-success tracking-tight">
                 ¥{finalAmount.toFixed(2)}
               </span>
             </div>
             <div className="relative overflow-hidden flex flex-col p-4 rounded-xl bg-gradient-to-br from-sky-500/10 to-sky-500/5 border border-sky-500/20 shadow-sm hover:shadow-md transition-shadow duration-200">
               <div className="absolute top-0 right-0 w-16 h-16 bg-sky-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
               <span className="text-xs font-medium text-muted-foreground mb-1">数量合计</span>
-              <span className="text-2xl font-bold text-sky-600 dark:text-sky-400 tracking-tight">
+              <span className="text-2xl font-bold text-info tracking-tight">
                 {totalQuantity.toFixed(0)}
               </span>
             </div>
           </div>
           {dataChangesCount > 0 && (
-            <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20">
+            <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-warning/10 to-orange-500/10 border border-warning/20">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center">
-                  <CheckCircle2 className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                <div className="w-10 h-10 rounded-lg bg-warning/20 flex items-center justify-center">
+                  <CheckCircle2 className="w-5 h-5 text-warning" />
                 </div>
                 <span className="text-sm font-medium text-foreground">
-                  已处理 <span className="text-amber-600 dark:text-amber-400 font-bold">{dataChangesCount}</span> 个SKU
+                  已处理 <span className="text-warning font-bold">{dataChangesCount}</span> 个 SKU
                 </span>
               </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowDataChanges(!showDataChanges)}
-                className="hover:bg-amber-500/10"
+                className="hover:bg-warning/10"
               >
                 {showDataChanges ? "隐藏" : "显示"}数据变化
               </Button>
