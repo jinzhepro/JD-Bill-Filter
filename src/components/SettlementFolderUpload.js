@@ -133,10 +133,10 @@ export default function SettlementFolderUpload() {
 
         // 如果有部分文件处理失败，给出警告
         if (errors.length > 0) {
-          addLog(`警告: ${errors.length} 个文件处理失败，但继续处理剩余数据`, "warning");
+          addLog(`警告：${errors.length} 个文件处理失败，但继续处理剩余数据`, "warning");
         }
 
-        addLog(`设置原始数据: ${allData.length} 行`, "info");
+        addLog(`设置原始数据：${allData.length} 行`, "info");
         setOriginalData(allData);
 
         try {
@@ -164,6 +164,7 @@ export default function SettlementFolderUpload() {
       setOriginalData,
       setProcessedData,
       handleError,
+      toast,
     ]
   );
 

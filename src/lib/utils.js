@@ -75,3 +75,44 @@ export function formatAmount(value, forcePositive = false) {
   }
   return `-¥${formatted}`;
 }
+
+/**
+ * 格式化金额显示（React 组件版本）
+ * @param {number} value - 金额值
+ * @param {boolean} forcePositive - 是否强制显示为正数
+ * @returns {JSX.Element} 格式化后的金额元素
+ * @example
+ * formatAmountJSX(1234.56) // <span>¥1,234.56</span>
+ */
+export function formatAmountJSX(value, forcePositive = false) {
+  const num = parseFloat(value || 0);
+  const formatted = Math.abs(num).toFixed(2);
+  if (forcePositive || num >= 0) {
+    return <span className="text-primary font-medium">¥{formatted}</span>;
+  }
+  return <span className="text-destructive font-medium">-¥{formatted}</span>;
+}
+
+/**
+ * 计算列总和
+ * @param {Array} data - 数据数组
+ * @param {Array} columns - 需要计算的列名数组
+ * @returns {Object} 各列的总和
+ */
+export function calculateColumnTotals(data, columns = ["应结金额", "直营服务费", "数量", "净结金额"]) {
+  if (!data || data.length === 0) {
+    return {};
+  }
+
+  const totals = {};
+
+  columns.forEach((column) => {
+    const total = data.reduce((sum, row) => {
+      const value = parseFloat(row[column] || 0);
+      return sum + (isNaN(value) ? 0 : value);
+    }, 0);
+    totals[column] = total;
+  });
+
+  return totals;
+}

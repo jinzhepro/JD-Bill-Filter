@@ -5,6 +5,7 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useSettlement } from "@/context/SettlementContext";
+import { formatAmountJSX } from "@/lib/utils";
 import {
   ArrowLeft,
   Download,
@@ -115,13 +116,11 @@ export default function DataDisplay({
 
   const totalAmount = calculateTotalAmount(processedData);
 
-  const calculateColumnTotals = () => {
-    // 如果已提供预计算的总和，直接使用
+  const calculateColumnTotalsLocal = () => {
     if (calculatedTotals && typeof calculatedTotals === 'object') {
       return calculatedTotals;
     }
 
-    // 否则根据 columnTotals 数组计算
     if (!columnTotals || !processedData || processedData.length === 0) return null;
 
     const totals = {};
@@ -135,7 +134,7 @@ export default function DataDisplay({
     return totals;
   };
 
-  const columnTotalsResult = calculateColumnTotals();
+  const columnTotalsResult = calculateColumnTotalsLocal();
 
   const handleSort = (key) => {
     let direction = "asc";
@@ -220,16 +219,6 @@ export default function DataDisplay({
 
   const handleReset = () => {
     if (onReset) onReset();
-  };
-
-  const formatAmount = (value, forcePositive = false) => {
-    const num = parseFloat(value || 0);
-    const formatted = Math.abs(num).toFixed(2);
-    // 直营服务费始终显示为正数
-    if (forcePositive || num >= 0) {
-      return <span className="text-primary font-medium">¥{formatted}</span>;
-    }
-    return <span className="text-destructive font-medium">-¥{formatted}</span>;
   };
 
   const statsContent = customStats || (
@@ -435,7 +424,7 @@ export default function DataDisplay({
                             {total !== undefined ? (
                               isAmtField ? (
                                 <span className="text-primary font-mono">
-                                  {formatAmount(total, header === "直营服务费")}
+                                  {formatAmountJSX(total, header === "直营服务费")}
                                 </span>
                               ) : (
                                 <span className="font-mono">
@@ -541,16 +530,6 @@ export default function DataDisplay({
 function TableRow({ row, rowIndex, amountField, amountFields, showRowNumber, showDataChanges, onShowModal }) {
   const { dataChanges } = useSettlement();
 
-  const formatAmount = (value, forcePositive = false) => {
-    const num = parseFloat(value || 0);
-    const formatted = Math.abs(num).toFixed(2);
-    // 直营服务费始终显示为正数
-    if (forcePositive || num >= 0) {
-      return <span className="text-primary font-medium">¥{formatted}</span>;
-    }
-    return <span className="text-destructive font-medium">-¥{formatted}</span>;
-  };
-
   const isAmountField = (key) => {
     if (amountFields && Array.isArray(amountFields)) {
       return amountFields.includes(key);
@@ -599,7 +578,7 @@ function TableRow({ row, rowIndex, amountField, amountFields, showRowNumber, sho
       {Object.entries(row).map(([key]) => (
         <td key={key} className="px-4 py-3 text-left border-b border-border/50 whitespace-nowrap">
           {isAmountField(key)
-            ? formatAmount(row[key], key === "直营服务费")
+            ? formatAmountJSX(row[key], key === "直营服务费")
             : row[key]}
         </td>
       ))}

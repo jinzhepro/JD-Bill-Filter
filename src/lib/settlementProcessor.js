@@ -4,13 +4,25 @@ import { cleanAmount } from "./utils";
 import { logger } from "./logger";
 
 /**
- * 清理字符串中的Tab和换行字符
+ * 清理字符串中的 Tab 和换行字符
+ * @param {string|number} value - 原始值
+ * @returns {string|number} 清理后的值
  */
 function cleanString(value) {
   if (typeof value === "string") {
     return value.replace(/[\t\n\r]/g, "").trim();
   }
   return value;
+}
+
+/**
+ * 从行数据中获取金额值
+ * @param {Object} row - 行数据
+ * @param {string} amountColumn - 金额列名
+ * @returns {Decimal} 金额值
+ */
+function getRowAmount(row, amountColumn) {
+  return new Decimal(cleanAmount(row[amountColumn] || 0));
 }
 
 /**
