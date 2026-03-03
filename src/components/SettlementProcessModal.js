@@ -14,6 +14,7 @@ import {
   parsePastedContent,
   mergeSameSkuRows,
 } from "@/lib/settlementHelpers";
+import { cleanAmount } from "@/lib/utils";
 
 /**
  * 结算单处理Modal组件
@@ -112,13 +113,13 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
     }
 
     const targetRow = updatedData[skuIndex];
-    const currentQuantity = cleanDecimalValue(targetRow["数量"]);
+    const currentQuantity = new Decimal(cleanAmount(targetRow["数量"]));
     const deductQuantity = cleanDecimalValue(row.quantity);
 
-    if (currentQuantity < deductQuantity) {
+    if (currentQuantity.lt(deductQuantity)) {
       return {
         success: false,
-        message: `商品编号 ${row.sku} 数量不足，当前数量: ${currentQuantity.toNumber()}，需要扣减: ${deductQuantity.toNumber()}`,
+        message: `商品编号 ${row.sku} 数量不足，当前数量：${currentQuantity.toNumber()}，需要扣减：${deductQuantity.toNumber()}`,
         data: updatedData,
         changes: null,
       };
@@ -278,11 +279,12 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
       const skuIndex = findSkuIndex(row.sku);
       if (skuIndex !== -1) {
         const targetRow = processedData[skuIndex];
-        const currentQuantity = cleanDecimalValue(targetRow["数量"]);
+        // 使用 cleanAmount 处理，因为它会正确处理千位分隔符
+        const currentQuantity = new Decimal(cleanAmount(targetRow["数量"]));
         const deductQuantity = cleanDecimalValue(row.quantity);
 
-        if (currentQuantity < deductQuantity) {
-          insufficientSKUs.push(`${row.sku} (当前: ${currentQuantity.toNumber()}, 需要: ${deductQuantity.toNumber()})`);
+        if (currentQuantity.lt(deductQuantity)) {
+          insufficientSKUs.push(`${row.sku} (当前：${currentQuantity.toNumber()}, 需要：${deductQuantity.toNumber()})`);
         }
       }
     }
