@@ -56,11 +56,13 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
 
   /**
    * 清空历史记录
+   * 注意：开票处理历史记录任何情况下不能清空，此函数已禁用
    */
   const handleClearHistory = () => {
-    clearPasteHistory();
+    // 历史记录不能清空，仅显示提示
     toast({
-      title: "历史记录已清空",
+      title: "历史记录无法清空",
+      description: "开票处理历史记录将自动保留，方便后续快速操作",
     });
   };
 
@@ -406,21 +408,16 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
         </div>
 
         {/* 历史记录 */}
-        {pasteHistory.length > 0 && (
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-sm font-semibold text-foreground">
-                历史记录
-              </h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClearHistory}
-                className="h-7 px-2 text-xs text-destructive hover:text-destructive"
-              >
-                清空
-              </Button>
-            </div>
+        <div>
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-sm font-semibold text-foreground">
+              历史记录 {pasteHistory.length > 0 && `(${pasteHistory.length}条)`}
+            </h3>
+            <span className="text-xs text-muted-foreground">
+              历史记录自动保留，无法清空
+            </span>
+          </div>
+          {pasteHistory.length > 0 ? (
             <div className="bg-muted/30 rounded-lg border border-border overflow-hidden max-h-32 overflow-y-auto">
               {pasteHistory.slice().reverse().map((item) => (
                 <div
@@ -444,8 +441,12 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="bg-muted/30 rounded-lg border border-border p-4 text-center text-xs text-muted-foreground">
+              暂无历史记录，使用开票处理功能后会自动保存
+            </div>
+          )}
+        </div>
 
         {/* 操作按钮 */}
         <div className="flex gap-3 pt-2">

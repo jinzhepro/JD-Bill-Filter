@@ -73,7 +73,7 @@ const ActionTypes = {
   ADD_DATA_CHANGE: "ADD_DATA_CHANGE",
   SET_PASTE_HISTORY: "SET_PASTE_HISTORY",
   ADD_PASTE_HISTORY: "ADD_PASTE_HISTORY",
-  CLEAR_PASTE_HISTORY: "CLEAR_PASTE_HISTORY",
+  // CLEAR_PASTE_HISTORY: "CLEAR_PASTE_HISTORY", // 已禁用，历史记录不能清空
 };
 
 function settlementReducer(state, action) {
@@ -158,23 +158,32 @@ function settlementReducer(state, action) {
       };
 
     case ActionTypes.SET_PASTE_HISTORY:
-      return { ...state, pasteHistory: action.payload };
+      // 只保留最新的 3 条历史记录
+      const limitedHistory = action.payload.slice(-3);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("pasteHistory", JSON.stringify(limitedHistory));
+        console.log("保存历史记录 (SET):", limitedHistory.length, "条");
+      }
+      return { ...state, pasteHistory: limitedHistory };
 
     case ActionTypes.ADD_PASTE_HISTORY:
       const newHistory = [...state.pasteHistory, action.payload];
+      // 只保留最新的 3 条历史记录
+      const limitedNewHistory = newHistory.slice(-3);
       if (typeof window !== "undefined") {
-        localStorage.setItem("pasteHistory", JSON.stringify(newHistory));
+        localStorage.setItem("pasteHistory", JSON.stringify(limitedNewHistory));
+        console.log("保存历史记录 (ADD):", limitedNewHistory.length, "条");
       }
       return {
         ...state,
-        pasteHistory: newHistory,
+        pasteHistory: limitedNewHistory,
       };
 
-    case ActionTypes.CLEAR_PASTE_HISTORY:
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("pasteHistory");
-      }
-      return { ...state, pasteHistory: [] };
+    // case ActionTypes.CLEAR_PASTE_HISTORY: // 已禁用
+    //   if (typeof window !== "undefined") {
+    //     localStorage.removeItem("pasteHistory");
+    //   }
+    //   return { ...state, pasteHistory: [] };
 
     case ActionTypes.RESET:
       return {
@@ -212,6 +221,7 @@ export function SettlementProvider({ children }) {
     }
     try {
       const stored = localStorage.getItem("pasteHistory");
+      console.log("加载历史记录:", stored ? JSON.parse(stored).length : 0, "条");
       if (stored) {
         return JSON.parse(stored);
       }
@@ -316,7 +326,9 @@ export function SettlementProvider({ children }) {
     },
 
     clearPasteHistory: () => {
-      dispatch({ type: ActionTypes.CLEAR_PASTE_HISTORY });
+      // 开票处理历史记录任何情况下不能清空
+      // 此方法已禁用，调用时不会执行任何操作
+      console.warn("clearPasteHistory 方法已禁用，开票处理历史记录不能清空");
     },
   }), []);
 
