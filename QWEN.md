@@ -1,116 +1,205 @@
-# JD Bill Filter - Project Context
+# JD Bill Filter - 项目上下文文档
 
-## Project Overview
+## 项目概述
 
-**JD Bill Filter** is a Next.js-based settlement document processing system for handling JD.com (京东) billing data. The application supports Excel/CSV file import, intelligent order merging, settlement processing, and supplier conversion.
+**JD Bill Filter（京东单据处理系统）** 是一个基于 Next.js 的京东对帐单处理系统，支持 Excel/CSV 文件导入、智能订单合并、结算单处理和供应商转换等功能。
 
-### Core Features
-- **Settlement Processing**: Batch import Excel/CSV files, merge same-SKU items, handle after-sales compensation
-- **Supplier Conversion**: Manage supplier information with custom matching rules
-- **Data Display**: Tabular results with sorting, copying, and real-time statistics
+### 核心技术栈
 
-## Tech Stack
+| 类别 | 技术 |
+|------|------|
+| **框架** | Next.js 16.0.10 (App Router) |
+| **语言** | JavaScript (无 TypeScript) |
+| **UI** | shadcn/ui + Tailwind CSS |
+| **状态管理** | React Context + useReducer |
+| **数值计算** | Decimal.js (高精度数学) |
+| **文件处理** | ExcelJS (Excel), 原生 API (CSV) |
+| **图标** | Lucide React |
 
-| Category | Technology |
-|----------|------------|
-| **Framework** | Next.js 16.0.10 (App Router) |
-| **Language** | JavaScript (not TypeScript) |
-| **UI Library** | React 19.2.0 + shadcn/ui + Tailwind CSS 3.4.18 |
-| **State Management** | React Context + useReducer |
-| **Math Library** | Decimal.js (high-precision calculations) |
-| **File Processing** | ExcelJS (Excel), native API (CSV) |
-| **Icons** | Lucide React |
-| **Linting** | ESLint 9 (Flat Config) |
+### 主要功能
 
-## Commands
+1. **结算单处理**：批量导入 Excel/CSV 文件，自动合并相同 SKU 的货款和数量，智能处理售后卖家赔付费和直营服务费
+2. **供应商转换**：根据匹配字符串自动识别供应商，支持自定义匹配规则
+3. **数据展示**：表格化展示处理结果，支持排序、复制和实时统计
 
-```bash
-npm run dev              # Start dev server at http://localhost:3000
-npm run build            # Build production version (runs ESLint)
-npm run start            # Start production server
-npm run lint             # Run ESLint on entire project
-npx eslint src/file.js   # Lint single file
-```
+---
 
-## Project Structure
+## 目录结构
 
 ```
 JD-Bill-Filter/
 ├── src/
-│   ├── app/                    # Next.js App Router pages
-│   │   ├── page.js             # Home page (Settlement Processing)
-│   │   ├── suppliers/          # Supplier conversion page
-│   │   ├── layout.js           # Root layout
-│   │   └── globals.css         # Global styles (shadcn/ui)
-│   ├── components/             # React components
-│   │   ├── ui/                 # shadcn/ui base components
-│   │   ├── SettlementContent.js
-│   │   ├── SettlementFolderUpload.js
-│   │   ├── SettlementResultDisplay.js
-│   │   ├── SettlementProcessModal.js
-│   │   ├── SupplierManager.js
+│   ├── app/                    # Next.js App Router 页面
+│   │   ├── page.js            # 首页（结算单处理）
+│   │   ├── suppliers/         # 供应商转换页面
+│   │   ├── layout.js          # 根布局
+│   │   └── globals.css        # 全局样式
+│   ├── components/            # React 组件
+│   │   ├── ui/               # shadcn/ui 基础组件
+│   │   ├── SettlementContent.js        # 结算单内容
+│   │   ├── SettlementFolderUpload.js   # 文件夹上传
+│   │   ├── SettlementResultDisplay.js  # 结果展示
+│   │   ├── Sidebar.js        # 侧边栏导航
+│   │   ├── SupplierManager.js # 供应商管理
 │   │   └── ...
-│   ├── context/                # React Context state management
-│   │   ├── SettlementContext.js  # Main context for settlement processing
-│   │   ├── SupplierContext.js
-│   │   ├── ThemeContext.js
-│   │   └── LoadingContext.js
-│   ├── lib/                    # Core business logic
-│   │   ├── settlementProcessor.js
-│   │   ├── settlementHelpers.js
-│   │   ├── excelHandler.js
-│   │   ├── fileValidation.js
-│   │   ├── utils.js
-│   │   ├── constants.js
-│   │   └── logger.js
-│   ├── data/                   # Static data
-│   │   └── suppliers.js
-│   └── hooks/                  # Custom Hooks
-│       └── use-toast.js
-├── public/                     # Static assets
+│   ├── context/              # React Context 状态管理
+│   │   ├── SettlementContext.js # 结算单状态（核心）
+│   │   ├── SupplierContext.js # 供应商状态
+│   │   ├── ThemeContext.js   # 主题状态
+│   │   └── LoadingContext.js # 加载状态
+│   ├── lib/                  # 核心业务逻辑
+│   │   ├── settlementProcessor.js # 结算单数据处理
+│   │   ├── settlementHelpers.js   # 结算辅助函数
+│   │   ├── excelHandler.js   # Excel 文件处理
+│   │   ├── fileValidation.js # 文件验证
+│   │   ├── logger.js         # 日志工具
+│   │   ├── utils.js          # 工具函数
+│   │   └── constants.js      # 常量定义
+│   ├── data/                 # 静态数据
+│   │   └── suppliers.js      # 供应商数据
+│   └── hooks/                # 自定义 Hooks
+│       └── use-toast.js      # Toast 提示
+├── public/                   # 静态资源
 ├── package.json
 ├── tailwind.config.js
 ├── next.config.mjs
-├── components.json             # shadcn/ui config
-└── AGENTS.md                   # AI Agent guidelines
+├── components.json
+├── eslint.config.mjs
+├── jsconfig.json
+├── AGENTS.md                 # AI Agent 开发指南
+├── README.md                 # 用户文档
+└── QWEN.md                   # 本文件
 ```
 
-## Key Conventions
+---
 
-### Import Order
-1. React/Next.js
-2. Third-party libraries
-3. Context
-4. UI components
-5. Hooks
-6. Utils/constants
-7. Types
+## 构建与运行
+
+### 环境要求
+
+- Node.js 18+
+- npm 或 yarn
+
+### 安装依赖
+
+```bash
+npm install
+```
+
+### 开发模式
+
+```bash
+npm run dev
+```
+
+访问 http://localhost:3000
+
+### 生产构建
+
+```bash
+npm run build
+npm start
+```
+
+### 代码检查
+
+```bash
+npm run lint
+```
+
+---
+
+## 核心业务逻辑
+
+### 结算单处理流程
+
+1. **文件上传**：支持 .xlsx, .xls, .csv 格式，50MB 限制
+2. **数据验证**：检查必需列（商品编号、金额列）
+3. **数据处理**：
+   - 按费用名称过滤（只处理"货款"记录）
+   - 合并相同 SKU 的货款和数量
+   - 处理直营服务费（按商品编号分组）
+   - 处理售后卖家赔付费（累加总额，按货款比例分摊）
+4. **结果计算**：
+   - 货款 = 应结金额 - 分摊的赔付费
+   - 收入 = 货款 + 直营服务费
+5. **导出结果**：生成 Excel 文件，商品编号设置为文本格式
+
+### 关键常量 (constants.js)
 
 ```javascript
-import React, { useState, useReducer } from "react";
-import Decimal from "decimal.js";
-import { useSettlement } from "@/context/SettlementContext";
-import { Button } from "@/components/ui/button";
-import { cn, cleanAmount } from "@/lib/utils";
+// 文件上传限制
+FILE_SIZE_LIMIT = 50MB
+
+// 结算单金额列名称
+SETTLEMENT_AMOUNT_COLUMNS = ["应结金额", "金额", "合计金额", "总金额"]
+
+// 费用名称过滤（只处理货款）
+SETTLEMENT_FEE_NAME_FILTER = "货款"
+
+// 直营服务费名称
+SETTLEMENT_SELF_OPERATION_FEE = "直营服务费"
+
+// 商品编号格式（文本格式，防止 Excel 自动转换）
+PRODUCT_CODE_FORMAT = "@"
 ```
 
-### Amount Calculations
+---
 
-**Always use Decimal.js** to avoid floating-point precision issues:
+## 开发规范
+
+### 代码风格
+
+- **文件命名**：PascalCase（组件）、camelCase（函数/变量）、UPPER_SNAKE_CASE（常量）
+- **客户端组件**：必须以 `"use client"` 开头
+- **导入顺序**：
+  ```javascript
+  // 1. React
+  import React, { useState } from "react";
+  
+  // 2. 第三方库
+  import Decimal from "decimal.js";
+  
+  // 3. 项目内部（使用 @/ 别名）
+  import { useSettlement } from "@/context/SettlementContext";
+  
+  // 4. 相对路径
+  import { MyComponent } from "./MyComponent";
+  ```
+
+### 金额计算规范
+
+**始终使用 Decimal.js 避免浮点数精度问题**：
 
 ```javascript
 import Decimal from "decimal.js";
 import { cleanAmount } from "@/lib/utils";
 
-const cleanValue = cleanAmount("¥1,234.56");
-const amount = new Decimal(cleanValue);
-const total = amount.plus(new Decimal(100));
-const result = total.toNumber();
+const amount = new Decimal(cleanAmount(value));
+const total = amount.plus(new Decimal(10));
+const displayValue = total.toNumber();
 ```
 
-### State Management
+### 商品编号处理
 
-**SettlementContext** is the main context for settlement processing:
+**关键**：必须强制转换为字符串，防止 Excel 自动转换为科学计数法：
+
+```javascript
+const productCode = String(row["商品编号"] || "");
+```
+
+### 错误处理
+
+```javascript
+try {
+  const result = await someAsyncOperation();
+} catch (error) {
+  logger.error("操作失败:", error);
+  setError(error.message);
+}
+```
+
+### Context 使用规范
 
 ```javascript
 import { useSettlement } from "@/context/SettlementContext";
@@ -119,113 +208,121 @@ function MyComponent() {
   const { processedData, setProcessedData, addLog } = useSettlement();
   // ...
 }
+
+// 禁止直接修改 state
+// ❌ state.processedData.push(newItem);
+// ✅ setProcessedData([...processedData, newItem]);
 ```
 
-### Product Code Handling
+### 样式规范
 
-**Product codes must be converted to strings** to prevent Excel auto-conversion:
+使用 shadcn/ui 语义化 CSS 变量：
 
 ```javascript
-const productCode = String(row["商品编号"] || "");
-const cleanCode = cleanProductCode('="123456"'); // "123456"
+// ✅ 推荐
+<div className="bg-card text-foreground border-border" />
+
+// ❌ 避免
+<div className="bg-white text-gray-800 border-gray-200" />
 ```
 
-### Tailwind CSS
+---
 
-Use `cn()` utility and semantic CSS variables:
+## 核心 Context
 
-```javascript
-import { cn } from "@/lib/utils";
-<div className={cn("bg-card text-foreground border-border", className)} />
-```
+### SettlementContext（主要）
 
-### Client Components
+**文件**: `src/context/SettlementContext.js`
 
-All client-side components must start with `"use client"`:
+**核心状态**：
+- `uploadedFiles`: 上传的文件列表
+- `originalData`: 原始结算单数据
+- `processedData`: 处理后的数据
+- `isProcessing`: 处理中状态
+- `logs`: 处理日志
+- `mergeMode`: 合并模式开关
+- `mergedData`: 合并后的数据
+- `pasteHistory`: 粘贴历史（localStorage 持久化，保留最近 3 条）
 
-```javascript
-"use client";
-import React from "react";
-```
+**核心方法**：
+- `setFile(file)`, `addFile(file)`, `removeFile(index)`
+- `setOriginalData(data)`, `setProcessedData(data)`
+- `addLog(message, type)`, `setError(error)`
+- `setMergeMode(mode)`, `setMergedData(data)`
 
-### Error Handling
+### 其他 Context
 
-```javascript
-try {
-  const result = await processExcelFile(file);
-  addLog("处理完成", LogType.SUCCESS);
-} catch (error) {
-  console.error("Excel 处理失败:", error);
-  addLog(`文件处理失败：${error.message}`, LogType.ERROR);
-  setError(error.message);
-}
-```
+| Context | 文件 | 用途 |
+|---------|------|------|
+| SupplierContext | `src/context/SupplierContext.js` | 供应商转换状态 |
+| ThemeContext | `src/context/ThemeContext.js` | 深色/浅色模式 |
+| LoadingContext | `src/context/LoadingContext.js` | 全局加载状态 |
 
-## File Processing
+---
 
-| Aspect | Specification |
-|--------|---------------|
-| **File Size Limit** | 50MB |
-| **Supported Formats** | .xlsx, .xls, .csv |
-| **CSV Encoding** | Try UTF-8 first, then GBK |
-| **Product Code** | Force string conversion |
-| **Excel Export** | Set product code column to text format (`numFmt: '@'`) |
+## 工具函数 (utils.js)
 
-## Settlement Processing Flow
+| 函数 | 用途 |
+|------|------|
+| `cn(...classes)` | 合并 Tailwind 类名 |
+| `cleanAmount(value)` | 清理金额字符串（移除货币符号和千位分隔符） |
+| `cleanProductCode(value)` | 清理商品编号（处理 Excel 自动添加的等号） |
+| `formatAmount(amount, isNegative)` | 格式化金额显示 |
 
-1. **File Upload**: Support .xlsx, .xls, .csv (50MB limit)
-2. **Data Validation**: Check required columns (product code, amount columns)
-3. **Data Processing**:
-   - Filter by fee name (only process "货款" records)
-   - Merge same-SKU items
-   - Handle self-operation fees (grouped by product code)
-   - Handle after-sales compensation (proportional distribution)
-4. **Result Calculation**:
-   - Settlement Amount = Due Amount - Distributed Compensation
-   - Income = Settlement Amount + Self-operation Fee
-5. **Export**: Generate Excel with product codes as text format
+---
 
-## State Management Pattern
+## 安全与限制
 
-```javascript
-"use client";
-import { createContext, useContext, useReducer, useCallback, useMemo } from "react";
+| 项目 | 限制 |
+|------|------|
+| 文件大小 | 50MB |
+| 支持格式 | .xlsx, .xls, .csv |
+| CSV 编码 | 先尝试 UTF-8，失败后尝试 GBK |
+| 数据存储 | 内存处理，无数据库依赖 |
 
-const initialState = { data: [], isLoading: false, error: null };
-const ActionTypes = { SET_DATA: "SET_DATA", RESET: "RESET" };
+---
 
-function reducer(state, action) {
-  switch (action.type) {
-    case ActionTypes.SET_DATA: return { ...state, data: action.payload };
-    case ActionTypes.RESET: return initialState;
-    default: return state;
-  }
-}
+## 测试
 
-const AppContext = createContext();
+**当前状态**：项目无测试框架
 
-export function AppProvider({ children }) {
-  const [state, dispatch] = useReducer(reducer, initialState);
-  const actions = useMemo(() => ({
-    setData: useCallback((data) => dispatch({ type: ActionTypes.SET_DATA, payload: data }), []),
-    reset: useCallback(() => dispatch({ type: ActionTypes.RESET }), []),
-  }), []);
+**建议**：安装 Vitest + Testing Library 添加测试
 
-  const value = useMemo(() => ({ ...state, ...actions }), [state, actions]);
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
-}
+---
 
-export function useApp() {
-  const context = useContext(AppContext);
-  if (!context) throw new Error("useApp must be used within AppProvider");
-  return context;
-}
-```
+## 相关文档
 
-**Note**: The main context used in the application is `SettlementContext` which follows this same pattern.
+| 文档 | 用途 |
+|------|------|
+| `README.md` | 用户文档，包含功能介绍和使用指南 |
+| `AGENTS.md` | AI Agent 开发指南，包含代码规范和常用代码片段 |
+| `package.json` | 依赖和脚本配置 |
+| `eslint.config.mjs` | ESLint 配置（基于 eslint-config-next） |
+| `jsconfig.json` | JavaScript 配置（配置 @/ 路径别名） |
 
-## Related Documentation
+---
 
-- **AGENTS.md**: AI Agent development guidelines
-- **README.md**: User-facing documentation
-- **package.json**: Dependencies and scripts
+## 注意事项
+
+### 业务逻辑
+
+- ⚠️ 结算单处理只处理"货款"记录
+- ⚠️ 相同 SKU 自动合并货款和数量
+- ⚠️ 售后卖家赔付费按货款比例分摊
+- ⚠️ 直营服务费按商品编号分组
+
+### 开发规范
+
+- ✅ 所有组件和函数必须有中文注释
+- ✅ 遵循 React 19 最佳实践
+- ✅ 使用 `npm run lint` 确保代码质量
+- ✅ 修改前仔细测试功能
+
+### 生产环境
+
+- ⚠️ 建议添加身份验证和授权
+- ⚠️ 数据仅在内存中处理，刷新后丢失
+
+---
+
+**回答完毕！**
