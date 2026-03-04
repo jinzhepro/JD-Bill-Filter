@@ -29,7 +29,6 @@ import {
  * @param {Function} props.onReset - 重置回调
  * @param {Function} props.onDownload - 下载回调
  * @param {boolean} props.showCopyColumn - 是否显示复制列按钮
- * @param {Function} props.onCopyColumn - 复制列回调
  * @param {string} props.downloadButtonText - 下载按钮文本
  * @param {string} props.resetButtonText - 重置按钮文本
  * @param {boolean} props.showRowNumber - 是否显示行号
@@ -46,7 +45,6 @@ export default function DataDisplay({
   onReset,
   onDownload,
   showCopyColumn = false,
-  onCopyColumn,
   downloadButtonText = "下载 Excel 结果",
   resetButtonText = "重新上传",
   showRowNumber = false,
@@ -160,10 +158,6 @@ export default function DataDisplay({
       toast({
         title: `已复制列 "${columnName}" 的 ${dataToCopy.length} 条数据到剪贴板`,
       });
-
-      if (onCopyColumn) {
-        onCopyColumn(columnName, dataToCopy.length);
-      }
     } catch (err) {
       console.error("复制失败:", err);
       toast({

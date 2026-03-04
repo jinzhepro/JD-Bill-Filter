@@ -1,8 +1,6 @@
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { SettlementProvider } from "@/context/SettlementContext";
-import { LoadingProvider } from "@/context/LoadingContext";
-import LoadingOverlay from "@/components/LoadingOverlay";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export const metadata = {
@@ -15,13 +13,10 @@ export default function RootLayout({ children }) {
     <html lang="zh-CN">
       <body className="antialiased bg-background text-foreground overflow-hidden">
         <SettlementProvider>
-          <LoadingProvider>
-            <ErrorBoundary>
-              {children}
-              <LoadingOverlay />
-              <Toaster />
-            </ErrorBoundary>
-          </LoadingProvider>
+          <ErrorBoundary>
+            {children}
+            <Toaster />
+          </ErrorBoundary>
         </SettlementProvider>
       </body>
     </html>

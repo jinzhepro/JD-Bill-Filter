@@ -56,19 +56,7 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
   };
 
   /**
-   * 清空历史记录
-   * 注意：开票处理历史记录任何情况下不能清空，此函数已禁用
-   */
-  const handleClearHistory = () => {
-    // 历史记录不能清空，仅显示提示
-    toast({
-      title: "历史记录无法清空",
-      description: "开票处理历史记录将自动保留，方便后续快速操作",
-    });
-  };
-
-  /**
-   * 查找SKU对应的行索引
+   * 查找 SKU 对应的行索引
    */
   const findSkuIndex = (sku) => {
     if (!processedData || processedData.length === 0) return -1;
