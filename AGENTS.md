@@ -9,20 +9,23 @@
 - **状态管理**: React Context + useReducer
 - **数值计算**: Decimal.js
 - **文件处理**: ExcelJS
+- **路径别名**: `@/*` → `./src/*`
 
 ## 2. 构建与运行命令
 
 ### 核心命令
 
 ```bash
-# 开发环境
+# 开发环境（热重载）
 npm run dev
 
 # 生产构建
 npm run build
+
+# 生产运行
 npm start
 
-# 代码检查
+# 代码检查（全项目）
 npm run lint
 ```
 
@@ -31,13 +34,17 @@ npm run lint
 ```bash
 # 运行单文件 lint
 npx eslint src/path/to/file.js
+
+# 自动修复
+npx eslint src/path/to/file.js --fix
 ```
 
 ### 测试命令
 
 ```bash
 # ⚠️ 当前项目无测试框架
-# README 建议安装 Vitest + Testing Library
+# 如需测试，建议安装 Vitest + Testing Library:
+# npm install -D vitest @testing-library/react @testing-library/jest-dom
 ```
 
 ### ESLint 配置
@@ -45,6 +52,10 @@ npx eslint src/path/to/file.js
 - 使用 ESLint 9 扁平配置
 - 基于 `eslint-config-next`
 - 配置文件：`eslint.config.mjs`
+
+### Cursor/Copilot 规则
+
+当前项目无 Cursor rules (`.cursor/rules/` 或 `.cursorrules`) 或 Copilot rules (`.github/copilot-instructions.md`)
 
 ## 3. 代码风格规范
 
@@ -67,6 +78,8 @@ src/
 - **函数式组件**: 使用 hooks，不使用 class 组件
 - **性能优化**: 使用 React.memo 优化重渲染
 - **文件命名**: PascalCase (如 `SettlementContent.js`)
+- **文件注释**: 所有文件顶部需有简短注释说明用途
+- **Next.js 16**: 遵循 App Router 规范，页面位于 `src/app/` 目录
 
 ### 3.3 导入顺序
 
@@ -86,6 +99,11 @@ import { cn } from "@/lib/utils";
 // 4. 相对路径
 import { MyComponent } from "./MyComponent";
 ```
+
+**注意**：
+- 使用 `@/` 别名引用 `src/` 目录
+- 组件导入使用具名导出
+- 避免循环依赖
 
 ### 3.4 命名规范
 
@@ -333,4 +351,6 @@ console.log("处理日志:", logs);
 - **README.md**: 用户文档
 - **QWEN.md**: 英文项目上下文
 - **package.json**: 依赖和脚本配置
+- **eslint.config.mjs**: ESLint 配置
+- **jsconfig.json**: 路径别名配置 (`@/*` → `./src/*`)
 - **eslint.config.mjs**: ESLint 配置
