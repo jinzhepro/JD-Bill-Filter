@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { SupplierProvider } from "@/context/SupplierContext";
 import { SimpleLayout } from "@/components/SimpleLayout";
 import SupplierManager from "@/components/SupplierManager";
@@ -13,8 +12,6 @@ function SupplierContent() {
   return (
     <>
       <SupplierManager />
-
-      {/* 错误模态框 */}
       <ErrorModal
         isOpen={!!error}
         onClose={() => {

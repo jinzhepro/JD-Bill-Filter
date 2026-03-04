@@ -162,7 +162,6 @@ function settlementReducer(state, action) {
       const limitedHistory = action.payload.slice(-3);
       if (typeof window !== "undefined") {
         localStorage.setItem("pasteHistory", JSON.stringify(limitedHistory));
-        console.log("保存历史记录 (SET):", limitedHistory.length, "条");
       }
       return { ...state, pasteHistory: limitedHistory };
 
@@ -172,7 +171,6 @@ function settlementReducer(state, action) {
       const limitedNewHistory = newHistory.slice(-3);
       if (typeof window !== "undefined") {
         localStorage.setItem("pasteHistory", JSON.stringify(limitedNewHistory));
-        console.log("保存历史记录 (ADD):", limitedNewHistory.length, "条");
       }
       return {
         ...state,
@@ -221,7 +219,6 @@ export function SettlementProvider({ children }) {
     }
     try {
       const stored = localStorage.getItem("pasteHistory");
-      console.log("加载历史记录:", stored ? JSON.parse(stored).length : 0, "条");
       if (stored) {
         return JSON.parse(stored);
       }
@@ -326,9 +323,6 @@ export function SettlementProvider({ children }) {
     },
 
     clearPasteHistory: () => {
-      // 开票处理历史记录任何情况下不能清空
-      // 此方法已禁用，调用时不会执行任何操作
-      console.warn("clearPasteHistory 方法已禁用，开票处理历史记录不能清空");
     },
   }), []);
 

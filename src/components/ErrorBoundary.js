@@ -27,9 +27,6 @@ export class ErrorBoundary extends React.Component {
       error,
       errorInfo,
     });
-
-    // 记录错误到控制台
-    console.error("ErrorBoundary 捕获到错误:", error, errorInfo);
   }
 
   handleReset = () => {
@@ -38,11 +35,6 @@ export class ErrorBoundary extends React.Component {
       error: null,
       errorInfo: null,
     });
-
-    // 在开发环境记录重置事件
-    if (process.env.NODE_ENV === 'development') {
-      console.log("应用已重置");
-    }
   };
 
   render() {
@@ -109,18 +101,13 @@ export function useErrorHandler() {
 
   const handleError = React.useCallback(
     (error, context = "操作") => {
-      console.error(`${context}失败:`, error);
-
       const errorMessage =
         error?.message || error?.toString() || "未知错误";
 
-      // 记录错误日志
-      addLog(`${context}失败: ${errorMessage}`, "error");
+      addLog(`${context}失败：${errorMessage}`, "error");
 
-      // 设置错误状态
       setError(errorMessage);
 
-      // 返回错误信息，便于调用方处理
       return errorMessage;
     },
     [setError, addLog]
@@ -132,7 +119,7 @@ export function useErrorHandler() {
         return await asyncFn();
       } catch (error) {
         handleError(error, context);
-        throw error; // 重新抛出错误，让调用方可以进一步处理
+        throw error;
       }
     },
     [handleError]

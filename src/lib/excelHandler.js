@@ -6,7 +6,6 @@ import {
   PRODUCT_CODE_FORMAT,
 } from "./constants";
 import { cleanProductCode, cleanAmount } from "./utils";
-import { logger } from "./logger";
 
 function getCellValue(cell) {
   const value = cell.value;
@@ -59,7 +58,6 @@ export function readFile(file, fileType) {
             parseCSVText(csvText, resolve, reject);
           }
         } catch (error) {
-          logger.error("CSV文件读取失败:", error);
           reject(new Error(`CSV文件读取失败: ${error.message}`));
         }
       };
@@ -119,17 +117,14 @@ export function readFile(file, fileType) {
 
             resolve(jsonData);
           }).catch((error) => {
-            logger.error("Excel文件解析失败:", error);
             reject(new Error(`Excel文件解析失败: ${error.message}`));
           });
         } catch (error) {
-          logger.error("Excel文件读取失败:", error);
           reject(new Error(`Excel文件读取失败: ${error.message}`));
         }
       };
 
       reader.onerror = function (error) {
-        logger.error("Excel文件读取失败:", error);
         reject(new Error("Excel文件读取失败"));
       };
 
@@ -213,7 +208,6 @@ function parseCSVText(csvText, resolve, reject) {
 
     resolve(jsonData);
   } catch (error) {
-    logger.error("CSV解析失败:", error);
     reject(new Error(`CSV解析失败: ${error.message}`));
   }
 }
@@ -401,7 +395,6 @@ export async function downloadExcel(data, fileName, totals = null, dataChanges =
 
     return true;
   } catch (error) {
-    logger.error("下载过程中发生错误:", error);
     throw new Error(`文件下载失败: ${error.message}`);
   } finally {
     // 确保在任何情况下都清理资源

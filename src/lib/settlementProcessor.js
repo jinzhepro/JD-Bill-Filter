@@ -1,7 +1,6 @@
 import Decimal from "decimal.js";
 import { SETTLEMENT_AMOUNT_COLUMNS, SETTLEMENT_QUANTITY_COLUMN, SETTLEMENT_FEE_NAME_FILTER, SETTLEMENT_SELF_OPERATION_FEE } from "./constants";
 import { cleanAmount } from "./utils";
-import { logger } from "./logger";
 
 /**
  * 清理字符串中的 Tab 和换行字符
@@ -71,7 +70,6 @@ function calculateTotalAfterSalesCompensation(data, actualAmountColumn, hasFeeNa
     if (hasFeeNameColumn && cleanString(row["费用名称"]) === "售后卖家赔付费") {
       const cleanAmountValue = cleanAmount(row[actualAmountColumn] || 0);
       total = total.plus(new Decimal(cleanAmountValue));
-      logger.log(`售后卖家赔付费: ${cleanAmountValue}, 累计总额: ${total.toNumber()}`);
     }
   }
 
@@ -181,7 +179,6 @@ function findCompensationDeductionSKU(mergedData, totalAfterSalesCompensation) {
 
   for (const item of mergedData.values()) {
     if (item.应结金额.gt(compensationAbs)) {
-      logger.log(`选择商品编号 ${item.商品编号} 扣除赔付费: ${totalAfterSalesCompensation.toNumber()}`);
       return item.商品编号;
     }
   }
@@ -204,7 +201,6 @@ function applyCompensationDeduction(mergedData, selfOperationFeeMap, totalAfterS
   for (const item of mergedData.values()) {
     // 跳过金额为0的记录
     if (item.应结金额.eq(new Decimal(0))) {
-      logger.log("跳过金额为0的记录:", item.商品编号);
       continue;
     }
 
@@ -212,7 +208,6 @@ function applyCompensationDeduction(mergedData, selfOperationFeeMap, totalAfterS
     let compensationDeducted = new Decimal(0);
     if (compensationDeductedFromSku === item.商品编号 && !totalAfterSalesCompensation.eq(new Decimal(0))) {
       compensationDeducted = totalAfterSalesCompensation;
-      logger.log(`商品编号 ${item.商品编号} 扣除赔付费: ${compensationDeducted.toNumber()}`);
     }
 
     // 计算最终金额
@@ -288,15 +283,9 @@ export async function processSettlementData(data) {
   const hasFeeNameColumn = "费用名称" in firstRow;
 
   // 调试日志（仅在开发环境输出）
-  logger.log("settlementProcessor - firstRow:", firstRow);
-  logger.log("settlementProcessor - hasFeeNameColumn:", hasFeeNameColumn);
-  logger.log("settlementProcessor - SETTLEMENT_FEE_NAME_FILTER:", SETTLEMENT_FEE_NAME_FILTER);
-  logger.log("settlementProcessor - data.length:", data.length);
-  logger.log("settlementProcessor - cleanString(费用名称):", cleanString(firstRow["费用名称"]));
 
   // 检查是否存在数量列
   const hasQuantityColumn = checkQuantityColumn(data, hasFeeNameColumn);
-  logger.log("settlementProcessor - hasQuantityColumn:", hasQuantityColumn);
 
   // 计算售后卖家赔付费总额
   const totalAfterSalesCompensation = calculateTotalAfterSalesCompensation(data, actualAmountColumn, hasFeeNameColumn);
@@ -308,9 +297,6 @@ export async function processSettlementData(data) {
   const { mergedData, processedCount, skippedCount } = mergeSKUData(data, actualAmountColumn, hasFeeNameColumn, hasQuantityColumn);
 
   // 调试日志
-  logger.log("settlementProcessor - selfOperationFeeMap.size:", selfOperationFeeMap.size);
-  logger.log("settlementProcessor - processedCount:", processedCount);
-  logger.log("settlementProcessor - skippedCount:", skippedCount);
 
   // 查找可以扣除赔付费的SKU
   const compensationDeductedFromSku = findCompensationDeductionSKU(mergedData, totalAfterSalesCompensation);
@@ -324,9 +310,6 @@ export async function processSettlementData(data) {
     hasQuantityColumn
   );
 
-  logger.log("settlementProcessor - mergedData.size:", mergedData.size);
-  logger.log("settlementProcessor - totalAfterSalesCompensation:", totalAfterSalesCompensation.toNumber());
-  logger.log("settlementProcessor - result.length:", result.length);
 
   return result;
 }
