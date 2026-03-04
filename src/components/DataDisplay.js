@@ -159,7 +159,6 @@ export default function DataDisplay({
         title: `已复制列 "${columnName}" 的 ${dataToCopy.length} 条数据到剪贴板`,
       });
     } catch (err) {
-      console.error("复制失败:", err);
       toast({
         variant: "destructive",
         title: `复制列 "${columnName}" 失败`,

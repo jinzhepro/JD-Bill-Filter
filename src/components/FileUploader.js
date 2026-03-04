@@ -55,9 +55,6 @@ export default function FileUploader({
         );
 
         if (validFiles.length === 0) {
-          console.error(
-            `没有找到有效的文件格式。支持的格式: .xlsx, .xls, .csv`
-          );
           return;
         }
 
@@ -70,7 +67,6 @@ export default function FileUploader({
           onFilesSelected(filesWithPath);
         }
       } catch (error) {
-        console.error("文件选择失败:", error);
       }
     },
     [isValidFileExtensionMemo, onFilesSelected]
@@ -85,7 +81,6 @@ export default function FileUploader({
       try {
         const files = event.dataTransfer.files;
         if (!files || files.length === 0) {
-          console.warn("拖拽区域为空");
           return;
         }
 
@@ -94,9 +89,6 @@ export default function FileUploader({
         );
 
         if (validFiles.length === 0) {
-          console.warn(
-            `没有找到有效的文件。请确保拖拽的是 .xlsx, .xls 或 .csv 文件`
-          );
           return;
         }
 
@@ -109,7 +101,6 @@ export default function FileUploader({
           onFilesSelected(filesWithPath);
         }
       } catch (error) {
-        console.error("拖拽文件处理失败:", error);
       }
     },
     [isValidFileExtensionMemo, onFilesSelected]

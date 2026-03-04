@@ -31,7 +31,6 @@ export default function SettlementResultDisplay() {
         .slice(0, 10)}.xlsx`;
       downloadExcel(processedData, fileName, null, dataChanges);
     } catch (error) {
-      console.error("Excel 下载失败:", error);
     }
   };
 

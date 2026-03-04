@@ -224,7 +224,6 @@ export function SettlementProvider({ children }) {
       }
       return [];
     } catch (error) {
-      console.error("Failed to load paste history from localStorage:", error);
       return [];
     }
   };
