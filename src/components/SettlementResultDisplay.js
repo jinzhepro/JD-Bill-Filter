@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { useSettlement } from "@/context/SettlementContext";
 import { downloadExcel } from "@/lib/excelHandler";
 import { calculateColumnTotals } from "@/lib/utils";
 import DataDisplay from "./DataDisplay";
 import SettlementProcessModal from "./SettlementProcessModal";
 import { Button } from "./ui/button";
-import { Clipboard, CheckCircle2 } from "lucide-react";
+import { Clipboard } from "lucide-react";
 
 /**
  * 结算单结果显示组件
@@ -29,45 +29,13 @@ export default function SettlementResultDisplay() {
       const fileName = `结算单合并结果_${new Date()
         .toISOString()
         .slice(0, 10)}.xlsx`;
-      downloadExcel(processedData, fileName, calculatedTotals, dataChanges);
+      downloadExcel(processedData, fileName, null, dataChanges);
     } catch (error) {
-      console.error("Excel下载失败:", error);
+      console.error("Excel 下载失败:", error);
     }
   };
 
-  // 使用 useMemo 优化派生计算，避免不必要的重复计算
-  const hasQuantity = useMemo(() =>
-    processedData && processedData.length > 0 && "数量" in processedData[0],
-    [processedData]
-  );
-
-  const totalQuantity = useMemo(() =>
-    processedData?.reduce((sum, item) => sum + (parseFloat(item.数量) || 0), 0) || 0,
-    [processedData]
-  );
-
-  const totalAmount = useMemo(() =>
-    processedData?.reduce((sum, item) => sum + (parseFloat(item.应结金额) || 0), 0) || 0,
-    [processedData]
-  );
-
-  const selfOperationAmount = useMemo(() =>
-    processedData?.reduce((sum, item) => sum + (parseFloat(item.直营服务费) || 0), 0) || 0,
-    [processedData]
-  );
-
-  const finalAmount = useMemo(() =>
-    totalAmount + selfOperationAmount,
-    [totalAmount, selfOperationAmount]
-  );
-
-  // 计算各列总和
   const calculatedTotals = calculateColumnTotals(processedData);
-
-  const dataChangesCount = useMemo(() =>
-    Object.keys(dataChanges).length,
-    [dataChanges]
-  );
 
   return (
     <DataDisplay
@@ -90,60 +58,6 @@ export default function SettlementResultDisplay() {
         "应结金额": "货款",
         "净结金额": "收入",
       }}
-      customStats={
-        <div className="space-y-5">
-          <div className="grid grid-cols-4 gap-4">
-            <div className="relative overflow-hidden flex flex-col p-4 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 shadow-sm hover:shadow-md transition-shadow duration-200">
-              <div className="absolute top-0 right-0 w-16 h-16 bg-primary/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
-              <span className="text-xs font-medium text-muted-foreground mb-1">货款合计</span>
-              <span className="text-2xl font-bold text-primary tracking-tight">
-                ¥{totalAmount.toFixed(2)}
-              </span>
-            </div>
-            <div className="relative overflow-hidden flex flex-col p-4 rounded-xl bg-gradient-to-br from-rose-500/10 to-rose-500/5 border border-rose-500/20 shadow-sm hover:shadow-md transition-shadow duration-200">
-              <div className="absolute top-0 right-0 w-16 h-16 bg-rose-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
-              <span className="text-xs font-medium text-muted-foreground mb-1">直营服务费</span>
-              <span className="text-2xl font-bold text-destructive tracking-tight">
-                ¥{selfOperationAmount.toFixed(2)}
-              </span>
-            </div>
-            <div className="relative overflow-hidden flex flex-col p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 shadow-sm hover:shadow-md transition-shadow duration-200">
-              <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
-              <span className="text-xs font-medium text-muted-foreground mb-1">收入</span>
-              <span className="text-2xl font-bold text-success tracking-tight">
-                ¥{finalAmount.toFixed(2)}
-              </span>
-            </div>
-            <div className="relative overflow-hidden flex flex-col p-4 rounded-xl bg-gradient-to-br from-sky-500/10 to-sky-500/5 border border-sky-500/20 shadow-sm hover:shadow-md transition-shadow duration-200">
-              <div className="absolute top-0 right-0 w-16 h-16 bg-sky-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
-              <span className="text-xs font-medium text-muted-foreground mb-1">数量合计</span>
-              <span className="text-2xl font-bold text-info tracking-tight">
-                {totalQuantity.toFixed(0)}
-              </span>
-            </div>
-          </div>
-          {dataChangesCount > 0 && (
-            <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-warning/10 to-orange-500/10 border border-warning/20">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-warning/20 flex items-center justify-center">
-                  <CheckCircle2 className="w-5 h-5 text-warning" />
-                </div>
-                <span className="text-sm font-medium text-foreground">
-                  已处理 <span className="text-warning font-bold">{dataChangesCount}</span> 个 SKU
-                </span>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowDataChanges(!showDataChanges)}
-                className="hover:bg-warning/10"
-              >
-                {showDataChanges ? "隐藏" : "显示"}数据变化
-              </Button>
-            </div>
-          )}
-        </div>
-      }
     >
       {/* 标题下方的结算单处理按钮 */}
       <div className="flex justify-end mb-4">

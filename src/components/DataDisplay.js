@@ -15,7 +15,6 @@ import {
   ChevronsUpDown,
   Search,
   X,
-  BarChart3,
   FileText,
   Clock,
   Info
@@ -33,14 +32,9 @@ import {
  * @param {Function} props.onCopyColumn - 复制列回调
  * @param {string} props.downloadButtonText - 下载按钮文本
  * @param {string} props.resetButtonText - 重置按钮文本
- * @param {boolean} props.showTotalAmount - 是否显示总金额
- * @param {string} props.amountField - 金额字段名
- * @param {React.ReactNode} props.customStats - 自定义统计内容
  * @param {boolean} props.showRowNumber - 是否显示行号
  * @param {Array} props.amountFields - 金额字段列表
- * @param {Array} props.columnTotals - 需要计算总数的列
  * @param {Object} props.calculatedTotals - 预计算的总数
- * @param {boolean} props.showStats - 是否显示统计
  * @param {React.ReactNode} props.children - 子元素
  * @param {boolean} props.showDataChanges - 是否显示数据变化
  * @param {Object} props.columnMapping - 列名映射
@@ -53,22 +47,17 @@ export default function DataDisplay({
   onDownload,
   showCopyColumn = false,
   onCopyColumn,
-  downloadButtonText = "下载Excel结果",
+  downloadButtonText = "下载 Excel 结果",
   resetButtonText = "重新上传",
-  showTotalAmount = true,
-  amountField = "金额",
-  customStats = null,
   showRowNumber = false,
   amountFields = null,
-  columnTotals = null,
   calculatedTotals = null,
-  showStats = true,
   children = null,
   showDataChanges = true,
   columnMapping = null,
 }) {
   const { toast } = useToast();
-  const { dataChanges, processingHistory } = useSettlement();
+  const { dataChanges } = useSettlement();
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [showModal, setShowModal] = useState(false);
   const [modalSku, setModalSku] = useState(null);
@@ -106,35 +95,7 @@ export default function DataDisplay({
     };
   }, [showModal, handleKeyDown]);
 
-  const calculateTotalAmount = (data) => {
-    if (!data || data.length === 0) return 0;
-    return data.reduce((total, row) => {
-      const amount = parseFloat(row[amountField] || row["总价"] || 0);
-      return total + amount;
-    }, 0);
-  };
-
-  const totalAmount = calculateTotalAmount(processedData);
-
-  const calculateColumnTotalsLocal = () => {
-    if (calculatedTotals && typeof calculatedTotals === 'object') {
-      return calculatedTotals;
-    }
-
-    if (!columnTotals || !processedData || processedData.length === 0) return null;
-
-    const totals = {};
-    columnTotals.forEach((column) => {
-      const total = processedData.reduce((sum, row) => {
-        const value = parseFloat(row[column] || 0);
-        return sum + (isNaN(value) ? 0 : value);
-      }, 0);
-      totals[column] = total;
-    });
-    return totals;
-  };
-
-  const columnTotalsResult = calculateColumnTotalsLocal();
+  const calculatedTotal = calculatedTotals;
 
   const handleSort = (key) => {
     let direction = "asc";
@@ -221,31 +182,6 @@ export default function DataDisplay({
     if (onReset) onReset();
   };
 
-  const statsContent = customStats || (
-    <div className="grid grid-cols-3 gap-4">
-      <div className="flex flex-col p-4 rounded-xl bg-gradient-to-br from-muted/40 to-muted/20 border border-border/50">
-        <span className="text-xs font-medium text-muted-foreground mb-1">原始记录数</span>
-        <span className="text-2xl font-bold text-foreground tracking-tight">
-          {originalData?.length || 0}
-        </span>
-      </div>
-      <div className="flex flex-col p-4 rounded-xl bg-gradient-to-br from-muted/40 to-muted/20 border border-border/50">
-        <span className="text-xs font-medium text-muted-foreground mb-1">处理后记录数</span>
-        <span className="text-2xl font-bold text-foreground tracking-tight">
-          {processedData?.length || 0}
-        </span>
-      </div>
-      {showTotalAmount && (
-        <div className="flex flex-col p-4 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
-          <span className="text-xs font-medium text-muted-foreground mb-1">总价</span>
-          <span className="text-2xl font-bold text-primary tracking-tight">
-            ¥{totalAmount.toFixed(2)}
-          </span>
-        </div>
-      )}
-    </div>
-  );
-
   if (!processedData || processedData.length === 0) {
     return null;
   }
@@ -268,17 +204,7 @@ export default function DataDisplay({
       {/* 标题下方的自定义内容（如表单） */}
       {children}
 
-      <section className="bg-card rounded-xl border border-border p-6 pb-2 shadow-sm">
-        {showStats && (
-          <div className="mb-6">
-            <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-primary" />
-              处理统计
-            </h3>
-            {statsContent}
-          </div>
-        )}
-
+      <section className="bg-card rounded-xl border border-border p-6 shadow-sm">
         <div className="mb-6 flex gap-3 flex-wrap items-center justify-between">
           <Button
             variant="outline"
@@ -333,11 +259,10 @@ export default function DataDisplay({
                   {processedData.length > 0 &&
                     Object.keys(processedData[0]).map((header) => {
                       const displayHeader = columnMapping?.[header] || header;
-                      const total = columnTotalsResult?.[header];
-                      const isTotalColumn = total !== undefined;
+                      const total = calculatedTotal?.[header];
                       const isAmtField = amountFields && Array.isArray(amountFields)
                         ? amountFields.includes(header)
-                        : header === "单价" || header === "总价" || header === amountField;
+                        : header === "单价" || header === "总价";
 
                       return (
                         <th
@@ -390,7 +315,6 @@ export default function DataDisplay({
                     key={row["商品编号"] || rowIndex}
                     row={row}
                     rowIndex={rowIndex}
-                    amountField={amountField}
                     amountFields={amountFields}
                     showRowNumber={showRowNumber}
                     showDataChanges={showDataChanges}
@@ -401,7 +325,7 @@ export default function DataDisplay({
                   />
                 ))}
               </tbody>
-              {columnTotalsResult && Object.keys(columnTotalsResult).length > 0 && (
+              {calculatedTotal && Object.keys(calculatedTotal).length > 0 && (
                 <tfoot className="sticky bottom-0 z-10 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 border-t-2 border-border">
                   <tr>
                     {showRowNumber && (
@@ -411,10 +335,10 @@ export default function DataDisplay({
                     )}
                     {processedData.length > 0 &&
                       Object.keys(processedData[0]).map((header) => {
-                        const total = columnTotalsResult?.[header];
+                        const total = calculatedTotal?.[header];
                         const isAmtField = amountFields && Array.isArray(amountFields)
                           ? amountFields.includes(header)
-                          : header === "单价" || header === "总价" || header === amountField;
+                          : header === "单价" || header === "总价";
 
                         return (
                           <td
@@ -527,14 +451,14 @@ export default function DataDisplay({
   );
 }
 
-function TableRow({ row, rowIndex, amountField, amountFields, showRowNumber, showDataChanges, onShowModal }) {
+function TableRow({ row, rowIndex, amountFields, showRowNumber, showDataChanges, onShowModal }) {
   const { dataChanges } = useSettlement();
 
   const isAmountField = (key) => {
     if (amountFields && Array.isArray(amountFields)) {
       return amountFields.includes(key);
     }
-    return key === "单价" || key === "总价" || key === amountField;
+    return key === "单价" || key === "总价";
   };
 
   const sku = row["商品编号"] || row["SKU"];
