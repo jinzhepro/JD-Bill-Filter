@@ -2,12 +2,13 @@
 
 import React, { useState } from "react";
 import Decimal from "decimal.js";
+import Tesseract from 'tesseract.js';
 import Modal from "./ui/modal";
 import { Textarea } from "./ui/textarea";
 import { Button } from "./ui/button";
 import { useSettlement } from "@/context/SettlementContext";
 import { useToast } from "@/hooks/use-toast";
-import { Check, RefreshCcw, Info } from "lucide-react";
+import { Check, RefreshCcw, Info, Image as ImageIcon, Upload } from "lucide-react";
 import {
   cleanDecimalValue,
   toNumber,
@@ -29,6 +30,548 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
 
   const [pasteContent, setPasteContent] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isRecognizing, setIsRecognizing] = useState(false);
+  const [recognitionProgress, setRecognitionProgress] = useState(0);
+  const [recognitionMode, setRecognitionMode] = useState('sku'); // 'sku' 或 'amount'
+  const [tempData, setTempData] = useState({ skus: [], amounts: [], fees: [] });
+
+  /**
+   * OCR 识别图片中的数字（第一部分：SKU 和数量）
+   * 奇数行 = SKU，偶数行 = 数量
+   */
+  const handleImageUploadForSkuQuantity = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        variant: "destructive",
+        title: "文件格式错误",
+        description: "请上传图片文件（JPG、PNG 等）",
+      });
+      return;
+    }
+
+    setIsRecognizing(true);
+    setRecognitionProgress(0);
+
+    try {
+      console.group('📸 第一部分：识别 SKU 和数量');
+      console.log('📁 文件名:', file.name);
+
+      const { data: { text } } = await Tesseract.recognize(
+        file,
+        'chi_sim+eng',
+        {
+          logger: m => {
+            if (m.status === 'recognizing text') {
+              setRecognitionProgress(Math.round(m.progress * 100));
+            }
+          }
+        }
+      );
+
+      console.log('\n📝 原始识别文本:');
+      console.log('─────────────────────────────────────');
+      console.log(text);
+      console.log('─────────────────────────────────────\n');
+
+      // 提取所有数字行
+      const lines = text.split('\n').filter(line => line.trim());
+      const numbers = [];
+
+      for (const line of lines) {
+        // 提取数字（包括小数）
+        const numberMatch = line.match(/\d+(\.\d+)?/g);
+        if (numberMatch) {
+          numbers.push(...numberMatch);
+        }
+      }
+
+      console.log('📊 提取到的数字:', numbers);
+
+      // 奇数行 = SKU，偶数行 = 数量
+      const skus = [];
+      const quantities = [];
+
+      for (let i = 0; i < numbers.length; i++) {
+        if (i % 2 === 0) {
+          // 奇数行（第 1,3,5...个）= SKU
+          skus.push(numbers[i]);
+        } else {
+          // 偶数行（第 2,4,6...个）= 数量
+          quantities.push(numbers[i]);
+        }
+      }
+
+      console.log('✅ SKU 列表:', skus);
+      console.log('✅ 数量列表:', quantities);
+
+      // 保存到临时数据
+      setTempData(prev => ({
+        ...prev,
+        skus,
+        quantities
+      }));
+
+      // 生成预览
+      const preview = `识别到 ${skus.length} 个 SKU 和 ${quantities.length} 个数量\n\n` +
+        skus.map((sku, i) => `SKU: ${sku}, 数量：${quantities[i] || '待匹配'}`).join('\n');
+
+      console.log('\n📋 预览:');
+      console.log(preview);
+
+      toast({
+        title: "第一部分识别成功",
+        description: `识别到 ${skus.length} 个 SKU 和 ${quantities.length} 个数量`,
+      });
+
+      console.groupEnd();
+    } catch (error) {
+      console.error('❌ OCR 识别失败:', error);
+      toast({
+        variant: "destructive",
+        title: "识别失败",
+        description: error.message || "图片识别过程中发生错误",
+      });
+    } finally {
+      setIsRecognizing(false);
+      setRecognitionProgress(0);
+    }
+  };
+
+  /**
+   * OCR 识别图片中的数字（第二部分：货款和自营服务费）
+   * 奇数行 = 货款，偶数行 = 自营服务费
+   */
+  const handleImageUploadForAmountFee = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        variant: "destructive",
+        title: "文件格式错误",
+        description: "请上传图片文件（JPG、PNG 等）",
+      });
+      return;
+    }
+
+    setIsRecognizing(true);
+    setRecognitionProgress(0);
+
+    try {
+      console.group('📸 第二部分：识别货款和自营服务费');
+      console.log('📁 文件名:', file.name);
+
+      const { data: { text } } = await Tesseract.recognize(
+        file,
+        'chi_sim+eng',
+        {
+          logger: m => {
+            if (m.status === 'recognizing text') {
+              setRecognitionProgress(Math.round(m.progress * 100));
+            }
+          }
+        }
+      );
+
+      console.log('\n📝 原始识别文本:');
+      console.log('─────────────────────────────────────');
+      console.log(text);
+      console.log('─────────────────────────────────────\n');
+
+      // 提取所有数字行
+      const lines = text.split('\n').filter(line => line.trim());
+      const numbers = [];
+
+      for (const line of lines) {
+        // 提取数字（包括小数）
+        const numberMatch = line.match(/\d+(\.\d+)?/g);
+        if (numberMatch) {
+          numbers.push(...numberMatch);
+        }
+      }
+
+      console.log('📊 提取到的数字:', numbers);
+
+      // 奇数行 = 货款，偶数行 = 自营服务费
+      const amounts = [];
+      const fees = [];
+
+      for (let i = 0; i < numbers.length; i++) {
+        if (i % 2 === 0) {
+          // 奇数行（第 1,3,5...个）= 货款
+          amounts.push(numbers[i]);
+        } else {
+          // 偶数行（第 2,4,6...个）= 自营服务费
+          fees.push(numbers[i]);
+        }
+      }
+
+      console.log('✅ 货款列表:', amounts);
+      console.log('✅ 自营服务费列表:', fees);
+
+      // 保存到临时数据
+      setTempData(prev => ({
+        ...prev,
+        amounts,
+        fees
+      }));
+
+      // 合并所有数据并生成最终结果
+      const finalResult = mergeAllData();
+
+      toast({
+        title: "第二部分识别成功",
+        description: `识别到 ${amounts.length} 个货款和 ${fees.length} 个自营服务费`,
+      });
+
+      console.groupEnd();
+    } catch (error) {
+      console.error('❌ OCR 识别失败:', error);
+      toast({
+        variant: "destructive",
+        title: "识别失败",
+        description: error.message || "图片识别过程中发生错误",
+      });
+    } finally {
+      setIsRecognizing(false);
+      setRecognitionProgress(0);
+    }
+  };
+
+  /**
+   * 合并所有数据并生成最终结果
+   */
+  const mergeAllData = () => {
+    const { skus, quantities, amounts, fees } = tempData;
+    const maxCount = Math.max(skus.length, quantities.length, amounts.length, fees.length);
+
+    const resultLines = [];
+
+    for (let i = 0; i < maxCount; i++) {
+      const sku = skus[i] || '';
+      const amount = amounts[i] || '';
+      const quantity = quantities[i] || '';
+      const fee = fees[i] || '';
+
+      if (sku) {
+        resultLines.push(`${sku}\t${amount}\t${quantity}\t${fee}`);
+      }
+    }
+
+    const resultText = resultLines.join('\n');
+    console.log('\n📊 合并数据详情:');
+    console.log('  SKU:', skus);
+    console.log('  数量:', quantities);
+    console.log('  货款:', amounts);
+    console.log('  自营服务费:', fees);
+    console.log('\n✅ 最终合并结果:');
+    console.log('─────────────────────────────────────');
+    console.log(resultText);
+    console.log('─────────────────────────────────────\n');
+
+    // 直接更新粘贴内容
+    setPasteContent(resultText);
+    return resultText;
+  };
+
+  /**
+   * 处理粘贴事件（支持文字和图片）
+   * 智能判断：如果粘贴框是空的就是第一次上传（识别 SKU 和数量）
+   *          如果有数据就是第二次上传（识别货款和自营服务费）
+   */
+  const handlePaste = async (event) => {
+    // 检查剪贴板中是否有图片
+    const items = event.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+
+      // 如果是图片类型
+      if (item.type.startsWith('image/')) {
+        event.preventDefault();
+
+        const file = item.getAsFile();
+        if (!file) continue;
+
+        // 智能判断：根据 pasteContent 是否为空决定识别模式
+        const isFirstUpload = !pasteContent || pasteContent.trim() === '';
+        const mode = isFirstUpload ? 'sku' : 'amount';
+
+        console.log('📋 粘贴图片识别');
+        console.log('📁 文件名:', file.name || 'clipboard-image.png');
+
+        setIsRecognizing(true);
+        setRecognitionProgress(0);
+
+        try {
+          // 使用 Tesseract 进行 OCR 识别
+          const { data: { text } } = await Tesseract.recognize(
+            file,
+            'chi_sim+eng',
+            {
+              logger: m => {
+                if (m.status === 'recognizing text') {
+                  setRecognitionProgress(Math.round(m.progress * 100));
+                }
+              }
+            }
+          );
+
+          console.log('\n📝 原始识别文本:');
+          console.log('─────────────────────────────────────');
+          console.log(text);
+          console.log('─────────────────────────────────────\n');
+
+          // 提取所有数字行
+          const lines = text.split('\n').filter(line => line.trim());
+          const numbers = [];
+
+          for (const line of lines) {
+            // 提取数字（包括小数）
+            const numberMatch = line.match(/\d+(\.\d+)?/g);
+            if (numberMatch) {
+              numbers.push(...numberMatch);
+            }
+          }
+
+          console.log('📊 提取到的数字:', numbers);
+
+          // 检查是否包含 SKU 关键字
+          const hasSkuKeyword = /SKU|商品编号|编号/.test(text);
+          console.log('🔍 是否包含 SKU 关键字:', hasSkuKeyword);
+
+          // 获取之前保存的数据
+          const prevSkus = tempData.skus || [];
+          const prevQuantities = tempData.quantities || [];
+          const prevAmounts = tempData.amounts || [];
+          const prevFees = tempData.fees || [];
+
+          if (hasSkuKeyword) {
+            // 情况1：识别到 SKU 关键字 → 填充 SKU 和数量列
+            console.log('📦 模式：SKU + 数量');
+
+            const skus = [];
+            const quantities = [];
+
+            for (let i = 0; i < numbers.length; i++) {
+              if (i % 2 === 0) {
+                skus.push(numbers[i]);
+              } else {
+                quantities.push(numbers[i]);
+              }
+            }
+
+            console.log('✅ 新识别 SKU 列表:', skus);
+            console.log('✅ 新识别数量列表:', quantities);
+
+            // 合并之前的 SKU + 新的 SKU
+            const allSkus = [...prevSkus, ...skus];
+            const allQuantities = [...prevQuantities, ...quantities];
+
+            console.log('✅ 合并后 SKU 列表:', allSkus);
+            console.log('✅ 合并后数量列表:', allQuantities);
+
+            // 生成完整的结果行
+            const maxCount = Math.max(allSkus.length, prevAmounts.length, prevFees.length);
+            const resultLines = [];
+
+            for (let i = 0; i < maxCount; i++) {
+              const sku = allSkus[i] || '';
+              const amount = prevAmounts[i] || '';
+              const quantity = allQuantities[i] || '';
+              const fee = prevFees[i] || '';
+
+              resultLines.push(`${sku}\t${amount}\t${quantity}\t${fee}`);
+            }
+
+            const resultText = resultLines.join('\n');
+            console.log('\n✅ 最终结果:');
+            console.log(resultText);
+
+            setPasteContent(resultText);
+
+            // 保存到临时数据
+            setTempData({
+              skus: allSkus,
+              quantities: allQuantities,
+              amounts: prevAmounts,
+              fees: prevFees
+            });
+
+            toast({
+              title: "识别成功（SKU + 数量）",
+              description: `共 ${allSkus.length} 个 SKU 和 ${allQuantities.length} 个数量`,
+            });
+          } else {
+            // 情况2：只识别到纯数字 → 填充货款和服务费列
+            console.log('💰 模式：货款 + 自营服务费');
+
+            const amounts = [];
+            const fees = [];
+
+            for (let i = 0; i < numbers.length; i++) {
+              if (i % 2 === 0) {
+                amounts.push(numbers[i]);
+              } else {
+                fees.push(numbers[i]);
+              }
+            }
+
+            console.log('✅ 新识别货款列表:', amounts);
+            console.log('✅ 新识别服务费列表:', fees);
+
+            // 合并之前的 + 新的
+            const allAmounts = [...prevAmounts, ...amounts];
+            const allFees = [...prevFees, ...fees];
+
+            console.log('✅ 合并后货款列表:', allAmounts);
+            console.log('✅ 合并后服务费列表:', allFees);
+
+            // 生成完整的结果行
+            const maxCount = Math.max(prevSkus.length, allAmounts.length);
+            const resultLines = [];
+
+            for (let i = 0; i < maxCount; i++) {
+              const sku = prevSkus[i] || '';
+              const amount = allAmounts[i] || '';
+              const quantity = prevQuantities[i] || '';
+              const fee = allFees[i] || '';
+
+              resultLines.push(`${sku}\t${amount}\t${quantity}\t${fee}`);
+            }
+
+            const resultText = resultLines.join('\n');
+            console.log('\n✅ 最终结果:');
+            console.log(resultText);
+
+            setPasteContent(resultText);
+
+            // 保存到临时数据
+            setTempData({
+              skus: prevSkus,
+              quantities: prevQuantities,
+              amounts: allAmounts,
+              fees: allFees
+            });
+
+            toast({
+              title: "识别成功（货款 + 自营服务费）",
+              description: `共 ${allAmounts.length} 个货款和 ${allFees.length} 个服务费`,
+            });
+          }
+
+          console.groupEnd();
+        } catch (error) {
+          console.error('❌ OCR 识别失败:', error);
+          toast({
+            variant: "destructive",
+            title: "识别失败",
+            description: error.message || "图片识别过程中发生错误",
+          });
+        } finally {
+          setIsRecognizing(false);
+          setRecognitionProgress(0);
+        }
+
+        break; // 只处理第一个图片
+      }
+    }
+  };
+
+  /**
+   * 解析 OCR 识别的文本，格式化为标准格式
+   * 识别 "SKU 编号：XXXXX" 和 "货款 +XXXX" 格式，并自动配对
+   */
+  const parseOCRText = (text) => {
+    const lines = text.split('\n').filter(line => line.trim());
+    const parsedLines = [];
+    let lastSku = '';
+    let lastAmount = '';
+
+    for (const line of lines) {
+      // 特殊处理：查找 "SKU 编号：10206106072064" 或 "SKU 编 号：10206106072064" 格式
+      // 支持空格：SKU 编 号、SKU 编号
+      const skuMatch = line.match(/SKU\s*编\s*号\s*[：:]\s*(\d+)/);
+      const amountMatch = line.match(/[-+]?货款\s*[：:]?\s*[+-]?\s*(\d+(\.\d+)?)/);
+
+      if (skuMatch && skuMatch[1]) {
+        const sku = skuMatch[1];
+        console.log('✅ 从特殊格式提取 SKU:', sku, '来自:', line);
+
+        // 如果同一行也有货款，一起提取
+        if (amountMatch && amountMatch[1]) {
+          const amount = amountMatch[1];
+          console.log('✅ 从同一行提取货款:', amount);
+          parsedLines.push(`${sku} ${amount}`);
+          lastSku = sku;
+          lastAmount = amount;
+        } else {
+          // 只找到 SKU，保存等待配对
+          lastSku = sku;
+          lastAmount = '';
+        }
+      } else if (amountMatch && amountMatch[1]) {
+        // 只找到货款
+        const amount = amountMatch[1];
+        console.log('✅ 从特殊格式提取货款:', amount, '来自:', line);
+
+        // 如果有之前保存的 SKU，配对
+        if (lastSku && !lastAmount) {
+          parsedLines.push(`${lastSku} ${amount}`);
+          console.log('✅ 配对成功:', lastSku, '+', amount);
+          lastAmount = amount;
+        } else {
+          // 单独的货款行
+          parsedLines.push(` ${amount}`);
+        }
+      }
+    }
+
+    return parsedLines.join('\n');
+  };
+
+  /**
+   * 识别金额字段（货款、服务费等）
+   */
+  const identifyAmountField = (value) => {
+    if (!value) return '';
+
+    // 清理非数字字符（保留小数点和负号）
+    const cleaned = value.replace(/[^\d.-]/g, '');
+
+    // 检查是否是有效的金额格式
+    if (/^\d+(\.\d{1,2})?$/.test(cleaned) || /^\d+$/.test(cleaned)) {
+      return cleaned;
+    }
+
+    return '';
+  };
+
+  /**
+   * 识别数量字段（通常是整数）
+   */
+  const identifyQuantityField = (value) => {
+    if (!value) return '';
+
+    // 清理非数字字符
+    const cleaned = value.replace(/[^\d-]/g, '');
+
+    // 检查是否是有效的数量格式（通常是整数）
+    if (/^\d+$/.test(cleaned)) {
+      return cleaned;
+    }
+
+    // 也可能是带小数的数量
+    if (/^\d+\.\d+$/.test(cleaned)) {
+      return cleaned;
+    }
+
+    return '';
+  };
 
   /**
    * 处理粘贴输入框内容变化
@@ -42,6 +585,7 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
    */
   const handleClearPaste = () => {
     setPasteContent("");
+    setTempData({ skus: [], quantities: [], amounts: [], fees: [] });
   };
 
   /**
@@ -334,6 +878,7 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
    */
   const handleReset = () => {
     setPasteContent("");
+    setTempData({ skus: [], quantities: [], amounts: [], fees: [] });
   };
 
   /**
@@ -356,7 +901,10 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
         <div>
           <div className="flex justify-between items-center mb-2">
             <h3 className="text-sm font-semibold text-foreground">
-              粘贴数据
+              粘贴图片
+              <span className="ml-2 text-xs text-muted-foreground font-normal">
+                含SKU图片填SKU列，纯数字图片填货款列
+              </span>
             </h3>
             <Button
               variant="ghost"
@@ -369,32 +917,12 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
             </Button>
           </div>
           <Textarea
-            placeholder="SKU 货款 数量 直营服务费，每行一条数据..."
+            placeholder="Ctrl+V 粘贴图片自动识别..."
             value={pasteContent}
             onChange={handlePasteContentChange}
-            className="h-40 text-sm font-mono"
+            onPaste={handlePaste}
+            className="h-60 text-sm font-mono"
           />
-        </div>
-
-        {/* 数据格式说明 */}
-        <div className="p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
-          <p className="flex items-start gap-2">
-            <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <span>
-              支持多行粘贴，<strong>相同商品编号会自动合并计算</strong>。直营服务费输入正数可减小服务费扣除金额（例如：-10 输入 5 变为 -5）。
-            </span>
-          </p>
-        </div>
-
-        {/* 数据格式详情 */}
-        <div className="text-xs text-muted-foreground space-y-1">
-          <p className="font-medium text-foreground">支持格式：</p>
-          <ul className="list-disc list-inside space-y-0.5 pl-2">
-            <li>制表符分隔：SKU<span className="text-foreground">\t</span>货款<span className="text-foreground">\t</span>数量<span className="text-foreground">\t</span>服务费</li>
-            <li>空格分隔：SKU<span className="text-foreground"> </span>货款<span className="text-foreground"> </span>数量<span className="text-foreground"> </span>服务费</li>
-            <li>逗号分隔：SKU<span className="text-foreground">,</span>货款<span className="text-foreground">,</span>数量<span className="text-foreground">,</span>服务费</li>
-            <li>竖线分隔：SKU<span className="text-foreground">|</span>货款<span className="text-foreground">|</span>数量<span className="text-foreground">|</span>服务费</li>
-          </ul>
         </div>
 
         {/* 历史记录 */}
@@ -408,7 +936,7 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
             </span>
           </div>
           {pasteHistory.length > 0 ? (
-            <div className="bg-muted/30 rounded-lg border border-border overflow-hidden max-h-32 overflow-y-auto">
+            <div className="bg-muted/30 rounded-lg border border-border">
               {pasteHistory.slice().reverse().map((item) => (
                 <div
                   key={item.id}
