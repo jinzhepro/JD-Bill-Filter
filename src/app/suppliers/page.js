@@ -1,10 +1,9 @@
 "use client";
 
-import { SupplierProvider } from "@/context/SupplierContext";
+import { SupplierProvider, useSupplier } from "@/context/SupplierContext";
 import { SimpleLayout } from "@/components/SimpleLayout";
 import SupplierManager from "@/components/SupplierManager";
 import { ErrorModal } from "@/components/ui/modal";
-import { useSupplier } from "@/context/SupplierContext";
 
 function SupplierContent() {
   const { error, clearError } = useSupplier();

@@ -8,7 +8,7 @@ import { Textarea } from "./ui/textarea";
 import { Button } from "./ui/button";
 import { useSettlement } from "@/context/SettlementContext";
 import { useToast } from "@/hooks/use-toast";
-import { Check, RefreshCcw, Info } from "lucide-react";
+import { Check, RefreshCcw } from "lucide-react";
 import {
   cleanDecimalValue,
   toNumber,
@@ -25,7 +25,7 @@ import { cleanAmount } from "@/lib/utils";
  * @param {Function} props.onClose - 关闭Modal的回调
  */
 export default function SettlementProcessModal({ isOpen, onClose }) {
-  const { processedData, setProcessedData, addProcessingHistory, addDataChange, pasteHistory, setPasteHistory, clearPasteHistory } = useSettlement();
+  const { processedData, setProcessedData, addProcessingHistory, addDataChange, pasteHistory, setPasteHistory } = useSettlement();
   const { toast } = useToast();
 
   const [pasteContent, setPasteContent] = useState("");
@@ -56,10 +56,6 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
 
         // 智能判断：根据 pasteContent 是否为空决定识别模式
         const isFirstUpload = !pasteContent || pasteContent.trim() === '';
-        const mode = isFirstUpload ? 'sku' : 'amount';
-
-        console.log('📋 粘贴图片识别');
-        console.log('📁 文件名:', file.name || 'clipboard-image.png');
 
         setIsRecognizing(true);
         setRecognitionProgress(0);
@@ -78,11 +74,6 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
             }
           );
 
-          console.log('\n📝 原始识别文本:');
-          console.log('─────────────────────────────────────');
-          console.log(text);
-          console.log('─────────────────────────────────────\n');
-
           // 提取所有数字行
           const lines = text.split('\n').filter(line => line.trim());
           const numbers = [];
@@ -95,11 +86,8 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
             }
           }
 
-          console.log('📊 提取到的数字:', numbers);
-
           // 检查是否包含 SKU 关键字
           const hasSkuKeyword = /SKU|商品编号|编号/.test(text);
-          console.log('🔍 是否包含 SKU 关键字:', hasSkuKeyword);
 
           // 获取之前保存的数据
           const prevSkus = tempData.skus || [];
@@ -109,8 +97,6 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
 
           if (hasSkuKeyword) {
             // 情况1：识别到 SKU 关键字 → 填充 SKU 和数量列
-            console.log('📦 模式：SKU + 数量');
-
             const skus = [];
             const quantities = [];
 
@@ -122,15 +108,9 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
               }
             }
 
-            console.log('✅ 新识别 SKU 列表:', skus);
-            console.log('✅ 新识别数量列表:', quantities);
-
             // 合并之前的 SKU + 新的 SKU
             const allSkus = [...prevSkus, ...skus];
             const allQuantities = [...prevQuantities, ...quantities];
-
-            console.log('✅ 合并后 SKU 列表:', allSkus);
-            console.log('✅ 合并后数量列表:', allQuantities);
 
             // 生成完整的结果行
             const maxCount = Math.max(allSkus.length, prevAmounts.length, prevFees.length);
@@ -146,9 +126,6 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
             }
 
             const resultText = resultLines.join('\n');
-            console.log('\n✅ 最终结果:');
-            console.log(resultText);
-
             setPasteContent(resultText);
 
             // 保存到临时数据
@@ -165,8 +142,6 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
             });
           } else {
             // 情况2：只识别到纯数字 → 填充货款和服务费列
-            console.log('💰 模式：货款 + 自营服务费');
-
             const amounts = [];
             const fees = [];
 
@@ -178,15 +153,9 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
               }
             }
 
-            console.log('✅ 新识别货款列表:', amounts);
-            console.log('✅ 新识别服务费列表:', fees);
-
             // 合并之前的 + 新的
             const allAmounts = [...prevAmounts, ...amounts];
             const allFees = [...prevFees, ...fees];
-
-            console.log('✅ 合并后货款列表:', allAmounts);
-            console.log('✅ 合并后服务费列表:', allFees);
 
             // 生成完整的结果行
             const maxCount = Math.max(prevSkus.length, allAmounts.length);
@@ -202,9 +171,6 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
             }
 
             const resultText = resultLines.join('\n');
-            console.log('\n✅ 最终结果:');
-            console.log(resultText);
-
             setPasteContent(resultText);
 
             // 保存到临时数据
@@ -220,10 +186,7 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
               description: `共 ${allAmounts.length} 个货款和 ${allFees.length} 个服务费`,
             });
           }
-
-          console.groupEnd();
         } catch (error) {
-          console.error('❌ OCR 识别失败:', error);
           toast({
             variant: "destructive",
             title: "识别失败",
@@ -237,97 +200,6 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
         break; // 只处理第一个图片
       }
     }
-  };
-
-  /**
-   * 解析 OCR 识别的文本，格式化为标准格式
-   * 识别 "SKU 编号：XXXXX" 和 "货款 +XXXX" 格式，并自动配对
-   */
-  const parseOCRText = (text) => {
-    const lines = text.split('\n').filter(line => line.trim());
-    const parsedLines = [];
-    let lastSku = '';
-    let lastAmount = '';
-
-    for (const line of lines) {
-      // 特殊处理：查找 "SKU 编号：10206106072064" 或 "SKU 编 号：10206106072064" 格式
-      // 支持空格：SKU 编 号、SKU 编号
-      const skuMatch = line.match(/SKU\s*编\s*号\s*[：:]\s*(\d+)/);
-      const amountMatch = line.match(/[-+]?货款\s*[：:]?\s*[+-]?\s*(\d+(\.\d+)?)/);
-
-      if (skuMatch && skuMatch[1]) {
-        const sku = skuMatch[1];
-        console.log('✅ 从特殊格式提取 SKU:', sku, '来自:', line);
-
-        // 如果同一行也有货款，一起提取
-        if (amountMatch && amountMatch[1]) {
-          const amount = amountMatch[1];
-          console.log('✅ 从同一行提取货款:', amount);
-          parsedLines.push(`${sku} ${amount}`);
-          lastSku = sku;
-          lastAmount = amount;
-        } else {
-          // 只找到 SKU，保存等待配对
-          lastSku = sku;
-          lastAmount = '';
-        }
-      } else if (amountMatch && amountMatch[1]) {
-        // 只找到货款
-        const amount = amountMatch[1];
-        console.log('✅ 从特殊格式提取货款:', amount, '来自:', line);
-
-        // 如果有之前保存的 SKU，配对
-        if (lastSku && !lastAmount) {
-          parsedLines.push(`${lastSku} ${amount}`);
-          console.log('✅ 配对成功:', lastSku, '+', amount);
-          lastAmount = amount;
-        } else {
-          // 单独的货款行
-          parsedLines.push(` ${amount}`);
-        }
-      }
-    }
-
-    return parsedLines.join('\n');
-  };
-
-  /**
-   * 识别金额字段（货款、服务费等）
-   */
-  const identifyAmountField = (value) => {
-    if (!value) return '';
-
-    // 清理非数字字符（保留小数点和负号）
-    const cleaned = value.replace(/[^\d.-]/g, '');
-
-    // 检查是否是有效的金额格式
-    if (/^\d+(\.\d{1,2})?$/.test(cleaned) || /^\d+$/.test(cleaned)) {
-      return cleaned;
-    }
-
-    return '';
-  };
-
-  /**
-   * 识别数量字段（通常是整数）
-   */
-  const identifyQuantityField = (value) => {
-    if (!value) return '';
-
-    // 清理非数字字符
-    const cleaned = value.replace(/[^\d-]/g, '');
-
-    // 检查是否是有效的数量格式（通常是整数）
-    if (/^\d+$/.test(cleaned)) {
-      return cleaned;
-    }
-
-    // 也可能是带小数的数量
-    if (/^\d+\.\d+$/.test(cleaned)) {
-      return cleaned;
-    }
-
-    return '';
   };
 
   /**
