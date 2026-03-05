@@ -680,6 +680,48 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
             onPaste={handlePaste}
             className="h-60 text-sm font-mono"
           />
+
+          {/* 数据合计 */}
+          {pasteContent.trim() && (
+            <div className="mt-3 p-3 bg-muted/50 rounded-lg border border-border">
+              <div className="flex flex-wrap gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">行数:</span>
+                  <span className="font-semibold">{pasteContent.trim().split('\n').filter(l => l.trim()).length}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">货款合计:</span>
+                  <span className="font-semibold text-green-600">
+                    ¥{pasteContent.trim().split('\n').filter(l => l.trim()).reduce((sum, line) => {
+                      const parts = line.split(/[\s\t,|]+/);
+                      const amount = parseFloat(parts[1]) || 0;
+                      return sum + amount;
+                    }, 0).toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">数量合计:</span>
+                  <span className="font-semibold">
+                    {pasteContent.trim().split('\n').filter(l => l.trim()).reduce((sum, line) => {
+                      const parts = line.split(/[\s\t,|]+/);
+                      const qty = parseFloat(parts[2]) || 0;
+                      return sum + qty;
+                    }, 0).toFixed(0)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">服务费合计:</span>
+                  <span className="font-semibold text-blue-600">
+                    ¥{pasteContent.trim().split('\n').filter(l => l.trim()).reduce((sum, line) => {
+                      const parts = line.split(/[\s\t,|]+/);
+                      const fee = parseFloat(parts[3]) || 0;
+                      return sum + fee;
+                    }, 0).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 历史记录 */}
