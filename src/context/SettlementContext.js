@@ -320,9 +320,6 @@ export function SettlementProvider({ children }) {
     addPasteHistory: (historyItem) => {
       dispatch({ type: ActionTypes.ADD_PASTE_HISTORY, payload: historyItem });
     },
-
-    clearPasteHistory: () => {
-    },
   }), []);
 
   // 使用 useMemo 优化，避免不必要的重渲染

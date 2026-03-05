@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "./ui/button";
-import { Badge } from "./ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useSettlement } from "@/context/SettlementContext";
 import { formatAmountJSX } from "@/lib/utils";
