@@ -282,8 +282,6 @@ export async function processSettlementData(data) {
   // 检查是否存在费用名称列
   const hasFeeNameColumn = "费用名称" in firstRow;
 
-  // 调试日志（仅在开发环境输出）
-
   // 检查是否存在数量列
   const hasQuantityColumn = checkQuantityColumn(data, hasFeeNameColumn);
 
@@ -295,8 +293,6 @@ export async function processSettlementData(data) {
 
   // 合并SKU数据
   const { mergedData, processedCount, skippedCount } = mergeSKUData(data, actualAmountColumn, hasFeeNameColumn, hasQuantityColumn);
-
-  // 调试日志
 
   // 查找可以扣除赔付费的SKU
   const compensationDeductedFromSku = findCompensationDeductionSKU(mergedData, totalAfterSalesCompensation);

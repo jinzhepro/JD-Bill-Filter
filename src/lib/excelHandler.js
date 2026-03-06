@@ -382,28 +382,19 @@ export async function downloadExcel(data, fileName, totals = null, dataChanges =
     link.href = url;
     link.download = fileName;
 
-    // 使用一次性事件监听器确保清理
-    const cleanup = () => {
-      requestAnimationFrame(() => {
-        URL.revokeObjectURL(url);
-        link?.remove();
-      });
-    };
-
-    link.addEventListener("click", cleanup, { once: true });
+    // 创建下载链接并触发下载
     link.click();
+
+    // 清理资源
+    URL.revokeObjectURL(url);
+    link.remove();
 
     return true;
   } catch (error) {
+    // 发生错误时也要清理资源
+    if (url) URL.revokeObjectURL(url);
+    if (link) link.remove();
     throw new Error(`文件下载失败: ${error.message}`);
-  } finally {
-    // 确保在任何情况下都清理资源
-    if (url) {
-      URL.revokeObjectURL(url);
-    }
-    if (link) {
-      link.remove();
-    }
   }
 }
 
