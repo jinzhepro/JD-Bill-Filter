@@ -175,10 +175,10 @@ export default function SettlementFolderUpload() {
       buttonText="选择文件"
       onFilesSelected={handleFiles}
       supportFolder={false}
-      multiple={false}
+      multiple={true}
       tips={[
         "自动合并相同商品编号的货款和数量（仅限费用名称为货款的记录）",
-        "每次只能上传一个文件",
+        "支持同时上传多个文件，数据会自动合并处理",
         "合并后可直接导出结果",
       ]}
     />
