@@ -29,7 +29,8 @@ export default function SettlementResultDisplay() {
       const fileName = `结算单合并结果_${new Date()
         .toISOString()
         .slice(0, 10)}.xlsx`;
-      downloadExcel(processedData, fileName, null, dataChanges);
+      const totals = calculateColumnTotals(processedData);
+      downloadExcel(processedData, fileName, totals, dataChanges);
     } catch (error) {
     }
   };
