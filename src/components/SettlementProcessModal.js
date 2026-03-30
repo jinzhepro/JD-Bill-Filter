@@ -87,40 +87,67 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
           }
 
           // 检查是否包含 SKU 关键字
-          const hasSkuKeyword = /SKU|商品编号|编号/.test(text);
+          const hasSkuKeyword = /SKU|商品编号 | 编号/.test(text);
 
-          // 获取之前保存的数据
-          const prevSkus = tempData.skus || [];
-          const prevQuantities = tempData.quantities || [];
-          const prevAmounts = tempData.amounts || [];
-          const prevFees = tempData.fees || [];
+          // 从当前输入框解析现有数据（保留用户编辑）
+          const parsedRows = parsePastedContent(pasteContent);
+          const prevSkus = parsedRows.map(r => r.sku);
+          const prevQuantities = parsedRows.map(r => r.quantity);
+          const prevAmounts = parsedRows.map(r => r.amount);
+          const prevFees = parsedRows.map(r => r.serviceFee);
+
+          // 计算总行数
+          const rowCount = Math.max(prevSkus.length, prevQuantities.length, prevAmounts.length, prevFees.length);
 
           if (hasSkuKeyword) {
-            // 情况1：识别到 SKU 关键字 → 填充 SKU 和数量列
-            const skus = [];
-            const quantities = [];
+            // 情况 1：识别到 SKU 关键字 → 填充 SKU 和数量列
+            const newSkus = [];
+            const newQuantities = [];
 
             for (let i = 0; i < numbers.length; i++) {
               if (i % 2 === 0) {
-                skus.push(numbers[i]);
+                newSkus.push(numbers[i]);
               } else {
-                quantities.push(numbers[i]);
+                newQuantities.push(numbers[i]);
               }
             }
 
-            // 合并之前的 SKU + 新的 SKU
-            const allSkus = [...prevSkus, ...skus];
-            const allQuantities = [...prevQuantities, ...quantities];
+            // 复制之前的数据
+            const allSkus = [...prevSkus];
+            const allQuantities = [...prevQuantities];
+
+            // 优先填充缺失 SKU 的行
+            let newIndex = 0;
+            for (let i = 0; i < rowCount && newIndex < newSkus.length; i++) {
+              if (!allSkus[i] || allSkus[i] === '') {
+                allSkus[i] = newSkus[newIndex];
+                if (newIndex < newQuantities.length) {
+                  allQuantities[i] = newQuantities[newIndex];
+                }
+                newIndex++;
+              }
+            }
+
+            // 剩余数据追加到新行
+            while (newIndex < newSkus.length) {
+              allSkus.push(newSkus[newIndex]);
+              if (newIndex < newQuantities.length) {
+                allQuantities.push(newQuantities[newIndex]);
+              } else {
+                allQuantities.push('');
+              }
+              newIndex++;
+            }
 
             // 生成完整的结果行
             const maxCount = Math.max(allSkus.length, prevAmounts.length, prevFees.length);
             const resultLines = [];
 
             for (let i = 0; i < maxCount; i++) {
-              const sku = allSkus[i] || '';
-              const amount = prevAmounts[i] || '';
-              const quantity = allQuantities[i] || '';
-              const fee = prevFees[i] || '';
+              const sku = i < allSkus.length ? allSkus[i] : '';
+              const amount = i < prevAmounts.length ? prevAmounts[i] : '';
+              const quantity = i < allQuantities.length ? allQuantities[i] : '';
+              const fee = i < prevFees.length ? prevFees[i] : '';
 
               resultLines.push(`${sku}\t${amount}\t${quantity}\t${fee}`);
             }
@@ -141,31 +168,54 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
               description: `共 ${allSkus.length} 个 SKU 和 ${allQuantities.length} 个数量`,
             });
           } else {
-            // 情况2：只识别到纯数字 → 填充货款和服务费列
-            const amounts = [];
-            const fees = [];
+            // 情况 2：只识别到纯数字 → 填充货款和服务费列
+            const newAmounts = [];
+            const newFees = [];
 
             for (let i = 0; i < numbers.length; i++) {
               if (i % 2 === 0) {
-                amounts.push(numbers[i]);
+                newAmounts.push(numbers[i]);
               } else {
-                fees.push(numbers[i]);
+                newFees.push(numbers[i]);
               }
             }
 
-            // 合并之前的 + 新的
-            const allAmounts = [...prevAmounts, ...amounts];
-            const allFees = [...prevFees, ...fees];
+            // 复制之前的数据
+            const allAmounts = [...prevAmounts];
+            const allFees = [...prevFees];
+
+            // 优先填充缺失货款/服务费的行
+            let newIndex = 0;
+            for (let i = 0; i < rowCount && newIndex < newAmounts.length; i++) {
+              if ((!allAmounts[i] || allAmounts[i] === '') && (!allFees[i] || allFees[i] === '')) {
+                allAmounts[i] = newAmounts[newIndex];
+                if (newIndex < newFees.length) {
+                  allFees[i] = newFees[newIndex];
+                }
+                newIndex++;
+              }
+            }
+
+            // 剩余数据追加到新行
+            while (newIndex < newAmounts.length) {
+              allAmounts.push(newAmounts[newIndex]);
+              if (newIndex < newFees.length) {
+                allFees.push(newFees[newIndex]);
+              } else {
+                allFees.push('');
+              }
+              newIndex++;
+            }
 
             // 生成完整的结果行
-            const maxCount = Math.max(prevSkus.length, allAmounts.length);
+            const maxCount = Math.max(prevSkus.length, allAmounts.length, prevQuantities.length, allFees.length);
             const resultLines = [];
 
             for (let i = 0; i < maxCount; i++) {
-              const sku = prevSkus[i] || '';
-              const amount = allAmounts[i] || '';
-              const quantity = prevQuantities[i] || '';
-              const fee = allFees[i] || '';
+              const sku = i < prevSkus.length ? prevSkus[i] : '';
+              const amount = i < allAmounts.length ? allAmounts[i] : '';
+              const quantity = i < prevQuantities.length ? prevQuantities[i] : '';
+              const fee = i < allFees.length ? allFees[i] : '';
 
               resultLines.push(`${sku}\t${amount}\t${quantity}\t${fee}`);
             }
@@ -222,6 +272,21 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
    */
   const handleLoadFromHistory = (historyItem) => {
     setPasteContent(historyItem.content);
+    
+    // 解析历史记录内容，恢复 tempData
+    const parsedRows = parsePastedContent(historyItem.content);
+    const skus = parsedRows.map(r => r.sku);
+    const quantities = parsedRows.map(r => r.quantity);
+    const amounts = parsedRows.map(r => r.amount);
+    const fees = parsedRows.map(r => r.serviceFee);
+    
+    setTempData({
+      skus,
+      quantities,
+      amounts,
+      fees
+    });
+    
     toast({
       title: "已加载历史记录",
       description: `已将 ${historyItem.rowCount} 行数据填充到输入框`,
