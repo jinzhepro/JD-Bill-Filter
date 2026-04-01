@@ -9,9 +9,9 @@
 - **语言**: JavaScript (无 TypeScript)
 - **样式**: Tailwind CSS 3.4.18 + shadcn/ui (New York style)
 - **UI 组件**: shadcn/ui + Radix UI
-- **工具库**: Decimal.js (高精度计算), ExcelJS (Excel处理), Lucide React (图标), Tesseract.js (OCR)
+- **工具库**: Decimal.js, ExcelJS, Lucide React, Tesseract.js
 
-**项目用途**: 基于 Next.js 的京东对帐单处理系统，支持 Excel/CSV 文件导入、智能订单合并、结算单处理和供应商转换等功能。
+**项目用途**: 京东对帐单处理系统，支持 Excel/CSV 导入、智能订单合并、结算单处理和供应商转换。
 
 ---
 
@@ -19,17 +19,18 @@
 
 ### 核心命令
 ```bash
-# 开发服务器
-npm run dev
+npm run dev      # 开发服务器
+npm run build    # 生产构建
+npm start        # 启动生产服务器
+npm run lint     # 代码检查
+```
 
-# 生产构建
-npm run build
-
-# 启动生产服务器
-npm start
-
-# 代码检查
-npm run lint
+### 测试命令
+**注意**: 项目当前未配置测试框架。推荐安装 Vitest + Testing Library：
+```bash
+npm install -D vitest @testing-library/react @testing-library/jest-dom @vitejs/plugin-react jsdom
+npm run test                    # 运行所有测试
+npm run test -- path/to/test.js # 运行单个测试
 ```
 
 ---
@@ -47,10 +48,10 @@ src/
 │   ├── ui/               # shadcn/ui 基础组件
 │   └── [业务组件].js      # 业务组件
 ├── context/              # React Context 状态管理
-│   ├── SettlementContext.js
-│   └── SupplierContext.js
+│   ├── SettlementContext.js  # 核心状态管理
+│   └── SupplierContext.js    # 供应商状态
 ├── lib/                  # 核心业务逻辑
-│   ├── utils.js          # 工具函数
+│   ├── utils.js          # 工具函数（cn, cleanAmount, cleanProductCode）
 │   ├── settlementProcessor.js
 │   ├── excelHandler.js
 │   └── constants.js
@@ -64,7 +65,7 @@ src/
 
 ### 4.1 组件规范
 - **客户端组件**: 所有使用 React hooks 的组件必须以 `"use client"` 开头
-- **服务端组件**: 默认是服务端组件，不需要标记
+- **服务端组件**: 默认是服务端组件
 - **组件导出**: 使用默认导出 `export default function ComponentName()`
 
 ### 4.2 导入顺序
@@ -96,159 +97,67 @@ import { MyComponent } from "./MyComponent";
 | Hook | use + PascalCase | `useSettlement` |
 
 ### 4.4 类型处理
-项目使用 JavaScript，通过 JSDoc 进行类型注释：
-```javascript
-/**
- * 处理结算单数据
- * @param {Array} data - 原始数据
- * @param {Object} options - 处理选项
- * @returns {Array} 处理后的数据
- */
-function processSettlementData(data, options) {
-  // ...
-}
-```
+项目使用 JavaScript，通过 JSDoc 进行类型注释。
 
 ### 4.5 样式规范
-- 使用 shadcn/ui 的语义化 CSS 变量
-- 避免使用自定义颜色类名
-- 使用 Tailwind 的工具类和 shadcn/ui 的组件变体
-
-```javascript
-// ✅ 推荐 - 使用 shadcn/ui 语义化类名
-<div className="bg-card text-foreground border-border" />
-
-// ❌ 避免 - 使用自定义颜色
-<div className="bg-white text-gray-800 border-gray-200" />
-```
+- 使用 shadcn/ui 的语义化 CSS 变量（如 `bg-card`, `text-foreground`）
+- 避免使用自定义颜色类名（如 `bg-white`, `text-gray-800`）
 
 ### 4.6 错误处理
-```javascript
-// 所有异步操作使用 try-catch
-try {
-  const result = await someAsyncOperation();
-  // 处理结果
-} catch (error) {
-  console.error("操作失败:", error);
-  setError(error.message);
-}
-```
+所有异步操作使用 try-catch，通过 Context 的 `setError` 和 `addLog` 记录错误。
+
+### 4.7 State 管理规范
+**CRITICAL**: 永远不要直接修改 state，始终使用 Context actions（如 `setData()`）。
 
 ---
 
-## 5. 常用代码片段
+## 5. 重要配置
 
-### 5.1 Context 使用
-```javascript
-"use client";
+**jsconfig.json**: `@/*` 映射到 `./src/*`
 
-import { useSettlement } from "@/context/SettlementContext";
-
-function MyComponent() {
-  const { processedData, setProcessedData, addLog } = useSettlement();
-  // ...
-}
-```
-
-### 5.2 金额计算（使用 Decimal.js）
-```javascript
-import Decimal from "decimal.js";
-
-// 始终使用 Decimal.js 避免浮点数精度问题
-const amount = new Decimal(cleanNumber(value));
-const total = amount.plus(new Decimal(10));
-const displayValue = total.toNumber();
-```
-
-### 5.3 商品编号处理
-```javascript
-// 商品编号必须强制转换为字符串，防止 Excel 自动转换为数字
-const productCode = String(row["商品编号"] || "");
-```
-
-### 5.4 Toast 提示
-```javascript
-import { useToast } from "@/hooks/use-toast";
-
-function MyComponent() {
-  const { toast } = useToast();
-
-  const handleAction = () => {
-    toast({
-      title: "成功",
-      description: "操作已完成",
-      variant: "default", // 或 "destructive"
-    });
-  };
-}
-```
-
-### 5.5 文件处理
-```javascript
-// CSV 编码处理：先尝试 UTF-8，失败后尝试 GBK
-// Excel 数字列：商品编号设置为文本格式 (numFmt: '@')
-// Excel 公式：处理 { formula: '...', result: ... } 对象
-```
+**eslint.config.mjs**: 使用 `eslint-config-next`，忽略 `.next/`, `out/`, `build/`
 
 ---
 
-## 6. 重要配置
+## 6. 核心规则
 
-### 6.1 jsconfig.json
-```json
-{
-  "compilerOptions": {
-    "paths": {
-      "@/*": ["./src/*"]
-    }
-  }
-}
-```
+### 6.1 性能优化
+- 使用 `useMemo` 缓存计算结果，`useCallback` 缓存回调函数
+- Context value 使用 `useMemo` 包装
 
----
-
-## 7. 注意事项
-
-### 7.1 性能
-- 使用 `useMemo` 缓存计算结果
-- 使用 `useCallback` 缓存回调函数
-- Context 中使用 `useMemo` 优化 value 对象
-
-### 7.2 安全
+### 6.2 安全限制
 - 文件大小限制：50MB
-- 支持的文件类型：.xlsx, .xls, .csv
-- 文件扩展名验证
+- 支持文件类型：.xlsx, .xls, .csv
 - 无数据库依赖，数据仅在内存中处理
 
-### 7.3 兼容性
-- Node.js 18+
-- React 19.2.0
-- 使用 `"use client"` 标记客户端组件
-
-### 7.4 重要规则
+### 6.3 核心规则（必须遵守）
 - **永远不要直接修改 state**，始终使用 Context actions
 - **SettlementContext 是主要的状态管理 Context**
 - 所有客户端组件必须以 `"use client"` 开头
-- 商品编号必须强制转换为字符串
+- **商品编号必须强制转换为字符串**，防止 Excel 自动转换为数字
+
+### 6.4 兼容性
+- Node.js 18+, React 19.2.0
 
 ---
 
-## 8. 项目依赖
+## 7. 项目依赖
 
-### 核心依赖
-- next: 16.0.10
-- react: 19.2.0
-- react-dom: 19.2.0
-- tailwindcss: 3.4.18
+**核心**: next: 16.0.10, react: 19.2.0, tailwindcss: 3.4.18
 
-### 业务依赖
-- decimal.js: 高精度数学计算
-- exceljs: Excel 文件处理
-- tesseract.js: OCR 文字识别
-- @radix-ui/*: UI 组件底层
+**业务**: decimal.js, exceljs, tesseract.js, @radix-ui/*, lucide-react
 
-### 开发依赖
-- eslint: 代码检查
-- lucide-react: 图标库
-- tailwind-merge: Tailwind 类名合并
-- clsx: 条件类名处理
+**开发**: eslint, eslint-config-next, tailwind-merge, clsx
+
+---
+
+## 8. 测试指南
+
+**当前状态**: 项目未配置测试框架，所有功能通过手动测试验证。
+
+**推荐配置**:
+```bash
+npm install -D vitest @testing-library/react @testing-library/jest-dom @vitejs/plugin-react jsdom
+```
+
+**运行单测**: `npm run test -- path/to/test.js`
