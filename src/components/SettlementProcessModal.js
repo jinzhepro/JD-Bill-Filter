@@ -7,7 +7,7 @@ import { Textarea } from "./ui/textarea";
 import { Button } from "./ui/button";
 import { useSettlement } from "@/context/SettlementContext";
 import { useToast } from "@/hooks/use-toast";
-import { Check, RefreshCcw } from "lucide-react";
+import { Check } from "lucide-react";
 import {
   cleanDecimalValue,
   toNumber,
@@ -308,15 +308,8 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
     onClose();
   };
 
-  /**
-   * 重置输入
-   */
-  const handleReset = () => {
-    setPasteContent("");
-  };
-
   const handleClose = () => {
-    handleReset();
+    setPasteContent("");
     onClose();
   };
 
@@ -437,10 +430,6 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
           >
             <Check className="w-4 h-4 mr-2" />
             {isProcessing ? "处理中..." : "粘贴处理"}
-          </Button>
-          <Button variant="outline" onClick={handleReset}>
-            <RefreshCcw className="w-4 h-4 mr-2" />
-            重置
           </Button>
           <Button variant="ghost" onClick={handleClose}>
             取消
