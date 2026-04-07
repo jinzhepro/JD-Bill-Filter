@@ -11,7 +11,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="zh-CN">
-      <body className="antialiased bg-background text-foreground overflow-hidden">
+      <body className="antialiased bg-background text-foreground">
         <SettlementProvider>
           <ErrorBoundary>
             {children}

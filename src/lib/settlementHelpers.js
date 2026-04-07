@@ -35,10 +35,10 @@ export function toNumber(decimal) {
 /**
  * 解析粘贴的多行数据
  * 支持格式：
- * 1. 制表符分隔：SKU\t货款\t数量\t服务费
- * 2. 空格分隔：SKU 货款 数量 服务费
- * 3. 逗号分隔：SKU,货款,数量,服务费
- * 4. 竖线分隔：SKU|货款|数量|服务费
+ * 1. 制表符分隔：SKU\t商品名称\t数量\t金额（商品名称列会被忽略）
+ * 2. 空格分隔：SKU 商品名称 数量 金额（商品名称列会被忽略）
+ * 3. 逗号分隔：SKU,商品名称,数量,金额（商品名称列会被忽略）
+ * 4. 竖线分隔：SKU|商品名称|数量|金额（商品名称列会被忽略）
  * @param {string} content - 粘贴的内容
  * @returns {Array} - 解析后的行数据数组
  */
@@ -63,24 +63,21 @@ export function parsePastedContent(content) {
     // 清理每个部分，移除前后空格
     parts = parts.map((part) => part.trim()).filter((part) => part !== "");
 
-    if (parts.length >= 2) {
-      let sku, amount, quantity, serviceFee;
+    if (parts.length >= 3) {
+      let sku, amount, quantity;
 
-      if (parts.length === 2) {
+      // 格式：SKU\t商品名称\t数量\t金额
+      // 商品名称（第二列）被忽略
+      if (parts.length === 3) {
+        // SKU\t数量\t金额（无商品名称）
         sku = parts[0];
         quantity = parts[1];
-        amount = "";
-        serviceFee = "";
-      } else if (parts.length === 3) {
+        amount = parts[2];
+      } else if (parts.length >= 4) {
+        // SKU\t商品名称\t数量\t金额
         sku = parts[0];
-        amount = parts[1];
         quantity = parts[2];
-        serviceFee = "";
-      } else {
-        sku = parts[0];
-        amount = parts[1];
-        quantity = parts[2];
-        serviceFee = parts[3];
+        amount = parts[3];
       }
 
       const row = {
@@ -88,7 +85,6 @@ export function parsePastedContent(content) {
         sku: sku || "",
         amount: amount || "",
         quantity: quantity || "",
-        serviceFee: serviceFee || "",
       };
       parsedRows.push(row);
     }
@@ -119,10 +115,6 @@ export function mergeSameSkuRows(rows) {
       const existingAmount = cleanDecimalValue(existing.amount);
       const currentAmount = cleanDecimalValue(row.amount);
       existing.amount = existingAmount.plus(currentAmount).toString();
-
-      const existingServiceFee = cleanDecimalValue(existing.serviceFee);
-      const currentServiceFee = cleanDecimalValue(row.serviceFee);
-      existing.serviceFee = existingServiceFee.plus(currentServiceFee).toString();
     } else {
       skuMap.set(sku, { ...row });
     }

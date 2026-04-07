@@ -232,7 +232,6 @@ export async function downloadExcel(data, fileName, totals = null, dataChanges =
     // 列名映射：显示名称
     const columnMapping = {
       "应结金额": "货款",
-      "净结金额": "收入",
     };
 
     // 映射后的表头

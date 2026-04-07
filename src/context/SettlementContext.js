@@ -20,6 +20,8 @@ const LogType = {
  * @property {Array} uploadedFiles - 上传的文件列表
  * @property {Array} originalData - 原始结算单数据
  * @property {Array} processedData - 处理后的结算单数据
+ * @property {Array} previousProcessedData - 处理前的数据备份（用于撤回）
+ * @property {Object} previousDataChanges - 处理前的数据变更记录备份
  * @property {boolean} isProcessing - 是否正在处理
  * @property {Array} logs - 处理日志
  * @property {string|null} error - 错误信息
@@ -37,6 +39,8 @@ const initialState = {
   uploadedFiles: [],
   originalData: [],
   processedData: [],
+  previousProcessedData: null,
+  previousDataChanges: null,
   isProcessing: false,
   logs: [],
   error: null,
@@ -73,7 +77,8 @@ const ActionTypes = {
   ADD_DATA_CHANGE: "ADD_DATA_CHANGE",
   SET_PASTE_HISTORY: "SET_PASTE_HISTORY",
   ADD_PASTE_HISTORY: "ADD_PASTE_HISTORY",
-  // CLEAR_PASTE_HISTORY: "CLEAR_PASTE_HISTORY", // 已禁用，历史记录不能清空
+  SAVE_BEFORE_PROCESSING: "SAVE_BEFORE_PROCESSING",
+  UNDO_PROCESSING: "UNDO_PROCESSING",
 };
 
 function settlementReducer(state, action) {
@@ -203,6 +208,27 @@ function settlementReducer(state, action) {
         processingHistory: [],
         dataChanges: {},
         pasteHistory: state.pasteHistory,
+        previousProcessedData: null,
+        previousDataChanges: null,
+      };
+
+    case ActionTypes.SAVE_BEFORE_PROCESSING:
+      return {
+        ...state,
+        previousProcessedData: JSON.parse(JSON.stringify(state.processedData)),
+        previousDataChanges: JSON.parse(JSON.stringify(state.dataChanges)),
+      };
+
+    case ActionTypes.UNDO_PROCESSING:
+      if (!state.previousProcessedData) {
+        return state;
+      }
+      return {
+        ...state,
+        processedData: state.previousProcessedData,
+        dataChanges: state.previousDataChanges,
+        previousProcessedData: null,
+        previousDataChanges: null,
       };
 
     default:
@@ -319,6 +345,14 @@ export function SettlementProvider({ children }) {
 
     addPasteHistory: (historyItem) => {
       dispatch({ type: ActionTypes.ADD_PASTE_HISTORY, payload: historyItem });
+    },
+
+    saveBeforeProcessing: () => {
+      dispatch({ type: ActionTypes.SAVE_BEFORE_PROCESSING });
+    },
+
+    undoProcessing: () => {
+      dispatch({ type: ActionTypes.UNDO_PROCESSING });
     },
   }), []);
 

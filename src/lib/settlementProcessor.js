@@ -230,10 +230,6 @@ function applyCompensationDeduction(mergedData, selfOperationFeeMap, totalAfterS
       resultItem.直营服务费 = 0;
     }
 
-    // 计算净结金额
-    const netAmount = finalAmount.plus(new Decimal(resultItem.直营服务费));
-    resultItem.净结金额 = netAmount.toNumber();
-
     result.push(resultItem);
   }
 

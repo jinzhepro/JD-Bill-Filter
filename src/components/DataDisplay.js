@@ -93,6 +93,12 @@ export default function DataDisplay({
   }, [showModal, handleKeyDown]);
 
   const calculatedTotal = calculatedTotals;
+  
+  // 计算收入合计（货款 + 直营服务费）
+  const incomeTotal = React.useMemo(() => {
+    if (!calculatedTotal) return 0;
+    return (calculatedTotal["应结金额"] || 0) + (calculatedTotal["直营服务费"] || 0);
+  }, [calculatedTotal]);
 
   const handleSort = (key) => {
     let direction = "asc";
@@ -193,6 +199,65 @@ export default function DataDisplay({
         <div></div>
       </div>
 
+      {/* 合计仪表盘 */}
+      {calculatedTotal && Object.keys(calculatedTotal).length > 0 && (
+        <section className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl border-2 border-primary/20 p-6 shadow-lg">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* 货款合计 */}
+            <div className="bg-card rounded-lg border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-muted-foreground">货款合计</span>
+                <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
+                  <span className="text-green-600 font-bold text-lg">¥</span>
+                </div>
+              </div>
+              <div className="text-3xl font-bold text-green-600 font-mono">
+                ¥{Math.abs(calculatedTotal["应结金额"] || 0).toFixed(2)}
+              </div>
+            </div>
+
+            {/* 直营服务费合计 */}
+            <div className="bg-card rounded-lg border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-muted-foreground">直营服务费合计</span>
+                <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                  <span className="text-blue-600 font-bold text-lg">¥</span>
+                </div>
+              </div>
+              <div className="text-3xl font-bold text-blue-600 font-mono">
+                ¥{Math.abs(calculatedTotal["直营服务费"] || 0).toFixed(2)}
+              </div>
+            </div>
+
+            {/* 收入合计 */}
+            <div className="bg-card rounded-lg border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-muted-foreground">收入合计</span>
+                <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center">
+                  <span className="text-orange-600 font-bold text-lg">¥</span>
+                </div>
+              </div>
+              <div className="text-3xl font-bold text-orange-600 font-mono">
+                ¥{Math.abs(incomeTotal).toFixed(2)}
+              </div>
+            </div>
+
+            {/* 数量合计 */}
+            <div className="bg-card rounded-lg border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-muted-foreground">数量合计</span>
+                <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center">
+                  <span className="text-purple-600 font-bold text-lg">#</span>
+                </div>
+              </div>
+              <div className="text-3xl font-bold text-purple-600 font-mono">
+                {(calculatedTotal["数量"] || 0).toFixed(0)}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* 标题下方的自定义内容（如表单） */}
       {children}
 
@@ -239,9 +304,8 @@ export default function DataDisplay({
         )}
 
         <div className="border border-border rounded-xl overflow-hidden shadow-sm">
-          <div className="max-h-[calc(100vh-380px)] overflow-auto">
-            <table className="w-full border-collapse text-sm">
-              <thead className="sticky top-0 z-10 bg-gradient-to-r from-muted/95 to-muted/80 backdrop-blur supports-[backdrop-filter]:bg-muted/80 border-b border-border">
+          <table className="w-full border-collapse text-sm">
+            <thead className="bg-gradient-to-r from-muted/95 to-muted/80 backdrop-blur supports-[backdrop-filter]:bg-muted/80 border-b border-border">
                 <tr>
                   {showRowNumber && (
                     <th className="px-4 py-3.5 text-left font-semibold text-foreground w-20 bg-muted/30">
@@ -317,50 +381,7 @@ export default function DataDisplay({
                   />
                 ))}
               </tbody>
-              {calculatedTotal && Object.keys(calculatedTotal).length > 0 && (
-                <tfoot className="sticky bottom-0 z-10 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 border-t-2 border-border">
-                  <tr>
-                    {showRowNumber && (
-                      <td className="px-4 py-3 text-left font-bold text-foreground w-20 bg-card/95">
-                        合计
-                      </td>
-                    )}
-                    {processedData.length > 0 &&
-                      Object.keys(processedData[0]).map((header) => {
-                        const total = calculatedTotal?.[header];
-                        const isAmtField = amountFields && Array.isArray(amountFields)
-                          ? amountFields.includes(header)
-                          : header === "单价" || header === "总价";
-
-                        return (
-                          <td
-                            key={header}
-                            className="px-4 py-3 text-left font-bold text-foreground whitespace-nowrap bg-card/95"
-                          >
-                            {total !== undefined ? (
-                              isAmtField ? (
-                                <span className="text-primary font-mono">
-                                  {formatAmountJSX(total, header === "直营服务费")}
-                                </span>
-                              ) : (
-                                <span className="font-mono">
-                                  {total?.toFixed(0)}
-                                </span>
-                              )
-                            ) : (
-                              "-"
-                            )}
-                          </td>
-                        );
-                      })}
-                    <td className="px-4 py-3 text-left font-bold text-foreground whitespace-nowrap bg-card/95">
-                      -
-                    </td>
-                  </tr>
-                </tfoot>
-              )}
             </table>
-          </div>
         </div>
       </section>
 
@@ -421,12 +442,6 @@ export default function DataDisplay({
                       <div className="text-right">¥{Math.abs(original?.直营服务费 || 0).toFixed(2)}</div>
                       <div className="text-right text-destructive">-¥{Math.abs(deducted?.直营服务费 || 0).toFixed(2)}</div>
                       <div className="text-right font-bold text-primary">¥{Math.abs(current?.直营服务费 || 0).toFixed(2)}</div>
-                    </div>
-                    <div className="grid grid-cols-4 gap-2 py-2">
-                      <div className="font-medium">收入</div>
-                      <div className="text-right">¥{formatNumber(original?.净结金额)}</div>
-                      <div className="text-right text-destructive">-¥{formatNumber(deducted?.应结金额 + Math.abs(deducted?.直营服务费 || 0))}</div>
-                      <div className="text-right font-bold text-primary">¥{formatNumber(current?.净结金额)}</div>
                     </div>
                     <div className="pt-4 mt-4 border-t border-border text-xs text-muted-foreground flex items-center gap-2">
                       <Clock className="w-4 h-4" />

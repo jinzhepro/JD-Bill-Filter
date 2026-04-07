@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import Decimal from "decimal.js";
-import Tesseract from 'tesseract.js';
 import Modal from "./ui/modal";
 import { Textarea } from "./ui/textarea";
 import { Button } from "./ui/button";
@@ -25,267 +24,22 @@ import { cleanAmount } from "@/lib/utils";
  * @param {Function} props.onClose - 关闭Modal的回调
  */
 export default function SettlementProcessModal({ isOpen, onClose }) {
-  const { processedData, setProcessedData, addProcessingHistory, addDataChange, pasteHistory, setPasteHistory } = useSettlement();
+  const { processedData, setProcessedData, addProcessingHistory, addDataChange, pasteHistory, setPasteHistory, saveBeforeProcessing } = useSettlement();
   const { toast } = useToast();
 
   const [pasteContent, setPasteContent] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isRecognizing, setIsRecognizing] = useState(false);
-  const [recognitionProgress, setRecognitionProgress] = useState(0);
-  const [tempData, setTempData] = useState({ skus: [], quantities: [], amounts: [], fees: [] });
 
-  /**
-   * 处理粘贴事件（支持文字和图片）
-   * 智能判断：如果粘贴框是空的就是第一次上传（识别 SKU 和数量）
-   *          如果有数据就是第二次上传（识别货款和自营服务费）
-   */
-  const handlePaste = async (event) => {
-    // 检查剪贴板中是否有图片
-    const items = event.clipboardData?.items;
-    if (!items) return;
-
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-
-      // 如果是图片类型
-      if (item.type.startsWith('image/')) {
-        event.preventDefault();
-
-        const file = item.getAsFile();
-        if (!file) continue;
-
-        // 智能判断：根据 pasteContent 是否为空决定识别模式
-        const isFirstUpload = !pasteContent || pasteContent.trim() === '';
-
-        setIsRecognizing(true);
-        setRecognitionProgress(0);
-
-        try {
-          // 使用 Tesseract 进行 OCR 识别
-          const { data: { text } } = await Tesseract.recognize(
-            file,
-            'chi_sim+eng',
-            {
-              logger: m => {
-                if (m.status === 'recognizing text') {
-                  setRecognitionProgress(Math.round(m.progress * 100));
-                }
-              }
-            }
-          );
-
-          // 提取所有数字行
-          const lines = text.split('\n').filter(line => line.trim());
-          const numbers = [];
-
-          for (const line of lines) {
-            // 提取数字（包括小数）
-            const numberMatch = line.match(/\d+(\.\d+)?/g);
-            if (numberMatch) {
-              numbers.push(...numberMatch);
-            }
-          }
-
-          // 检查是否包含 SKU 关键字
-          const hasSkuKeyword = /SKU|商品编号 | 编号/.test(text);
-
-          // 从当前输入框解析现有数据（保留用户编辑）
-          const parsedRows = parsePastedContent(pasteContent);
-          const prevSkus = parsedRows.map(r => r.sku);
-          const prevQuantities = parsedRows.map(r => r.quantity);
-          const prevAmounts = parsedRows.map(r => r.amount);
-          const prevFees = parsedRows.map(r => r.serviceFee);
-
-          // 计算总行数
-          const rowCount = Math.max(prevSkus.length, prevQuantities.length, prevAmounts.length, prevFees.length);
-
-          if (hasSkuKeyword) {
-            // 情况 1：识别到 SKU 关键字 → 填充 SKU 和数量列
-            const newSkus = [];
-            const newQuantities = [];
-
-            for (let i = 0; i < numbers.length; i++) {
-              if (i % 2 === 0) {
-                newSkus.push(numbers[i]);
-              } else {
-                newQuantities.push(numbers[i]);
-              }
-            }
-
-            // 复制之前的数据
-            const allSkus = [...prevSkus];
-            const allQuantities = [...prevQuantities];
-
-            // 优先填充缺失 SKU 的行
-            let newIndex = 0;
-            for (let i = 0; i < rowCount && newIndex < newSkus.length; i++) {
-              if (!allSkus[i] || allSkus[i] === '') {
-                allSkus[i] = newSkus[newIndex];
-                if (newIndex < newQuantities.length) {
-                  allQuantities[i] = newQuantities[newIndex];
-                }
-                newIndex++;
-              }
-            }
-
-            // 剩余数据追加到新行
-            while (newIndex < newSkus.length) {
-              allSkus.push(newSkus[newIndex]);
-              if (newIndex < newQuantities.length) {
-                allQuantities.push(newQuantities[newIndex]);
-              } else {
-                allQuantities.push('');
-              }
-              newIndex++;
-            }
-
-            // 生成完整的结果行
-            const maxCount = Math.max(allSkus.length, prevAmounts.length, prevFees.length);
-            const resultLines = [];
-
-            for (let i = 0; i < maxCount; i++) {
-              const sku = i < allSkus.length ? allSkus[i] : '';
-              const amount = i < prevAmounts.length ? prevAmounts[i] : '';
-              const quantity = i < allQuantities.length ? allQuantities[i] : '';
-              const fee = i < prevFees.length ? prevFees[i] : '';
-
-              resultLines.push(`${sku}\t${amount}\t${quantity}\t${fee}`);
-            }
-
-            const resultText = resultLines.join('\n');
-            setPasteContent(resultText);
-
-            // 保存到临时数据
-            setTempData({
-              skus: allSkus,
-              quantities: allQuantities,
-              amounts: prevAmounts,
-              fees: prevFees
-            });
-
-            toast({
-              title: "识别成功（SKU + 数量）",
-              description: `共 ${allSkus.length} 个 SKU 和 ${allQuantities.length} 个数量`,
-            });
-          } else {
-            // 情况 2：只识别到纯数字 → 填充货款和服务费列
-            const newAmounts = [];
-            const newFees = [];
-
-            for (let i = 0; i < numbers.length; i++) {
-              if (i % 2 === 0) {
-                newAmounts.push(numbers[i]);
-              } else {
-                newFees.push(numbers[i]);
-              }
-            }
-
-            // 复制之前的数据
-            const allAmounts = [...prevAmounts];
-            const allFees = [...prevFees];
-
-            // 优先填充缺失货款/服务费的行
-            let newIndex = 0;
-            for (let i = 0; i < rowCount && newIndex < newAmounts.length; i++) {
-              if ((!allAmounts[i] || allAmounts[i] === '') && (!allFees[i] || allFees[i] === '')) {
-                allAmounts[i] = newAmounts[newIndex];
-                if (newIndex < newFees.length) {
-                  allFees[i] = newFees[newIndex];
-                }
-                newIndex++;
-              }
-            }
-
-            // 剩余数据追加到新行
-            while (newIndex < newAmounts.length) {
-              allAmounts.push(newAmounts[newIndex]);
-              if (newIndex < newFees.length) {
-                allFees.push(newFees[newIndex]);
-              } else {
-                allFees.push('');
-              }
-              newIndex++;
-            }
-
-            // 生成完整的结果行
-            const maxCount = Math.max(prevSkus.length, allAmounts.length, prevQuantities.length, allFees.length);
-            const resultLines = [];
-
-            for (let i = 0; i < maxCount; i++) {
-              const sku = i < prevSkus.length ? prevSkus[i] : '';
-              const amount = i < allAmounts.length ? allAmounts[i] : '';
-              const quantity = i < prevQuantities.length ? prevQuantities[i] : '';
-              const fee = i < allFees.length ? allFees[i] : '';
-
-              resultLines.push(`${sku}\t${amount}\t${quantity}\t${fee}`);
-            }
-
-            const resultText = resultLines.join('\n');
-            setPasteContent(resultText);
-
-            // 保存到临时数据
-            setTempData({
-              skus: prevSkus,
-              quantities: prevQuantities,
-              amounts: allAmounts,
-              fees: allFees
-            });
-
-            toast({
-              title: "识别成功（货款 + 自营服务费）",
-              description: `共 ${allAmounts.length} 个货款和 ${allFees.length} 个服务费`,
-            });
-          }
-        } catch (error) {
-          toast({
-            variant: "destructive",
-            title: "识别失败",
-            description: error.message || "图片识别过程中发生错误",
-          });
-        } finally {
-          setIsRecognizing(false);
-          setRecognitionProgress(0);
-        }
-
-        break; // 只处理第一个图片
-      }
-    }
-  };
-
-  /**
-   * 处理粘贴输入框内容变化
-   */
   const handlePasteContentChange = (e) => {
     setPasteContent(e.target.value);
   };
 
-  /**
-   * 清空粘贴输入框
-   */
   const handleClearPaste = () => {
     setPasteContent("");
-    setTempData({ skus: [], quantities: [], amounts: [], fees: [] });
   };
 
-  /**
-   * 从历史记录加载数据
-   */
   const handleLoadFromHistory = (historyItem) => {
     setPasteContent(historyItem.content);
-    
-    // 解析历史记录内容，恢复 tempData
-    const parsedRows = parsePastedContent(historyItem.content);
-    const skus = parsedRows.map(r => r.sku);
-    const quantities = parsedRows.map(r => r.quantity);
-    const amounts = parsedRows.map(r => r.amount);
-    const fees = parsedRows.map(r => r.serviceFee);
-    
-    setTempData({
-      skus,
-      quantities,
-      amounts,
-      fees
-    });
     
     toast({
       title: "已加载历史记录",
@@ -316,9 +70,6 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
     }
     if (!row.quantity.trim() || isNaN(parseFloat(row.quantity))) {
       return { id: row.id, message: "请输入有效的数量" };
-    }
-    if (!row.serviceFee.trim() || isNaN(parseFloat(row.serviceFee))) {
-      return { id: row.id, message: "请输入有效的直营服务费" };
     }
     return null;
   };
@@ -355,7 +106,6 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
       数量: toNumber(currentQuantity),
       应结金额: toNumber(cleanDecimalValue(targetRow["应结金额"])),
       直营服务费: toNumber(cleanDecimalValue(targetRow["直营服务费"])),
-      净结金额: toNumber(cleanDecimalValue(targetRow["净结金额"])),
     };
 
     const newQuantity = currentQuantity.minus(deductQuantity);
@@ -368,11 +118,10 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
     const deductedData = {
       数量: toNumber(deductQuantity),
       应结金额: toNumber(cleanDecimalValue(row.amount)),
-      直营服务费: toNumber(cleanDecimalValue(row.serviceFee)),
+      直营服务费: 0,
     };
 
     const rowAmount = cleanDecimalValue(row.amount);
-    const rowServiceFee = cleanDecimalValue(row.serviceFee);
 
     if (!rowAmount.eq(new Decimal(0))) {
       const currentAmount = cleanDecimalValue(targetRow["应结金额"]);
@@ -380,21 +129,10 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
       updatedData[skuIndex]["应结金额"] = toNumber(newAmount);
     }
 
-    if (!rowServiceFee.eq(new Decimal(0))) {
-      const currentServiceFee = cleanDecimalValue(targetRow["直营服务费"]);
-      const newServiceFee = currentServiceFee.plus(rowServiceFee.abs());
-      updatedData[skuIndex]["直营服务费"] = toNumber(newServiceFee);
-    }
-
-    const finalAmount = cleanDecimalValue(updatedData[skuIndex]["应结金额"])
-      .plus(cleanDecimalValue(updatedData[skuIndex]["直营服务费"]));
-    updatedData[skuIndex]["净结金额"] = toNumber(finalAmount);
-
     const currentData = {
       数量: toNumber(newQuantity),
       应结金额: toNumber(cleanDecimalValue(updatedData[skuIndex]["应结金额"])),
       直营服务费: toNumber(cleanDecimalValue(updatedData[skuIndex]["直营服务费"])),
-      净结金额: toNumber(cleanDecimalValue(updatedData[skuIndex]["净结金额"])),
     };
 
     const changes = {
@@ -525,6 +263,9 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
     }
 
     // 所有验证通过，开始处理
+    // 先保存当前数据状态，用于撤回
+    saveBeforeProcessing();
+    
     setIsProcessing(true);
 
     let updatedData = [...processedData];
@@ -572,12 +313,8 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
    */
   const handleReset = () => {
     setPasteContent("");
-    setTempData({ skus: [], quantities: [], amounts: [], fees: [] });
   };
 
-  /**
-   * 关闭Modal时重置状态
-   */
   const handleClose = () => {
     handleReset();
     onClose();
@@ -595,9 +332,9 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
         <div>
           <div className="flex justify-between items-center mb-2">
             <h3 className="text-sm font-semibold text-foreground">
-              粘贴图片
+              粘贴文本
               <span className="ml-2 text-xs text-muted-foreground font-normal">
-                含SKU图片填SKU列，纯数字图片填货款列
+                格式：SKU 商品名称 数量 金额（商品名称列会被忽略）
               </span>
             </h3>
             <Button
@@ -611,10 +348,9 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
             </Button>
           </div>
           <Textarea
-            placeholder="Ctrl+V 粘贴图片自动识别..."
+            placeholder="粘贴文本内容..."
             value={pasteContent}
             onChange={handlePasteContentChange}
-            onPaste={handlePaste}
             className="h-60 text-sm font-mono"
           />
 
@@ -631,7 +367,7 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
                   <span className="font-semibold text-green-600">
                     ¥{pasteContent.trim().split('\n').filter(l => l.trim()).reduce((sum, line) => {
                       const parts = line.split(/[\s\t,|]+/);
-                      const amount = parseFloat(parts[1]) || 0;
+                      const amount = parseFloat(parts[3]) || 0;
                       return sum + amount;
                     }, 0).toFixed(2)}
                   </span>
@@ -644,16 +380,6 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
                       const qty = parseFloat(parts[2]) || 0;
                       return sum + qty;
                     }, 0).toFixed(0)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">服务费合计:</span>
-                  <span className="font-semibold text-blue-600">
-                    ¥{pasteContent.trim().split('\n').filter(l => l.trim()).reduce((sum, line) => {
-                      const parts = line.split(/[\s\t,|]+/);
-                      const fee = parseFloat(parts[3]) || 0;
-                      return sum + fee;
-                    }, 0).toFixed(2)}
                   </span>
                 </div>
               </div>
