@@ -1,163 +1,140 @@
-# AGENTS.md - AI Agent 开发指南
+# AGENTS.md - AI Agent Development Guide
 
-## 1. 项目概述
+## Project Overview
 
-**项目名称**: 京东单据处理系统 (JD Bill Filter)
+**JD Bill Filter** - JD.com settlement statement processing system (Chinese-language application)
 
-**技术栈**:
-- **框架**: Next.js 16.0.10 (App Router)
-- **语言**: JavaScript (无 TypeScript)
-- **样式**: Tailwind CSS 3.4.18 + shadcn/ui (New York style)
-- **UI 组件**: shadcn/ui + Radix UI
-- **工具库**: Decimal.js, ExcelJS, Lucide React, Tesseract.js
+**Tech Stack**: Next.js 16.0.10 (App Router), React 19.2.0, JavaScript (no TypeScript), Tailwind CSS 3.4.18, shadcn/ui (New York style), Decimal.js, ExcelJS, Tesseract.js
 
-**项目用途**: 京东对帐单处理系统，支持 Excel/CSV 导入、智能订单合并、结算单处理和供应商转换。
+**Node Version**: Managed via Volta (current: 24.14.1). Minimum: Node.js 18+
 
----
+## Build & Run Commands
 
-## 2. 构建与运行命令
-
-### 核心命令
 ```bash
-npm run dev      # 开发服务器
-npm run build    # 生产构建
-npm start        # 启动生产服务器
-npm run lint     # 代码检查
+npm run dev      # Development server
+npm run build    # Production build
+npm start        # Production server
+npm run lint     # Linting (ESLint 9 flat config)
 ```
 
-### 测试命令
-**注意**: 项目当前未配置测试框架。推荐安装 Vitest + Testing Library：
-```bash
-npm install -D vitest @testing-library/react @testing-library/jest-dom @vitejs/plugin-react jsdom
-npm run test                    # 运行所有测试
-npm run test -- path/to/test.js # 运行单个测试
-```
+**No test framework configured**. Manual testing only.
 
----
+## Critical Architecture Notes
 
-## 3. 项目结构
+### State Management
+- **SettlementContext** is the primary state manager (src/context/SettlementContext.js)
+- **CRITICAL**: Never mutate state directly. Always use Context actions (e.g., `setData()`, `setError()`)
+- All Context values should be wrapped with `useMemo`
 
-```
-src/
-├── app/                    # Next.js App Router 页面
-│   ├── page.js            # 首页（结算单处理）
-│   ├── suppliers/         # 供应商转换页面
-│   ├── layout.js          # 根布局
-│   └── globals.css        # 全局样式
-├── components/            # React 组件
-│   ├── ui/               # shadcn/ui 基础组件
-│   └── [业务组件].js      # 业务组件
-├── context/              # React Context 状态管理
-│   ├── SettlementContext.js  # 核心状态管理
-│   └── SupplierContext.js    # 供应商状态
-├── lib/                  # 核心业务逻辑
-│   ├── utils.js          # 工具函数（cn, cleanAmount, cleanProductCode）
-│   ├── settlementProcessor.js
-│   ├── excelHandler.js
-│   └── constants.js
-├── data/                 # 静态数据
-└── hooks/                # 自定义 Hooks
-```
+### Monetary Calculations
+- **ALWAYS use Decimal.js** for all monetary calculations to avoid floating-point errors
+- Import: `import Decimal from "decimal.js"`
+- Pattern: `const amount = new Decimal(cleanAmount(value))`
 
----
+### Data Type Handling
+- **Product codes MUST be coerced to strings** to prevent Excel auto-conversion to numbers
+- Use `cleanProductCode()` from lib/utils.js to handle Excel formula prefixes (`="123456"`)
+- Excel formula cells return `{ formula: '...', result: ... }` objects
 
-## 4. 代码风格规范
+### File Processing
+- File types: .xlsx, .xls, .csv (50MB max)
+- CSV encoding: Try UTF-8 first, fallback to GBK if no Chinese characters detected
+- Excel export: Set product code column to text format (`numFmt: '@'`)
+- No database - all data processed in-memory
 
-### 4.1 组件规范
-- **客户端组件**: 所有使用 React hooks 的组件必须以 `"use client"` 开头
-- **服务端组件**: 默认是服务端组件
-- **组件导出**: 使用默认导出 `export default function ComponentName()`
+## Code Conventions
 
-### 4.2 导入顺序
+### Component Structure
+- Client components MUST start with `"use client"` directive
+- Use default exports: `export default function ComponentName()`
+- Server components are the default (no directive needed)
+
+### Import Order
 ```javascript
 // 1. React
 import React, { useState, useEffect } from "react";
 
-// 2. 第三方库
+// 2. Third-party libraries
 import Decimal from "decimal.js";
 import ExcelJS from "exceljs";
 
-// 3. 项目内部（使用 @/ 别名）
+// 3. Internal imports (use @/ alias)
 import { useSettlement } from "@/context/SettlementContext";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-// 4. 相对路径
+// 4. Relative imports
 import { MyComponent } from "./MyComponent";
 ```
 
-### 4.3 命名规范
+### Naming Conventions
+- Components: PascalCase (`SettlementContent.js`)
+- Functions/variables: camelCase (`processSettlementData`)
+- Constants: UPPER_SNAKE_CASE (`MAX_FILE_SIZE`)
+- Context files: PascalCase + Context (`SettlementContext.js`)
+- Hooks: use + PascalCase (`useSettlement`)
 
-| 类型 | 规范 | 示例 |
-|------|------|------|
-| 组件 | PascalCase | `SettlementContent.js` |
-| 函数/变量 | camelCase | `processSettlementData` |
-| 常量 | UPPER_SNAKE_CASE | `MAX_FILE_SIZE` |
-| Context | PascalCase + Context | `SettlementContext.js` |
-| Hook | use + PascalCase | `useSettlement` |
+### Styling
+- Use shadcn/ui semantic CSS variables (`bg-card`, `text-foreground`, `border-border`)
+- Avoid custom color classes (`bg-white`, `text-gray-800`)
 
-### 4.4 类型处理
-项目使用 JavaScript，通过 JSDoc 进行类型注释。
+### Error Handling
+- All async operations must use try-catch
+- Use Context `setError()` and `addLog()` for error reporting
 
-### 4.5 样式规范
-- 使用 shadcn/ui 的语义化 CSS 变量（如 `bg-card`, `text-foreground`）
-- 避免使用自定义颜色类名（如 `bg-white`, `text-gray-800`）
+### Performance
+- Use `useMemo` for computed values, `useCallback` for callbacks
+- Wrap Context provider values with `useMemo`
 
-### 4.6 错误处理
-所有异步操作使用 try-catch，通过 Context 的 `setError` 和 `addLog` 记录错误。
+## Project Structure
 
-### 4.7 State 管理规范
-**CRITICAL**: 永远不要直接修改 state，始终使用 Context actions（如 `setData()`）。
-
----
-
-## 5. 重要配置
-
-**jsconfig.json**: `@/*` 映射到 `./src/*`
-
-**eslint.config.mjs**: 使用 `eslint-config-next`，忽略 `.next/`, `out/`, `build/`
-
----
-
-## 6. 核心规则
-
-### 6.1 性能优化
-- 使用 `useMemo` 缓存计算结果，`useCallback` 缓存回调函数
-- Context value 使用 `useMemo` 包装
-
-### 6.2 安全限制
-- 文件大小限制：50MB
-- 支持文件类型：.xlsx, .xls, .csv
-- 无数据库依赖，数据仅在内存中处理
-
-### 6.3 核心规则（必须遵守）
-- **永远不要直接修改 state**，始终使用 Context actions
-- **SettlementContext 是主要的状态管理 Context**
-- 所有客户端组件必须以 `"use client"` 开头
-- **商品编号必须强制转换为字符串**，防止 Excel 自动转换为数字
-
-### 6.4 兼容性
-- Node.js 18+, React 19.2.0
-
----
-
-## 7. 项目依赖
-
-**核心**: next: 16.0.10, react: 19.2.0, tailwindcss: 3.4.18
-
-**业务**: decimal.js, exceljs, tesseract.js, @radix-ui/*, lucide-react
-
-**开发**: eslint, eslint-config-next, tailwind-merge, clsx
-
----
-
-## 8. 测试指南
-
-**当前状态**: 项目未配置测试框架，所有功能通过手动测试验证。
-
-**推荐配置**:
-```bash
-npm install -D vitest @testing-library/react @testing-library/jest-dom @vitejs/plugin-react jsdom
+```
+src/
+├── app/                    # Next.js App Router pages
+│   ├── page.js            # Home (settlement processing)
+│   ├── suppliers/         # Supplier conversion page
+│   ├── layout.js          # Root layout
+│   └── globals.css        # Global styles
+├── components/            # React components
+│   ├── ui/               # shadcn/ui base components
+│   └── [business].js      # Business components
+├── context/              # React Context state management
+│   ├── SettlementContext.js  # Core state (CRITICAL)
+│   ├── SupplierContext.js
+│   ├── ThemeContext.js
+│   └── LoadingContext.js
+├── lib/                  # Core business logic
+│   ├── utils.js          # Utilities (cn, cleanAmount, cleanProductCode, formatAmount)
+│   ├── settlementProcessor.js  # Settlement data processing
+│   ├── excelHandler.js   # Excel/CSV file handling
+│   └── constants.js      # Constants
+├── data/                 # Static data
+│   └── suppliers.js      # Supplier data
+└── hooks/                # Custom hooks
+    └── use-toast.js      # Toast notifications
 ```
 
-**运行单测**: `npm run test -- path/to/test.js`
+## Important Configurations
+
+- **jsconfig.json**: Path alias `@/*` → `./src/*`
+- **eslint.config.mjs**: ESLint 9 flat config format
+- **components.json**: shadcn/ui config (New York style, no TypeScript)
+- **next.config.mjs**: React strict mode enabled
+- **Volta**: Node version management configured in package.json
+
+## Key Utilities (src/lib/utils.js)
+
+- `cn(...inputs)`: Merge Tailwind classes (from shadcn/ui)
+- `cleanAmount(value)`: Clean currency strings, remove symbols/formatting
+- `cleanProductCode(value)`: Handle Excel formula prefix (`="123456"` → `"123456"`)
+- `formatAmount(value, forcePositive)`: Format currency for display
+- `calculateColumnTotals(data, columns)`: Sum columns in data array
+
+## Critical Rules
+
+1. **Never mutate state directly** - always use Context actions
+2. **Always use Decimal.js for monetary calculations**
+3. **Product codes must be strings** - use `String()` or `cleanProductCode()`
+4. **Client components must have `"use client"` directive**
+5. **All async operations must have try-catch error handling**
+6. **Use `useMemo` for Context values and computed data**
