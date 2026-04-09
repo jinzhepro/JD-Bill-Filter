@@ -42,85 +42,22 @@ npm run lint     # Linting (ESLint 9 flat config)
 - Excel export: Set product code column to text format (`numFmt: '@'`)
 - No database - all data processed in-memory
 
-## Code Conventions
+## Styling
 
-### Component Structure
-- Client components MUST start with `"use client"` directive
-- Use default exports: `export default function ComponentName()`
-- Server components are the default (no directive needed)
-
-### Import Order
-```javascript
-// 1. React
-import React, { useState, useEffect } from "react";
-
-// 2. Third-party libraries
-import Decimal from "decimal.js";
-import ExcelJS from "exceljs";
-
-// 3. Internal imports (use @/ alias)
-import { useSettlement } from "@/context/SettlementContext";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-
-// 4. Relative imports
-import { MyComponent } from "./MyComponent";
-```
-
-### Naming Conventions
-- Components: PascalCase (`SettlementContent.js`)
-- Functions/variables: camelCase (`processSettlementData`)
-- Constants: UPPER_SNAKE_CASE (`MAX_FILE_SIZE`)
-- Context files: PascalCase + Context (`SettlementContext.js`)
-- Hooks: use + PascalCase (`useSettlement`)
-
-### Styling
 - Use shadcn/ui semantic CSS variables (`bg-card`, `text-foreground`, `border-border`)
 - Avoid custom color classes (`bg-white`, `text-gray-800`)
 
-### Error Handling
-- All async operations must use try-catch
-- Use Context `setError()` and `addLog()` for error reporting
-
-### Performance
-- Use `useMemo` for computed values, `useCallback` for callbacks
-- Wrap Context provider values with `useMemo`
-
-## Project Structure
+## Key Structure
 
 ```
 src/
 ├── app/                    # Next.js App Router pages
-│   ├── page.js            # Home (settlement processing)
-│   ├── suppliers/         # Supplier conversion page
-│   ├── layout.js          # Root layout
-│   └── globals.css        # Global styles
-├── components/            # React components
-│   ├── ui/               # shadcn/ui base components
-│   └── [business].js      # Business components
-├── context/              # React Context state management
-│   ├── SettlementContext.js  # Core state (CRITICAL)
-│   ├── SupplierContext.js
-│   ├── ThemeContext.js
-│   └── LoadingContext.js
-├── lib/                  # Core business logic
-│   ├── utils.js          # Utilities (cn, cleanAmount, cleanProductCode, formatAmount)
-│   ├── settlementProcessor.js  # Settlement data processing
-│   ├── excelHandler.js   # Excel/CSV file handling
-│   └── constants.js      # Constants
-├── data/                 # Static data
-│   └── suppliers.js      # Supplier data
-└── hooks/                # Custom hooks
-    └── use-toast.js      # Toast notifications
+├── components/            # React components + ui/ (shadcn/ui)
+├── context/              # SettlementContext.js (core), SupplierContext.js
+├── lib/                  # utils.js, settlementProcessor.js, excelHandler.js, constants.js
+├── data/                 # suppliers.js (static data)
+└── hooks/                # use-toast.js
 ```
-
-## Important Configurations
-
-- **jsconfig.json**: Path alias `@/*` → `./src/*`
-- **eslint.config.mjs**: ESLint 9 flat config format
-- **components.json**: shadcn/ui config (New York style, no TypeScript)
-- **next.config.mjs**: React strict mode enabled
-- **Volta**: Node version management configured in package.json
 
 ## Key Utilities (src/lib/utils.js)
 
@@ -128,7 +65,6 @@ src/
 - `cleanAmount(value)`: Clean currency strings, remove symbols/formatting
 - `cleanProductCode(value)`: Handle Excel formula prefix (`="123456"` → `"123456"`)
 - `formatAmount(value, forcePositive)`: Format currency for display
-- `calculateColumnTotals(data, columns)`: Sum columns in data array
 
 ## Critical Rules
 
@@ -137,4 +73,3 @@ src/
 3. **Product codes must be strings** - use `String()` or `cleanProductCode()`
 4. **Client components must have `"use client"` directive**
 5. **All async operations must have try-catch error handling**
-6. **Use `useMemo` for Context values and computed data**
