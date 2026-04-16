@@ -16,7 +16,8 @@ import {
   X,
   FileText,
   Clock,
-  Info
+  Info,
+  ChevronDown
 } from "lucide-react";
 
 /**
@@ -59,6 +60,7 @@ export default function DataDisplay({
   const [showModal, setShowModal] = useState(false);
   const [modalSku, setModalSku] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showTotals, setShowTotals] = useState(true);
 
   /**
    * 关闭模态框的回调函数
@@ -199,62 +201,93 @@ export default function DataDisplay({
         <div></div>
       </div>
 
-      {/* 合计仪表盘 */}
+      {/* 合计仪表盘 - 可折叠 */}
       {calculatedTotal && Object.keys(calculatedTotal).length > 0 && (
-        <section className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl border-2 border-primary/20 p-6 shadow-lg">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* 货款合计 */}
-            <div className="bg-card rounded-lg border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-muted-foreground">货款合计</span>
-                <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
-                  <span className="text-green-600 font-bold text-lg">¥</span>
-                </div>
+        <section className="bg-muted/20 rounded-xl border border-border shadow-sm overflow-hidden">
+          <button
+            onClick={() => setShowTotals(!showTotals)}
+            className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-muted/30 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center">
+                <span className="text-muted-foreground font-bold text-sm">¥</span>
               </div>
-              <div className="text-3xl font-bold text-green-600 font-mono">
-                ¥{Math.abs(calculatedTotal["应结金额"] || 0).toFixed(2)}
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">
+                  合计仪表盘
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  货款 ¥{Math.abs(calculatedTotal["应结金额"] || 0).toFixed(2)} · 
+                  直营服务费 ¥{Math.abs(calculatedTotal["直营服务费"] || 0).toFixed(2)} · 
+                  收入 ¥{Math.abs(incomeTotal).toFixed(2)} · 
+                  数量 {(calculatedTotal["数量"] || 0).toFixed(0)}
+                </p>
               </div>
             </div>
+            <ChevronDown
+              className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${
+                showTotals ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+          
+          {showTotals && (
+            <div className="px-6 pb-6 pt-2 border-t border-border/50">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* 货款合计 */}
+                <div className="bg-card rounded-lg border border-border p-5 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-muted-foreground">货款合计</span>
+                    <div className="w-9 h-9 rounded-full bg-green-500/10 flex items-center justify-center">
+                      <span className="text-green-600 font-bold text-base">¥</span>
+                    </div>
+                  </div>
+                  <div className="text-2xl font-bold text-green-600 font-mono">
+                    ¥{Math.abs(calculatedTotal["应结金额"] || 0).toFixed(2)}
+                  </div>
+                </div>
 
-            {/* 直营服务费合计 */}
-            <div className="bg-card rounded-lg border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-muted-foreground">直营服务费合计</span>
-                <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-                  <span className="text-blue-600 font-bold text-lg">¥</span>
+                {/* 直营服务费合计 */}
+                <div className="bg-card rounded-lg border border-border p-5 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-muted-foreground">直营服务费合计</span>
+                    <div className="w-9 h-9 rounded-full bg-blue-500/10 flex items-center justify-center">
+                      <span className="text-blue-600 font-bold text-base">¥</span>
+                    </div>
+                  </div>
+                  <div className="text-2xl font-bold text-blue-600 font-mono">
+                    ¥{Math.abs(calculatedTotal["直营服务费"] || 0).toFixed(2)}
+                  </div>
                 </div>
-              </div>
-              <div className="text-3xl font-bold text-blue-600 font-mono">
-                ¥{Math.abs(calculatedTotal["直营服务费"] || 0).toFixed(2)}
-              </div>
-            </div>
 
-            {/* 收入合计 */}
-            <div className="bg-card rounded-lg border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-muted-foreground">收入合计</span>
-                <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center">
-                  <span className="text-orange-600 font-bold text-lg">¥</span>
+                {/* 收入合计 */}
+                <div className="bg-card rounded-lg border border-border p-5 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-muted-foreground">收入合计</span>
+                    <div className="w-9 h-9 rounded-full bg-orange-500/10 flex items-center justify-center">
+                      <span className="text-orange-600 font-bold text-base">¥</span>
+                    </div>
+                  </div>
+                  <div className="text-2xl font-bold text-orange-600 font-mono">
+                    ¥{Math.abs(incomeTotal).toFixed(2)}
+                  </div>
                 </div>
-              </div>
-              <div className="text-3xl font-bold text-orange-600 font-mono">
-                ¥{Math.abs(incomeTotal).toFixed(2)}
-              </div>
-            </div>
 
-            {/* 数量合计 */}
-            <div className="bg-card rounded-lg border border-border p-6 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-muted-foreground">数量合计</span>
-                <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center">
-                  <span className="text-purple-600 font-bold text-lg">#</span>
+                {/* 数量合计 */}
+                <div className="bg-card rounded-lg border border-border p-5 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-muted-foreground">数量合计</span>
+                    <div className="w-9 h-9 rounded-full bg-purple-500/10 flex items-center justify-center">
+                      <span className="text-purple-600 font-bold text-base">#</span>
+                    </div>
+                  </div>
+                  <div className="text-2xl font-bold text-purple-600 font-mono">
+                    {(calculatedTotal["数量"] || 0).toFixed(0)}
+                  </div>
                 </div>
               </div>
-              <div className="text-3xl font-bold text-purple-600 font-mono">
-                {(calculatedTotal["数量"] || 0).toFixed(0)}
-              </div>
             </div>
-          </div>
+          )}
         </section>
       )}
 
