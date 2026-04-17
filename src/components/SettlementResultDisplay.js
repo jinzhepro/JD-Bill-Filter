@@ -34,6 +34,11 @@ export default function SettlementResultDisplay() {
       const totals = calculateColumnTotals(processedData);
       downloadExcel(processedData, fileName, totals, dataChanges);
     } catch (error) {
+      toast({
+        title: "下载失败",
+        description: error instanceof Error ? error.message : "文件下载时发生错误",
+        variant: "destructive",
+      });
     }
   };
 

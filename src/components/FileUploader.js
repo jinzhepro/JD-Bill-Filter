@@ -67,6 +67,7 @@ export default function FileUploader({
           onFilesSelected(filesWithPath);
         }
       } catch (error) {
+        console.error("文件选择错误:", error);
       }
     },
     [isValidFileExtensionMemo, onFilesSelected]
@@ -101,6 +102,7 @@ export default function FileUploader({
           onFilesSelected(filesWithPath);
         }
       } catch (error) {
+        console.error("文件拖拽错误:", error);
       }
     },
     [isValidFileExtensionMemo, onFilesSelected]

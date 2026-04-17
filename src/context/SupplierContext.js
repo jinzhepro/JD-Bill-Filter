@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext } from "react";
+import { createContext, useContext, useMemo } from "react";
 import { SUPPLIERS, findSupplierByMatchString, convertTextToSuppliers } from "@/data/suppliers";
 
 // 初始状态
@@ -14,12 +14,12 @@ const SupplierContext = createContext();
 
 // Provider 组件
 export function SupplierProvider({ children }) {
-  // 简化的context，只提供静态数据和转换功能
-  const value = {
+  // 使用 useMemo 包装 value，避免不必要的重渲染
+  const value = useMemo(() => ({
     ...initialState,
     findSupplierByMatchString,
     convertTextToSuppliers,
-  };
+  }), []);
 
   return (
     <SupplierContext.Provider value={value}>

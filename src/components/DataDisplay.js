@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useSettlement } from "@/context/SettlementContext";
 import { formatAmountJSX } from "@/lib/utils";
@@ -94,13 +95,11 @@ export default function DataDisplay({
     };
   }, [showModal, handleKeyDown]);
 
-  const calculatedTotal = calculatedTotals;
-  
   // 计算收入合计（货款 + 直营服务费）
   const incomeTotal = React.useMemo(() => {
-    if (!calculatedTotal) return 0;
-    return (calculatedTotal["应结金额"] || 0) + (calculatedTotal["直营服务费"] || 0);
-  }, [calculatedTotal]);
+    if (!calculatedTotals) return 0;
+    return (calculatedTotals["应结金额"] || 0) + (calculatedTotals["直营服务费"] || 0);
+  }, [calculatedTotals]);
 
   const handleSort = (key) => {
     let direction = "asc";
@@ -202,7 +201,7 @@ export default function DataDisplay({
       </div>
 
       {/* 合计仪表盘 - 可折叠 */}
-      {calculatedTotal && Object.keys(calculatedTotal).length > 0 && (
+      {calculatedTotals && Object.keys(calculatedTotals).length > 0 && (
         <section className="bg-muted/20 rounded-xl border border-border shadow-sm overflow-hidden">
           <button
             onClick={() => setShowTotals(!showTotals)}
@@ -217,10 +216,10 @@ export default function DataDisplay({
                   合计仪表盘
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  货款 ¥{Math.abs(calculatedTotal["应结金额"] || 0).toFixed(2)} · 
-                  直营服务费 ¥{Math.abs(calculatedTotal["直营服务费"] || 0).toFixed(2)} · 
+                  货款 ¥{Math.abs(calculatedTotals["应结金额"] || 0).toFixed(2)} · 
+                  直营服务费 ¥{Math.abs(calculatedTotals["直营服务费"] || 0).toFixed(2)} · 
                   收入 ¥{Math.abs(incomeTotal).toFixed(2)} · 
-                  数量 {(calculatedTotal["数量"] || 0).toFixed(0)}
+                  数量 {(calculatedTotals["数量"] || 0).toFixed(0)}
                 </p>
               </div>
             </div>
@@ -243,7 +242,7 @@ export default function DataDisplay({
                     </div>
                   </div>
                   <div className="text-2xl font-bold text-green-600 font-mono">
-                    ¥{Math.abs(calculatedTotal["应结金额"] || 0).toFixed(2)}
+                    ¥{Math.abs(calculatedTotals["应结金额"] || 0).toFixed(2)}
                   </div>
                 </div>
 
@@ -256,7 +255,7 @@ export default function DataDisplay({
                     </div>
                   </div>
                   <div className="text-2xl font-bold text-blue-600 font-mono">
-                    ¥{Math.abs(calculatedTotal["直营服务费"] || 0).toFixed(2)}
+                    ¥{Math.abs(calculatedTotals["直营服务费"] || 0).toFixed(2)}
                   </div>
                 </div>
 
@@ -282,7 +281,7 @@ export default function DataDisplay({
                     </div>
                   </div>
                   <div className="text-2xl font-bold text-purple-600 font-mono">
-                    {(calculatedTotal["数量"] || 0).toFixed(0)}
+                    {(calculatedTotals["数量"] || 0).toFixed(0)}
                   </div>
                 </div>
               </div>
@@ -308,14 +307,12 @@ export default function DataDisplay({
           {/* 全局搜索框 */}
           <div className="relative flex-1 max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
+            <Input
               type="text"
               placeholder="搜索商品编号、金额等..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-10 py-2 rounded-lg border border-border bg-background text-sm
-                focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary
-                placeholder:text-muted-foreground transition-all duration-200"
+              className="pl-10 pr-10"
             />
             {searchQuery && (
               <button
@@ -348,7 +345,7 @@ export default function DataDisplay({
                   {processedData.length > 0 &&
                     Object.keys(processedData[0]).map((header) => {
                       const displayHeader = columnMapping?.[header] || header;
-                      const total = calculatedTotal?.[header];
+                      const total = calculatedTotals?.[header];
                       const isAmtField = amountFields && Array.isArray(amountFields)
                         ? amountFields.includes(header)
                         : header === "单价" || header === "总价";
