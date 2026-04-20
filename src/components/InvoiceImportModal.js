@@ -31,7 +31,7 @@ export function InvoiceImportModal({ open, onOpenChange, onImport }) {
     const items = [];
 
     const extractSpec = (name) => {
-      const specMatch = name.match(/(\d+(?:ml|L|g|kg|ML))\s*[×\*xX]\s*(\d+)/i);
+      const specMatch = name.match(/(\d+(?:ml|L|g|kg|ML))(?:\/[^\*]*)?[×\*xX]\s*(\d+)/i);
       if (specMatch) {
         const spec = `${specMatch[1]}×${specMatch[2]}`;
         const cleanName = name.replace(specMatch[0], "").replace(/_[\d]+$/, "").trim();
@@ -43,9 +43,10 @@ export function InvoiceImportModal({ open, onOpenChange, onImport }) {
     for (const line of lines) {
       const parts = line.split(/\t+/);
       if (parts.length >= 3) {
-        const rawName = parts[0].trim();
-        const quantity = parseFloat(parts[1]) || 0;
-        const totalAmount = parseFloat(parts[2]) || 0;
+        const rawQuantity = parts[0].trim().replace(/^~/, "");
+        const quantity = parseFloat(rawQuantity) || 0;
+        const totalAmount = parseFloat(parts[1]) || 0;
+        const rawName = parts[2].trim();
         
         if (rawName && quantity > 0 && totalAmount > 0) {
           const { name: cleanName, spec } = extractSpec(rawName);
@@ -82,12 +83,12 @@ export function InvoiceImportModal({ open, onOpenChange, onImport }) {
         </DialogHeader>
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">
-            粘贴数据，格式：名称 + 制表符 + 数量 + 制表符 + 合计金额
+            粘贴数据，格式：数量 + 制表符 + 金额 + 制表符 + 商品名称_商品编号
           </p>
           <Textarea
             value={pasteText}
             onChange={(e) => setPasteText(e.target.value)}
-            placeholder="【整箱】可口可乐500ml*24瓶/箱_10210154943598	3	145.5"
+            placeholder="2	97.98	【整箱】可口可乐可乐500ml/瓶*24瓶/箱_10206106072064"
             rows={10}
           />
         </div>

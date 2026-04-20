@@ -123,20 +123,19 @@ export function InvoiceForm() {
         <CardHeader>
           <CardTitle>开票内容</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <div className="flex justify-between items-center">
+            <Button variant="outline" onClick={handleReset}>
+              清空表单
+            </Button>
+            <Button onClick={handleExport} disabled={isExporting}>
+              <FileDown className="w-4 h-4 mr-2" />
+              {isExporting ? "导出中..." : "导出发票"}
+            </Button>
+          </div>
           <InvoiceLineItems />
         </CardContent>
       </Card>
-
-      <div className="flex justify-end gap-4">
-        <Button variant="outline" onClick={handleReset}>
-          清空表单
-        </Button>
-        <Button onClick={handleExport} disabled={isExporting}>
-          <FileDown className="w-4 h-4 mr-2" />
-          {isExporting ? "导出中..." : "导出发票"}
-        </Button>
-      </div>
     </div>
   );
 }
