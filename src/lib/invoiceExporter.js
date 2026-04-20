@@ -153,7 +153,7 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `发票_${basicInfo.contractNo || "未命名"}.xlsx`;
+  link.download = `发票_${customerInfo.customerName || "未命名"}.xlsx`;
   link.click();
 
   URL.revokeObjectURL(url);
