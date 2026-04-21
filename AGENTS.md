@@ -4,7 +4,7 @@
 
 **JD Bill Filter** - 京东结算单处理系统（中文界面）
 
-**技术栈**: Next.js 16.0.10 (App Router), React 19.2.0, JavaScript (无 TypeScript), Tailwind CSS 3.4.18, shadcn/ui (New York 风格), Decimal.js, ExcelJS
+**技术栈**: Next.js 16.2.3 (App Router), React 19.2.0, JavaScript (无 TypeScript), Tailwind CSS 3.4.18, shadcn/ui (New York 风格), Decimal.js, ExcelJS
 
 **Node 版本**: Volta 管理 (24.14.1)
 
@@ -113,6 +113,14 @@ const data = await readFile(file, fileType);
 await downloadExcel(data, fileName, totals, dataChanges);
 ```
 
+## 发票导出 (`src/lib/invoiceExporter.js`)
+
+```javascript
+import { exportInvoice } from "@/lib/invoiceExporter";
+
+await exportInvoice(basicInfo, customerInfo, lineItems);
+```
+
 ## 供应商转换 (`src/data/suppliers.js`)
 
 ```javascript
@@ -122,21 +130,24 @@ const supplier = findSupplierByMatchString(text);
 const results = convertTextToSuppliers(text);
 ```
 
-## 项目结构（关键文件）
+## 项目结构
 
 ```
 src/
 ├── app/
 │   ├── page.js              # 首页（结算单处理）
-│   ├── suppliers/page.js    # 供应商转换页面
+│   ├── invoice/page.js      # 发票开具申请
+│   ├── suppliers/page.js    # 供应商转换
 │   └── layout.js            # 根布局
 ├── components/ui/           # shadcn/ui 基础组件
 ├── context/
 │   ├── SettlementContext.js # 结算单状态（核心）
+│   ├── InvoiceContext.js    # 发票状态
 │   └── SupplierContext.js   # 供应商状态
 ├── lib/
 │   ├── settlementProcessor.js   # 结算单处理
 │   ├── excelHandler.js          # Excel 处理
+│   ├── invoiceExporter.js       # 发票导出
 │   ├── settlementHelpers.js     # 辅助函数
 │   ├── utils.js                 # 工具函数
 │   ├── constants.js             # 常量定义
