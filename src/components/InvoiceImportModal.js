@@ -9,12 +9,14 @@ import { useToast } from "@/hooks/use-toast";
 
 const getBrandName = (name) => {
   if (name.includes("雀巢")) return "*软饮料*雀巢";
-  if (name.includes("可口可乐") || name.includes("雪碧")) return "*软饮料*可口可乐";
+  if (name.includes("可口可乐") || name.includes("雪碧") || name.includes("美汁源")) return "*软饮料*可口可乐";
   if (name.includes("百事")) return "*软饮料*百事可乐";
   if (name.includes("脉动")) return "*软饮料*脉动";
   if (name.includes("蒙牛")) return "*软饮料*蒙牛";
   if (name.includes("红牛")) return "*软饮料*红牛";
   if (name.includes("大窑")) return "*软饮料*大窑";
+  if (name.includes("康师傅")) return "*软饮料*康师傅";
+  if (name.includes("崂山")) return "*软饮料*崂山";
   return "其他";
 };
 
