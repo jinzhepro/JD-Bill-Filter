@@ -14,6 +14,7 @@ const getBrandName = (name) => {
   if (name.includes("脉动")) return "*软饮料*脉动";
   if (name.includes("蒙牛")) return "*软饮料*蒙牛";
   if (name.includes("红牛")) return "*软饮料*红牛";
+  if (name.includes("大窑")) return "*软饮料*大窑";
   return "其他";
 };
 
