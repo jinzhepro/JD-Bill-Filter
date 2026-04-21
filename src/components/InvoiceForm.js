@@ -36,6 +36,19 @@ export function InvoiceForm() {
       toast({ title: "请添加开票内容明细", variant: "destructive" });
       return;
     }
+    
+    const incompleteIndex = lineItems.findIndex((item) => 
+      !item.name || !item.spec || !item.unit || !item.quantity || !item.price || item.quantity <= 0 || item.price <= 0 || item.name === "其他"
+    );
+    if (incompleteIndex !== -1) {
+      const item = lineItems[incompleteIndex];
+      let reason = "信息不完整";
+      if (item.name === "其他") {
+        reason = "商品未匹配品牌规则";
+      }
+      toast({ title: `第 ${incompleteIndex + 1} 行${reason}，请检查`, variant: "destructive" });
+      return;
+    }
 
     setIsExporting(true);
     try {
