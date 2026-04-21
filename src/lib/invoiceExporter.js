@@ -8,7 +8,7 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems) {
   const TOTAL_COLUMNS = 10;
 
   worksheet.columns = [
-    { width: 12 },
+    { width: 18 },
     { width: 25 },
     { width: 12 },
     { width: 8 },
