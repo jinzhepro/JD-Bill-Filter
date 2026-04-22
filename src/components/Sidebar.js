@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileSpreadsheet, ArrowLeftRight, Receipt, Package, Tag, History } from "lucide-react";
+import { FileSpreadsheet, ArrowLeftRight, Receipt, Package, Tag, History, ShoppingCart } from "lucide-react";
 
 /**
  * 侧边栏导航组件
@@ -22,6 +22,11 @@ export function Sidebar() {
       name: "供应商转换",
       href: "/suppliers",
       icon: <ArrowLeftRight className="w-5 h-5" />,
+    },
+    {
+      name: "采购单",
+      href: "/purchase",
+      icon: <ShoppingCart className="w-5 h-5" />,
     },
     {
       name: "发票导出",
