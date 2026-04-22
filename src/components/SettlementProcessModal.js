@@ -86,11 +86,10 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
 
     const lines = allItems.map(item => {
       const sku = item.sku || "";
-      const name = item.name || "";
       const quantity = item.quantity || 0;
       const price = item.price || 0;
       const amount = new Decimal(quantity).times(price).toFixed(2);
-      return `${sku}\t${name}\t${quantity}\t${amount}`;
+      return `${sku}\t${quantity}\t${amount}`;
     });
 
     setPasteContent(lines.join("\n"));
@@ -377,7 +376,7 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
             <h3 className="text-sm font-semibold text-foreground">
               粘贴文本
               <span className="ml-2 text-xs text-muted-foreground font-normal">
-                格式：SKU 商品名称 数量 金额（商品名称列会被忽略）
+                格式：SKU 数量 金额（Tab或空格分隔）
               </span>
             </h3>
             <Button
@@ -410,7 +409,7 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
                   <span className="font-semibold text-green-600">
                     ¥{pasteContent.trim().split('\n').filter(l => l.trim()).reduce((sum, line) => {
                       const parts = line.split(/[\s\t,|]+/);
-                      const amount = parseFloat(parts[3]) || 0;
+                      const amount = parseFloat(parts[2]) || 0;
                       return sum + amount;
                     }, 0).toFixed(2)}
                   </span>
@@ -420,7 +419,7 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
                   <span className="font-semibold">
                     {pasteContent.trim().split('\n').filter(l => l.trim()).reduce((sum, line) => {
                       const parts = line.split(/[\s\t,|]+/);
-                      const qty = parseFloat(parts[2]) || 0;
+                      const qty = parseFloat(parts[1]) || 0;
                       return sum + qty;
                     }, 0).toFixed(0)}
                   </span>

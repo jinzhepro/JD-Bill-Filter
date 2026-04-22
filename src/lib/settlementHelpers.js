@@ -35,10 +35,11 @@ export function toNumber(decimal) {
 /**
  * 解析粘贴的多行数据
  * 支持格式：
- * 1. 制表符分隔：SKU\t商品名称\t数量\t金额（商品名称列会被忽略）
- * 2. 空格分隔：SKU 商品名称 数量 金额（商品名称列会被忽略）
- * 3. 逗号分隔：SKU,商品名称,数量,金额（商品名称列会被忽略）
- * 4. 竖线分隔：SKU|商品名称|数量|金额（商品名称列会被忽略）
+ * 1. 制表符分隔：SKU\t数量\t金额
+ * 2. 空格分隔：SKU 数量 金额
+ * 3. 逗号分隔：SKU,数量,金额
+ * 4. 竖线分隔：SKU|数量|金额
+ * 也兼容旧格式：SKU\t商品名称\t数量\t金额（商品名称列会被忽略）
  * @param {string} content - 粘贴的内容
  * @returns {Array} - 解析后的行数据数组
  */
@@ -66,15 +67,13 @@ export function parsePastedContent(content) {
     if (parts.length >= 3) {
       let sku, amount, quantity;
 
-      // 格式：SKU\t商品名称\t数量\t金额
-      // 商品名称（第二列）被忽略
+      // 新格式：SKU 数量 金额（3列）
       if (parts.length === 3) {
-        // SKU\t数量\t金额（无商品名称）
         sku = parts[0];
         quantity = parts[1];
         amount = parts[2];
       } else if (parts.length >= 4) {
-        // SKU\t商品名称\t数量\t金额
+        // 兼容旧格式：SKU 商品名称 数量 金额（商品名称列被忽略）
         sku = parts[0];
         quantity = parts[2];
         amount = parts[3];
