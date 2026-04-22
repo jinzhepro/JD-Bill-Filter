@@ -94,7 +94,7 @@ export function InvoiceLineItems() {
 
   const totals = calculateTotals();
 
-  const renderMonthTable = (month, items) => {
+  const renderMonthTable = (month, items, showTotal = false) => {
     const currentMonth = getCurrentMonth();
     const isCurrentMonth = month === currentMonth;
     const monthLabel = isCurrentMonth ? `${month}（本月）` : `${month}（其他月）`;
@@ -167,6 +167,18 @@ export function InvoiceLineItems() {
                   </tr>
                 );
               })}
+              {showTotal && (
+                <tr className="bg-muted font-medium border-t-2 border-border">
+                  <td className="border border-border px-2 py-2"></td>
+                  <td className="border border-border px-2 py-2 text-center" colSpan={3}>总计（{sortedMonths.length} 个月份）</td>
+                  <td className="border border-border px-2 py-2 text-right">{totals.quantity}</td>
+                  <td className="border border-border px-2 py-2"></td>
+                  <td className="border border-border px-2 py-2 text-right">{totals.amount}</td>
+                  <td className="border border-border px-2 py-2"></td>
+                  <td className="border border-border px-2 py-2 text-right">{totals.tax}</td>
+                  <td className="border border-border px-2 py-2 text-right">{totals.total}</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -201,24 +213,7 @@ export function InvoiceLineItems() {
         <p className="text-muted-foreground text-center py-4">暂无数据</p>
       ) : (
         <>
-          {sortedMonths.map((month) => renderMonthTable(month, groupedByMonth[month]))}
-          
-          <div className="overflow-x-auto border-t-2 border-border">
-            <table className="w-full border-collapse">
-              <tbody>
-                <tr className="bg-muted font-medium">
-                  <td className="border border-border px-2 py-2 w-8"></td>
-                  <td className="border border-border px-2 py-2 text-center" colSpan={3}>总计（{sortedMonths.length} 个月份）</td>
-                  <td className="border border-border px-2 py-2 text-right">{totals.quantity}</td>
-                  <td className="border border-border px-2 py-2"></td>
-                  <td className="border border-border px-2 py-2 text-right">{totals.amount}</td>
-                  <td className="border border-border px-2 py-2"></td>
-                  <td className="border border-border px-2 py-2 text-right">{totals.tax}</td>
-                  <td className="border border-border px-2 py-2 text-right">{totals.total}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          {sortedMonths.map((month, idx) => renderMonthTable(month, groupedByMonth[month], idx === sortedMonths.length - 1))}
         </>
       )}
     </div>
