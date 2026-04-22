@@ -178,8 +178,7 @@ export default function FileUploader({
           type="file"
           accept={accept}
           multiple={multiple}
-          webkitdirectory={supportFolder ? "true" : undefined}
-          directory={supportFolder ? "true" : undefined}
+          {...(supportFolder ? { webkitdirectory: "" } : {})}
           onChange={handleFileSelect}
           className="hidden"
         />

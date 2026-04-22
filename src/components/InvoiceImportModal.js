@@ -34,7 +34,7 @@ export function InvoiceImportModal({ open, onOpenChange, onImport }) {
     const items = [];
 
     const extractSpec = (name) => {
-      const specMatch = name.match(/(\d+(?:ml|L|g|kg|ML))(?:\/[^\*]*)?[×\*xX]\s*(\d+)/i);
+      const specMatch = name.match(/(\d+(?:ml|L|g|kg|ML))(?:\/[^*]*)?[×*xX]\s*(\d+)/i);
       if (specMatch) {
         const spec = `${specMatch[1]}×${specMatch[2]}`;
         const cleanName = name.replace(specMatch[0], "").replace(/_[\d]+$/, "").trim();

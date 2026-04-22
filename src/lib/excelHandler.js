@@ -390,10 +390,9 @@ export async function downloadExcel(data, fileName, totals = null, dataChanges =
 
     return true;
   } catch (error) {
-    // 发生错误时也要清理资源
     if (url) URL.revokeObjectURL(url);
     if (link) link.remove();
-    throw new Error(`文件下载失败: ${error.message}`);
+    throw new Error(`文件下载失败: ${error.message}`, { cause: error });
   }
 }
 

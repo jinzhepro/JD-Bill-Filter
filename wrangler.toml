@@ -1,0 +1,8 @@
+name = "jd"
+compatibility_date = "2026-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "jd"
+database_id = "1f167a92-6720-43af-8087-a7f2fc8d852c"

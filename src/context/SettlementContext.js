@@ -162,17 +162,16 @@ function settlementReducer(state, action) {
         },
       };
 
-    case ActionTypes.SET_PASTE_HISTORY:
-      // 只保留最新的 3 条历史记录
+    case ActionTypes.SET_PASTE_HISTORY: {
       const limitedHistory = action.payload.slice(-3);
       if (typeof window !== "undefined") {
         localStorage.setItem("pasteHistory", JSON.stringify(limitedHistory));
       }
       return { ...state, pasteHistory: limitedHistory };
+    }
 
-    case ActionTypes.ADD_PASTE_HISTORY:
+    case ActionTypes.ADD_PASTE_HISTORY: {
       const newHistory = [...state.pasteHistory, action.payload];
-      // 只保留最新的 3 条历史记录
       const limitedNewHistory = newHistory.slice(-3);
       if (typeof window !== "undefined") {
         localStorage.setItem("pasteHistory", JSON.stringify(limitedNewHistory));
@@ -181,6 +180,7 @@ function settlementReducer(state, action) {
         ...state,
         pasteHistory: limitedNewHistory,
       };
+    }
 
     // case ActionTypes.CLEAR_PASTE_HISTORY: // 已禁用
     //   if (typeof window !== "undefined") {
