@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Decimal from "decimal.js";
 import Modal from "./ui/modal";
 import { Textarea } from "./ui/textarea";
 import { Button } from "./ui/button";
 import { useSettlement } from "@/context/SettlementContext";
 import { useToast } from "@/hooks/use-toast";
-import { Check } from "lucide-react";
+import { Check, Calendar } from "lucide-react";
 import {
   cleanDecimalValue,
   toNumber,
@@ -29,6 +29,30 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
 
   const [pasteContent, setPasteContent] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [currentMonthHistory, setCurrentMonthHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  const currentMonth = new Date().toISOString().slice(0, 7);
+
+  const fetchCurrentMonthHistory = async () => {
+    setLoadingHistory(true);
+    try {
+      const res = await fetch(`/api/invoice-history?month=${currentMonth}`);
+      const data = await res.json();
+      if (data.success) {
+        setCurrentMonthHistory(data.data || []);
+      }
+    } catch {
+      toast({ title: "获取发票历史失败", variant: "destructive" });
+    }
+    setLoadingHistory(false);
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchCurrentMonthHistory();
+    }
+  }, [isOpen]);
 
   const handlePasteContentChange = (e) => {
     setPasteContent(e.target.value);
@@ -45,6 +69,25 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
       title: "已加载历史记录",
       description: `已将 ${historyItem.rowCount} 行数据填充到输入框`,
     });
+  };
+
+  const handleLoadFromInvoiceHistory = (history) => {
+    if (!history.items || history.items.length === 0) {
+      toast({ title: "该记录无明细数据", variant: "destructive" });
+      return;
+    }
+
+    const lines = history.items.map(item => {
+      const sku = item.sku || "";
+      const name = item.name || "";
+      const quantity = item.quantity || 0;
+      const price = item.price || 0;
+      const amount = new Decimal(quantity).times(price).toFixed(2);
+      return `${sku}\t${name}\t${quantity}\t${amount}`;
+    });
+
+    setPasteContent(lines.join("\n"));
+    toast({ title: `已加载 ${history.items.length} 条开票明细` });
   };
 
   /**
@@ -376,6 +419,58 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
                   </span>
                 </div>
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* 当前月份发票历史 */}
+        <div>
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              当前月份发票历史 ({currentMonth})
+            </h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={fetchCurrentMonthHistory}
+              className="h-7 px-2 text-xs"
+              disabled={loadingHistory}
+            >
+              {loadingHistory ? "加载中..." : "刷新"}
+            </Button>
+          </div>
+          {loadingHistory ? (
+            <div className="bg-muted/30 rounded-lg border border-border p-4 text-center text-xs text-muted-foreground">
+              加载中...
+            </div>
+          ) : currentMonthHistory.length > 0 ? (
+            <div className="bg-muted/30 rounded-lg border border-border max-h-40 overflow-y-auto">
+              {currentMonthHistory.map((history) => (
+                <div
+                  key={history.id}
+                  className="flex items-center justify-between p-2 border-b border-border last:border-b-0 hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() => handleLoadFromInvoiceHistory(history)}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-foreground truncate">
+                        {history.customer_name}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {history.items_count} 项
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      ¥{history.total_amount?.toFixed(2) || 0} | {history.invoice_date}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-muted/30 rounded-lg border border-border p-4 text-center text-xs text-muted-foreground">
+              当前月份暂无发票记录
             </div>
           )}
         </div>
