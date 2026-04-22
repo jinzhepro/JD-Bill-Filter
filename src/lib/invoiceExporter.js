@@ -1,7 +1,7 @@
 import ExcelJS from "exceljs";
 import Decimal from "decimal.js";
 
-export async function exportInvoice(basicInfo, customerInfo, lineItems) {
+export async function exportInvoice(basicInfo, customerInfo, lineItems, month) {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("发票");
 
@@ -153,7 +153,9 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `发票_${customerInfo.customerName || "未命名"}.xlsx`;
+  const defaultMonth = new Date().toISOString().substring(0, 7);
+  const fileMonth = month || defaultMonth;
+  link.download = `${fileMonth}_${customerInfo.customerName || "未命名"}.xlsx`;
   link.click();
 
   URL.revokeObjectURL(url);
