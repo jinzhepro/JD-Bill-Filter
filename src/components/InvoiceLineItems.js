@@ -20,6 +20,7 @@ export function InvoiceLineItems() {
       quantity: 0,
       price: 0,
       taxRate: 0.13,
+      date: new Date().toISOString().split("T")[0],
     });
   };
 

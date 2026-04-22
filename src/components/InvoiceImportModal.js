@@ -70,14 +70,15 @@ export function InvoiceImportModal({ open, onOpenChange, onImport, onSetInvoiceD
           
           if (product) {
             const price = new Decimal(totalAmount).div(new Decimal(quantity)).toFixed(2);
-            items.push({
-              name: product.invoice_name || "其他",
-              spec: product.spec || "",
-              unit: "箱",
-              quantity,
-              price: parseFloat(price),
-              taxRate: 0.13,
-            });
+items.push({
+          name: product.invoice_name || "其他",
+          spec: product.spec || "",
+          unit: "箱",
+          quantity,
+          price: parseFloat(price),
+          taxRate: 0.13,
+          date: parseDate(date),
+        });
           } else {
             unmatchedSkus.push(sku);
           }
