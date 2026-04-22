@@ -71,13 +71,20 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
     });
   };
 
-  const handleLoadFromInvoiceHistory = (history) => {
-    if (!history.items || history.items.length === 0) {
-      toast({ title: "该记录无明细数据", variant: "destructive" });
+  const handleLoadAllCurrentMonth = () => {
+    if (currentMonthHistory.length === 0) {
+      toast({ title: "当前月份无发票历史", variant: "destructive" });
       return;
     }
 
-    const lines = history.items.map(item => {
+    const allItems = currentMonthHistory.flatMap(history => history.items || []);
+    
+    if (allItems.length === 0) {
+      toast({ title: "当前月份发票历史无明细数据", variant: "destructive" });
+      return;
+    }
+
+    const lines = allItems.map(item => {
       const sku = item.sku || "";
       const name = item.name || "";
       const quantity = item.quantity || 0;
@@ -87,7 +94,7 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
     });
 
     setPasteContent(lines.join("\n"));
-    toast({ title: `已加载 ${history.items.length} 条开票明细` });
+    toast({ title: `已加载当前月份全部 ${allItems.length} 条开票明细` });
   };
 
   /**
@@ -428,45 +435,27 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
           <div className="flex justify-between items-center mb-2">
             <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
               <Calendar className="w-4 h-4" />
-              当前月份发票历史 ({currentMonth})
+              当前月份发票历史 ({currentMonth}) {currentMonthHistory.length > 0 && `- ${currentMonthHistory.length} 条记录`}
             </h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={fetchCurrentMonthHistory}
-              className="h-7 px-2 text-xs"
-              disabled={loadingHistory}
-            >
-              {loadingHistory ? "加载中..." : "刷新"}
-            </Button>
           </div>
           {loadingHistory ? (
             <div className="bg-muted/30 rounded-lg border border-border p-4 text-center text-xs text-muted-foreground">
               加载中...
             </div>
           ) : currentMonthHistory.length > 0 ? (
-            <div className="bg-muted/30 rounded-lg border border-border max-h-40 overflow-y-auto">
-              {currentMonthHistory.map((history) => (
-                <div
-                  key={history.id}
-                  className="flex items-center justify-between p-2 border-b border-border last:border-b-0 hover:bg-muted/50 transition-colors cursor-pointer"
-                  onClick={() => handleLoadFromInvoiceHistory(history)}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-foreground truncate">
-                        {history.customer_name}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {history.items_count} 项
-                      </span>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      ¥{history.total_amount?.toFixed(2) || 0} | {history.invoice_date}
-                    </div>
-                  </div>
+            <div className="bg-muted/30 rounded-lg border border-border p-3">
+              <div className="flex justify-between items-center">
+                <div className="text-xs text-muted-foreground">
+                  共 {currentMonthHistory.reduce((sum, h) => sum + (h.items_count || 0), 0)} 项明细
                 </div>
-              ))}
+                <Button
+                  size="sm"
+                  onClick={handleLoadAllCurrentMonth}
+                  className="h-7 px-3 text-xs"
+                >
+                  一键填充全部
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="bg-muted/30 rounded-lg border border-border p-4 text-center text-xs text-muted-foreground">
