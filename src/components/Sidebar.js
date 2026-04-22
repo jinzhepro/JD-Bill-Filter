@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileSpreadsheet, ArrowLeftRight, Receipt, Package } from "lucide-react";
+import { FileSpreadsheet, ArrowLeftRight, Receipt, Package, Tag } from "lucide-react";
 
 /**
  * 侧边栏导航组件
@@ -32,6 +32,11 @@ export function Sidebar() {
       name: "商品管理",
       href: "/products",
       icon: <Package className="w-5 h-5" />,
+    },
+    {
+      name: "品牌映射",
+      href: "/brands",
+      icon: <Tag className="w-5 h-5" />,
     },
   ];
 

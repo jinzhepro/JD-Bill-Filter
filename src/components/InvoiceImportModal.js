@@ -1,28 +1,29 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Decimal from "decimal.js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
-const getBrandName = (name) => {
-  if (name.includes("雀巢")) return "*软饮料*雀巢";
-  if (name.includes("可口可乐") || name.includes("雪碧") || name.includes("美汁源")) return "*软饮料*可口可乐";
-  if (name.includes("百事")) return "*软饮料*百事可乐";
-  if (name.includes("脉动")) return "*软饮料*脉动";
-  if (name.includes("蒙牛")) return "*软饮料*蒙牛";
-  if (name.includes("红牛")) return "*软饮料*红牛";
-  if (name.includes("大窑")) return "*软饮料*大窑";
-  if (name.includes("康师傅")) return "*软饮料*康师傅";
-  if (name.includes("崂山")) return "*软饮料*崂山";
-  return "其他";
-};
-
 export function InvoiceImportModal({ open, onOpenChange, onImport }) {
   const [pasteText, setPasteText] = useState("");
+  const [products, setProducts] = useState([]);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch("/api/products?pageSize=1000");
+        const data = await res.json();
+        if (data.success) {
+          setProducts(data.data);
+        }
+      } catch {}
+    };
+    fetchProducts();
+  }, []);
 
   const handleImport = () => {
     if (!pasteText.trim()) {
@@ -30,41 +31,50 @@ export function InvoiceImportModal({ open, onOpenChange, onImport }) {
       return;
     }
 
+    if (products.length === 0) {
+      toast({ title: "商品数据未加载，请稍后重试", variant: "destructive" });
+      return;
+    }
+
     const lines = pasteText.trim().split("\n");
     const items = [];
-
-    const extractSpec = (name) => {
-      const specMatch = name.match(/(\d+(?:ml|L|g|kg|ML))(?:\/[^*]*)?[×*xX]\s*(\d+)/i);
-      if (specMatch) {
-        const spec = `${specMatch[1]}×${specMatch[2]}`;
-        const cleanName = name.replace(specMatch[0], "").replace(/_[\d]+$/, "").trim();
-        return { spec, name: cleanName };
-      }
-      return { spec: "", name: name.replace(/_[\d]+$/, "").trim() };
-    };
+    const unmatchedSkus = [];
 
     for (const line of lines) {
       const parts = line.split(/\t+/);
-      if (parts.length >= 3) {
-        const rawQuantity = parts[0].trim().replace(/^~/, "");
+      if (parts.length >= 4) {
+        const date = parts[0].trim();
+        const sku = parts[1].trim();
+        const rawQuantity = parts[2].trim().replace(/^~/, "");
         const quantity = parseFloat(rawQuantity) || 0;
-        const totalAmount = parseFloat(parts[1]) || 0;
-        const rawName = parts[2].trim();
+        const totalAmount = parseFloat(parts[3]) || 0;
         
-        if (rawName && quantity > 0 && totalAmount > 0) {
-          const { name: cleanName, spec } = extractSpec(rawName);
-          const brandName = getBrandName(cleanName);
-          const price = new Decimal(totalAmount).div(new Decimal(quantity)).toFixed(2);
-          items.push({
-            name: brandName,
-            spec,
-            unit: "箱",
-            quantity,
-            price: parseFloat(price),
-            taxRate: 0.13,
-          });
+        if (sku && quantity > 0 && totalAmount > 0) {
+          const product = products.find(p => p.sku === sku);
+          
+          if (product) {
+            const price = new Decimal(totalAmount).div(new Decimal(quantity)).toFixed(2);
+            items.push({
+              name: product.invoice_name || "其他",
+              spec: product.spec || "",
+              unit: "箱",
+              quantity,
+              price: parseFloat(price),
+              taxRate: 0.13,
+            });
+          } else {
+            unmatchedSkus.push(sku);
+          }
         }
       }
+    }
+
+    if (unmatchedSkus.length > 0) {
+      toast({ 
+        title: `以下 SKU 未找到商品：${unmatchedSkus.join(", ")}`, 
+        variant: "destructive" 
+      });
+      return;
     }
 
     if (items.length === 0) {
@@ -86,12 +96,12 @@ export function InvoiceImportModal({ open, onOpenChange, onImport }) {
         </DialogHeader>
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">
-            粘贴数据，格式：数量 + 制表符 + 金额 + 制表符 + 商品名称_商品编号
+            粘贴数据，格式：日期 + 制表符 + SKU + 制表符 + 数量 + 制表符 + 金额
           </p>
           <Textarea
             value={pasteText}
             onChange={(e) => setPasteText(e.target.value)}
-            placeholder="2	97.98	【整箱】可口可乐可乐500ml/瓶*24瓶/箱_10206106072064"
+            placeholder="2026/4/6	10205802436048	10	549.9"
             rows={10}
           />
         </div>

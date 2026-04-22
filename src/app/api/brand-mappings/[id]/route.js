@@ -8,7 +8,7 @@ export async function GET(request, { params }) {
   const id = params.id;
 
   try {
-    const result = await db.prepare('SELECT * FROM product_mappings WHERE id = ?').bind(id).first();
+    const result = await db.prepare('SELECT * FROM brand_mappings WHERE id = ?').bind(id).first();
 
     if (!result) {
       return Response.json({ success: false, error: '记录不存在' }, { status: 404 });
@@ -27,18 +27,18 @@ export async function PUT(request, { params }) {
 
   try {
     const body = await request.json();
-    const { sku, product_name, warehouse, spec, invoice_name } = body;
+    const { brand_keywords, invoice_name } = body;
 
-    if (!sku || !product_name) {
+    if (!brand_keywords || !invoice_name) {
       return Response.json({
         success: false,
-        error: 'sku, product_name 必填'
+        error: 'brand_keywords, invoice_name 必填'
       }, { status: 400 });
     }
 
     const result = await db.prepare(
-      'UPDATE product_mappings SET sku = ?, product_name = ?, warehouse = ?, spec = ?, invoice_name = ?, updated_at = datetime(\'now\') WHERE id = ?'
-    ).bind(sku, product_name, warehouse || null, spec || null, invoice_name || null, id).run();
+      'UPDATE brand_mappings SET brand_keywords = ?, invoice_name = ?, updated_at = datetime(\'now\') WHERE id = ?'
+    ).bind(brand_keywords, invoice_name, id).run();
 
     if (result.meta.changes === 0) {
       return Response.json({ success: false, error: '记录不存在' }, { status: 404 });
@@ -56,7 +56,7 @@ export async function DELETE(request, { params }) {
   const id = params.id;
 
   try {
-    const result = await db.prepare('DELETE FROM product_mappings WHERE id = ?').bind(id).run();
+    const result = await db.prepare('DELETE FROM brand_mappings WHERE id = ?').bind(id).run();
 
     if (result.meta.changes === 0) {
       return Response.json({ success: false, error: '记录不存在' }, { status: 404 });

@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { FileDown, FileText } from "lucide-react";
 
 export function InvoiceForm() {
-  const { basicInfo, customerInfo, lineItems, setBasicInfo, setCustomerInfo, reset } = useInvoice();
+  const { basicInfo, customerInfo, lineItems, setBasicInfo, setCustomerInfo, clearLineItems } = useInvoice();
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -68,8 +68,8 @@ export function InvoiceForm() {
   };
 
   const handleReset = () => {
-    reset();
-    toast({ title: "表单已清空" });
+    clearLineItems();
+    toast({ title: "开票内容已清空" });
   };
 
   return (
@@ -151,7 +151,7 @@ export function InvoiceForm() {
         <CardContent className="space-y-4">
           <div className="flex justify-between items-center">
             <Button variant="outline" onClick={handleReset}>
-              清空表单
+              清空明细
             </Button>
             <Button onClick={handleExport} disabled={isExporting}>
               <FileDown className="w-4 h-4 mr-2" />

@@ -33,6 +33,7 @@ const ActionTypes = {
   UPDATE_LINE_ITEM: "UPDATE_LINE_ITEM",
   REMOVE_LINE_ITEM: "REMOVE_LINE_ITEM",
   RESET: "RESET",
+  CLEAR_LINE_ITEMS: "CLEAR_LINE_ITEMS",
 };
 
 function invoiceReducer(state, action) {
@@ -57,6 +58,8 @@ function invoiceReducer(state, action) {
       };
     case ActionTypes.RESET:
       return initialState;
+    case ActionTypes.CLEAR_LINE_ITEMS:
+      return { ...state, lineItems: [] };
     default:
       return state;
   }
@@ -74,6 +77,7 @@ export function InvoiceProvider({ children }) {
     updateLineItem: (index, data) => dispatch({ type: ActionTypes.UPDATE_LINE_ITEM, payload: { index, data } }),
     removeLineItem: (index) => dispatch({ type: ActionTypes.REMOVE_LINE_ITEM, payload: index }),
     reset: () => dispatch({ type: ActionTypes.RESET }),
+    clearLineItems: () => dispatch({ type: ActionTypes.CLEAR_LINE_ITEMS }),
   }), []);
 
   const value = useMemo(() => ({ ...state, ...actions }), [state, actions]);
