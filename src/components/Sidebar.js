@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileSpreadsheet, ArrowLeftRight, Receipt, Package, Tag } from "lucide-react";
+import { FileSpreadsheet, ArrowLeftRight, Receipt, Package, Tag, History } from "lucide-react";
 
 /**
  * 侧边栏导航组件
@@ -27,6 +27,11 @@ export function Sidebar() {
       name: "发票导出",
       href: "/invoice",
       icon: <Receipt className="w-5 h-5" />,
+    },
+    {
+      name: "发票历史",
+      href: "/invoice-history",
+      icon: <History className="w-5 h-5" />,
     },
     {
       name: "商品管理",

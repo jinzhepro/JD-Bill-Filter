@@ -10,9 +10,10 @@ import { CustomerImportModal } from "./CustomerImportModal";
 import { exportInvoice } from "@/lib/invoiceExporter";
 import { useToast } from "@/hooks/use-toast";
 import { FileDown, FileText } from "lucide-react";
+import Decimal from "decimal.js";
 
 export function InvoiceForm() {
-  const { basicInfo, customerInfo, lineItems, setBasicInfo, setCustomerInfo, clearLineItems } = useInvoice();
+  const { basicInfo, customerInfo, lineItems, invoiceDate, setBasicInfo, setCustomerInfo, clearLineItems } = useInvoice();
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -59,6 +60,49 @@ export function InvoiceForm() {
     setIsExporting(true);
     try {
       await exportInvoice(basicInfo, customerInfo, lineItems);
+      
+      const totalAmount = lineItems.reduce((sum, item) => {
+        const quantity = new Decimal(item.quantity || 0);
+        const price = new Decimal(item.price || 0);
+        const taxRate = new Decimal(item.taxRate || 0.13);
+        const total = quantity.times(price);
+        return sum + total.toNumber();
+      }, 0);
+
+      const itemsWithCalculations = lineItems.map(item => {
+        const quantity = new Decimal(item.quantity || 0);
+        const price = new Decimal(item.price || 0);
+        const taxRate = new Decimal(item.taxRate || 0.13);
+        const amount = quantity.times(price).div(new Decimal(1).plus(taxRate));
+        const tax = amount.times(taxRate);
+        const total = amount.plus(tax);
+        return {
+          ...item,
+          amount: amount.toNumber(),
+          tax: tax.toNumber(),
+          total: total.toNumber()
+        };
+      });
+
+      if (invoiceDate) {
+        const historyRes = await fetch("/api/invoice-history", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            invoiceDate,
+            customerInfo,
+            items: itemsWithCalculations,
+            totalAmount
+          })
+        });
+        const historyData = await historyRes.json();
+        if (!historyData.success) {
+          console.error("保存历史失败:", historyData.error);
+        }
+      } else {
+        console.warn("未设置发票日期，跳过保存历史");
+      }
+
       toast({ title: "发票导出成功" });
     } catch (error) {
       toast({ title: `导出失败: ${error.message}`, variant: "destructive" });
@@ -147,6 +191,9 @@ export function InvoiceForm() {
       <Card>
         <CardHeader>
           <CardTitle>开票内容</CardTitle>
+          {invoiceDate && (
+            <p className="text-sm text-muted-foreground mt-1">发票日期: {invoiceDate}</p>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex justify-between items-center">

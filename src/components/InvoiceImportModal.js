@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
-export function InvoiceImportModal({ open, onOpenChange, onImport }) {
+export function InvoiceImportModal({ open, onOpenChange, onImport, onSetInvoiceDate }) {
   const [pasteText, setPasteText] = useState("");
   const [products, setProducts] = useState([]);
   const { toast } = useToast();
@@ -25,6 +25,17 @@ export function InvoiceImportModal({ open, onOpenChange, onImport }) {
     fetchProducts();
   }, []);
 
+  const parseDate = (dateStr) => {
+    const parts = dateStr.split(/[\/\-]/);
+    if (parts.length === 3) {
+      const year = parts[0];
+      const month = parts[1].padStart(2, '0');
+      const day = parts[2].padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    return dateStr;
+  };
+
   const handleImport = () => {
     if (!pasteText.trim()) {
       toast({ title: "请粘贴数据", variant: "destructive" });
@@ -39,6 +50,7 @@ export function InvoiceImportModal({ open, onOpenChange, onImport }) {
     const lines = pasteText.trim().split("\n");
     const items = [];
     const unmatchedSkus = [];
+    let firstDate = "";
 
     for (const line of lines) {
       const parts = line.split(/\t+/);
@@ -48,6 +60,10 @@ export function InvoiceImportModal({ open, onOpenChange, onImport }) {
         const rawQuantity = parts[2].trim().replace(/^~/, "");
         const quantity = parseFloat(rawQuantity) || 0;
         const totalAmount = parseFloat(parts[3]) || 0;
+        
+        if (!firstDate && date) {
+          firstDate = parseDate(date);
+        }
         
         if (sku && quantity > 0 && totalAmount > 0) {
           const product = products.find(p => p.sku === sku);
@@ -80,6 +96,10 @@ export function InvoiceImportModal({ open, onOpenChange, onImport }) {
     if (items.length === 0) {
       toast({ title: "未能解析任何有效数据", variant: "destructive" });
       return;
+    }
+
+    if (firstDate && onSetInvoiceDate) {
+      onSetInvoiceDate(firstDate);
     }
 
     onImport(items);

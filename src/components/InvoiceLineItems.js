@@ -9,7 +9,7 @@ import Decimal from "decimal.js";
 import { InvoiceImportModal } from "./InvoiceImportModal";
 
 export function InvoiceLineItems() {
-  const { lineItems, addLineItem, updateLineItem, removeLineItem } = useInvoice();
+  const { lineItems, addLineItem, updateLineItem, removeLineItem, setInvoiceDate } = useInvoice();
   const [importModalOpen, setImportModalOpen] = useState(false);
 
   const handleAddItem = () => {
@@ -89,6 +89,7 @@ export function InvoiceLineItems() {
         open={importModalOpen}
         onOpenChange={setImportModalOpen}
         onImport={handleImport}
+        onSetInvoiceDate={setInvoiceDate}
       />
 
       <div className="overflow-x-auto">
