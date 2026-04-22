@@ -1,11 +1,10 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
 const AuthContext = createContext(null);
 
-const AUTH_COOKIE = 'auth_token';
 const AUTH_PASSWORD = 'qingyun2026';
 
 export function AuthProvider({ children }) {
@@ -13,11 +12,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     try {
       const res = await fetch('/api/check-auth');
       const data = await res.json();
@@ -30,7 +25,11 @@ export function AuthProvider({ children }) {
       router.push('/login');
     }
     setLoading(false);
-  };
+  }, [router]);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   const login = async (password) => {
     const res = await fetch('/api/login', {
