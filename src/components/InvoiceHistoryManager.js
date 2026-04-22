@@ -70,6 +70,7 @@ export function InvoiceHistoryManager() {
       };
 
       const lineItems = history.items.map(item => ({
+        sku: item.sku || "",
         name: item.name,
         spec: item.spec || "",
         unit: "箱",
@@ -226,6 +227,7 @@ export function InvoiceHistoryManager() {
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="bg-muted">
+                        <th className="border border-border px-3 py-2 text-left">SKU</th>
                         <th className="border border-border px-3 py-2 text-left">商品名称</th>
                         <th className="border border-border px-3 py-2 text-left">规格</th>
                         <th className="border border-border px-3 py-2 text-right">数量</th>
@@ -235,6 +237,7 @@ export function InvoiceHistoryManager() {
                     <tbody>
                       {selectedHistory.items && selectedHistory.items.map((item, index) => (
                         <tr key={index}>
+                          <td className="border border-border px-3 py-2">{item.sku || "-"}</td>
                           <td className="border border-border px-3 py-2">{item.name}</td>
                           <td className="border border-border px-3 py-2">{item.spec || "-"}</td>
                           <td className="border border-border px-3 py-2 text-right">{item.quantity}</td>
