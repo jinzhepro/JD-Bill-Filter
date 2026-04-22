@@ -138,6 +138,11 @@ export function ProductManager() {
       return;
     }
 
+    if (!formData.spec || formData.spec.trim() === "") {
+      toast({ title: "规格必填", variant: "destructive" });
+      return;
+    }
+
     const expectedInvoiceName = getInvoiceName(formData.product_name, brandMappings);
     if (!formData.invoice_name || formData.invoice_name.trim() === "") {
       if (expectedInvoiceName) {
@@ -218,11 +223,21 @@ export function ProductManager() {
       return;
     }
 
-    const unmatchedItems = items.filter(item => !item.invoice_name);
-    if (unmatchedItems.length > 0) {
-      const unmatchedNames = unmatchedItems.map(item => item.product_name).join(", ");
+    const missingSpecItems = items.filter(item => !item.spec || item.spec.trim() === "");
+    if (missingSpecItems.length > 0) {
+      const missingNames = missingSpecItems.map(item => item.product_name).slice(0, 3).join(", ");
       toast({ 
-        title: `以下商品未匹配到发票名称：${unmatchedNames}`, 
+        title: `以下商品缺少规格：${missingNames}${missingSpecItems.length > 3 ? "..." : ""}`, 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    const unmatchedItems = items.filter(item => !item.invoice_name || item.invoice_name.trim() === "");
+    if (unmatchedItems.length > 0) {
+      const unmatchedNames = unmatchedItems.map(item => item.product_name).slice(0, 3).join(", ");
+      toast({ 
+        title: `以下商品未匹配到发票名称：${unmatchedNames}${unmatchedItems.length > 3 ? "..." : ""}`, 
         variant: "destructive" 
       });
       return;
@@ -376,11 +391,12 @@ export function ProductManager() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">规格</label>
+              <label className="text-sm font-medium">规格 *</label>
               <Input
                 value={formData.spec}
                 onChange={(e) => setFormData({ ...formData, spec: e.target.value })}
               />
+              <p className="text-xs text-muted-foreground">如：600ml×15</p>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">发票名称 *</label>
