@@ -6,14 +6,16 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { InvoiceLineItems } from "./InvoiceLineItems";
+import { CustomerImportModal } from "./CustomerImportModal";
 import { exportInvoice } from "@/lib/invoiceExporter";
 import { useToast } from "@/hooks/use-toast";
-import { FileDown } from "lucide-react";
+import { FileDown, FileText } from "lucide-react";
 
 export function InvoiceForm() {
   const { basicInfo, customerInfo, lineItems, setBasicInfo, setCustomerInfo, reset } = useInvoice();
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   const handleBasicChange = (field, value) => {
     setBasicInfo({ [field]: value });
@@ -21,6 +23,10 @@ export function InvoiceForm() {
 
   const handleCustomerChange = (field, value) => {
     setCustomerInfo({ [field]: value });
+  };
+
+  const handleImportCustomer = (data) => {
+    setCustomerInfo(data);
   };
 
   const handleExport = async () => {
@@ -104,6 +110,12 @@ export function InvoiceForm() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="md:col-span-4 flex justify-end">
+              <Button variant="outline" size="sm" onClick={() => setImportModalOpen(true)}>
+                <FileText className="w-4 h-4 mr-1" />
+                导入
+              </Button>
+            </div>
             <div className="space-y-2 md:col-span-4">
               <label className="text-sm font-medium">客户名称（公司全称） *</label>
               <Input value={customerInfo.customerName} onChange={(e) => handleCustomerChange("customerName", e.target.value)} />
@@ -149,6 +161,12 @@ export function InvoiceForm() {
           <InvoiceLineItems />
         </CardContent>
       </Card>
+
+      <CustomerImportModal
+        open={importModalOpen}
+        onOpenChange={setImportModalOpen}
+        onImport={handleImportCustomer}
+      />
     </div>
   );
 }
