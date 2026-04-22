@@ -59,6 +59,7 @@ export function PurchaseOrderManager() {
   const parseImportText = (text) => {
     const lines = text.trim().split("\n");
     const items = [];
+    const missingSKUs = [];
     
     for (const line of lines) {
       const parts = line.split("\t");
@@ -67,7 +68,7 @@ export function PurchaseOrderManager() {
         const product = products.find(p => p.sku === sku);
         
         if (!product) {
-          toast({ title: `SKU ${sku} 未找到商品`, variant: "destructive" });
+          missingSKUs.push(sku);
           continue;
         }
         
@@ -88,7 +89,7 @@ export function PurchaseOrderManager() {
       }
     }
     
-    return items;
+    return { items, missingSKUs };
   };
 
   const handleImport = async () => {
@@ -102,7 +103,15 @@ export function PurchaseOrderManager() {
       return;
     }
 
-    const items = parseImportText(importText);
+    const { items, missingSKUs } = parseImportText(importText);
+    
+    if (missingSKUs.length > 0) {
+      toast({ 
+        title: `以下 SKU 未找到商品，无法导入：${missingSKUs.join("、")}`, 
+        variant: "destructive" 
+      });
+      return;
+    }
     
     if (items.length === 0) {
       toast({ title: "无法解析导入内容，请检查格式", variant: "destructive" });
@@ -357,7 +366,7 @@ export function PurchaseOrderManager() {
       </Card>
 
       <Dialog open={importModalOpen} onOpenChange={setImportModalOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>导入采购单</DialogTitle>
           </DialogHeader>
@@ -373,7 +382,7 @@ export function PurchaseOrderManager() {
               />
             </div>
             <p className="text-sm text-muted-foreground">
-              商品名称根据SKU自动从商品管理查询。未找到SKU的行将跳过。
+              商品名称根据SKU自动从商品管理查询。未找到SKU将中断导入。
             </p>
           </div>
           <DialogFooter>
