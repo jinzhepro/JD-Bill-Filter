@@ -138,6 +138,17 @@ export function ProductManager() {
       return;
     }
 
+    const expectedInvoiceName = getInvoiceName(formData.product_name, brandMappings);
+    if (!formData.invoice_name || formData.invoice_name.trim() === "") {
+      if (expectedInvoiceName) {
+        toast({ title: "发票名称未填写，品牌映射建议：" + expectedInvoiceName, variant: "destructive" });
+        return;
+      } else {
+        toast({ title: "发票名称必填，未匹配到品牌映射", variant: "destructive" });
+        return;
+      }
+    }
+
     try {
       const url = editingProduct ? `/api/products/${editingProduct.id}` : "/api/products/add";
       const method = editingProduct ? "PUT" : "POST";
@@ -370,6 +381,14 @@ export function ProductManager() {
                 value={formData.spec}
                 onChange={(e) => setFormData({ ...formData, spec: e.target.value })}
               />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">发票名称 *</label>
+              <Input
+                value={formData.invoice_name}
+                onChange={(e) => setFormData({ ...formData, invoice_name: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">根据品牌映射自动填充，请检查是否正确</p>
             </div>
           </div>
           <DialogFooter>
