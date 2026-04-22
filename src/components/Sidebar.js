@@ -3,7 +3,9 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileSpreadsheet, ArrowLeftRight, Receipt, Package, Tag, History, ShoppingCart } from "lucide-react";
+import { FileSpreadsheet, ArrowLeftRight, Receipt, Package, Tag, History, ShoppingCart, LogOut } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { Button } from "@/components/ui/button";
 
 /**
  * 侧边栏导航组件
@@ -11,6 +13,7 @@ import { FileSpreadsheet, ArrowLeftRight, Receipt, Package, Tag, History, Shoppi
  */
 export function Sidebar() {
   const pathname = usePathname();
+  const { logout } = useAuth();
 
   const menuItems = [
     {
@@ -104,7 +107,16 @@ export function Sidebar() {
       </nav>
 
       {/* 底部版权信息 */}
-      <div className="p-4 border-t border-border">
+      <div className="p-4 border-t border-border space-y-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={logout}
+          className="w-full justify-start text-muted-foreground hover:text-foreground"
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          退出登录
+        </Button>
         <p className="text-xs text-muted-foreground text-center">
           © {new Date().getFullYear()} JD Bill Filter
         </p>
