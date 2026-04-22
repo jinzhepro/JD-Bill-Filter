@@ -30,6 +30,11 @@ export function InvoiceForm() {
     setCustomerInfo(data);
   };
 
+  const getCurrentMonth = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  };
+
   const handleExport = async () => {
     if (!basicInfo.companyName || !basicInfo.contractNo) {
       toast({ title: "请填写公司名称和合同号", variant: "destructive" });
@@ -58,38 +63,54 @@ export function InvoiceForm() {
     }
 
     setIsExporting(true);
+    
     try {
-      await exportInvoice(basicInfo, customerInfo, lineItems);
-      
-      const totalAmount = lineItems.reduce((sum, item) => {
-        const quantity = new Decimal(item.quantity || 0);
-        const price = new Decimal(item.price || 0);
-        const taxRate = new Decimal(item.taxRate || 0.13);
-        const total = quantity.times(price);
-        return sum + total.toNumber();
-      }, 0);
+      const groupedByMonth = lineItems.reduce((acc, item) => {
+        const month = item.date ? item.date.substring(0, 7) : getCurrentMonth();
+        if (!acc[month]) acc[month] = [];
+        acc[month].push(item);
+        return acc;
+      }, {});
 
-      const itemsWithCalculations = lineItems.map(item => {
-        const quantity = new Decimal(item.quantity || 0);
-        const price = new Decimal(item.price || 0);
-        const taxRate = new Decimal(item.taxRate || 0.13);
-        const amount = quantity.times(price).div(new Decimal(1).plus(taxRate));
-        const tax = amount.times(taxRate);
-        const total = amount.plus(tax);
-        return {
-          ...item,
-          amount: amount.toNumber(),
-          tax: tax.toNumber(),
-          total: total.toNumber()
-        };
-      });
+      const months = Object.keys(groupedByMonth);
+      const exportedMonths = [];
 
-      if (invoiceDate) {
+      for (const month of months) {
+        const monthItems = groupedByMonth[month];
+        
+        await exportInvoice(basicInfo, customerInfo, monthItems, month);
+        exportedMonths.push(month);
+
+        const totalAmount = monthItems.reduce((sum, item) => {
+          const quantity = new Decimal(item.quantity || 0);
+          const price = new Decimal(item.price || 0);
+          const taxRate = new Decimal(item.taxRate || 0.13);
+          const total = quantity.times(price);
+          return sum + total.toNumber();
+        }, 0);
+
+        const itemsWithCalculations = monthItems.map(item => {
+          const quantity = new Decimal(item.quantity || 0);
+          const price = new Decimal(item.price || 0);
+          const taxRate = new Decimal(item.taxRate || 0.13);
+          const amount = quantity.times(price).div(new Decimal(1).plus(taxRate));
+          const tax = amount.times(taxRate);
+          const total = amount.plus(tax);
+          return {
+            ...item,
+            amount: amount.toNumber(),
+            tax: tax.toNumber(),
+            total: total.toNumber()
+          };
+        });
+
+        const invoiceDateForHistory = monthItems[0]?.date || `${month}-01`;
+
         const historyRes = await fetch("/api/invoice-history", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            invoiceDate,
+            invoiceDate: invoiceDateForHistory,
             customerInfo,
             items: itemsWithCalculations,
             totalAmount
@@ -99,11 +120,13 @@ export function InvoiceForm() {
         if (!historyData.success) {
           console.error("保存历史失败:", historyData.error);
         }
-      } else {
-        console.warn("未设置发票日期，跳过保存历史");
       }
 
-      toast({ title: "发票导出成功" });
+      if (months.length === 1) {
+        toast({ title: "发票导出成功" });
+      } else {
+        toast({ title: `导出完成：已生成 ${months.length} 个文件（${exportedMonths.join("、")}）` });
+      }
     } catch (error) {
       toast({ title: `导出失败: ${error.message}`, variant: "destructive" });
     } finally {
