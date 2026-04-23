@@ -38,6 +38,7 @@ export function ProductManager() {
   });
   const [importText, setImportText] = useState("");
   const [importing, setImporting] = useState(false);
+  const [updatingInvoiceNames, setUpdatingInvoiceNames] = useState(false);
   const { toast } = useToast();
 
   const stats = useMemo(() => {
@@ -273,7 +274,7 @@ export function ProductManager() {
   };
 
   const handleUpdateInvoiceNames = async () => {
-    if (!confirm("确定根据品牌映射更新所有商品的发票名称？")) return;
+    setUpdatingInvoiceNames(true);
 
     try {
       const res = await fetch("/api/products/update-invoice-names", {
@@ -294,6 +295,8 @@ export function ProductManager() {
     } catch {
       toast({ title: "更新失败", variant: "destructive" });
     }
+
+    setUpdatingInvoiceNames(false);
   };
 
   return (
@@ -329,9 +332,9 @@ export function ProductManager() {
               <Upload className="w-4 h-4 mr-1" />
               导入
             </Button>
-            <Button variant="outline" onClick={handleUpdateInvoiceNames}>
-              <RefreshCw className="w-4 h-4 mr-1" />
-              更新发票名称
+            <Button variant="outline" onClick={handleUpdateInvoiceNames} disabled={updatingInvoiceNames}>
+              <RefreshCw className={`w-4 h-4 mr-1 ${updatingInvoiceNames ? 'animate-spin' : ''}`} />
+              {updatingInvoiceNames ? '更新中...' : '更新发票名称'}
             </Button>
             <Button onClick={handleAdd}>
               <Plus className="w-4 h-4 mr-1" />
