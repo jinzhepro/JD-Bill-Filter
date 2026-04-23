@@ -145,13 +145,17 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month) {
   monthRow.getCell(TOTAL_COLUMNS).font = { bold: true };
   monthRow.getCell(TOTAL_COLUMNS).alignment = { horizontal: "right", vertical: "middle" };
 
+  const lastRowNumber = monthRow.number;
+
   worksheet.eachRow((row) => {
     row.height = 25;
     row.eachCell((cell) => {
-      if (!cell.border) {
+      if (!cell.border && row.number !== lastRowNumber) {
         cell.border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
       }
-      cell.alignment = { horizontal: "center", vertical: "middle" };
+      if (row.number !== lastRowNumber) {
+        cell.alignment = { horizontal: "center", vertical: "middle" };
+      }
     });
   });
 
