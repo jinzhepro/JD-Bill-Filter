@@ -21,24 +21,6 @@ import {
   ChevronDown
 } from "lucide-react";
 
-/**
- * 数据展示组件，支持排序、复制列数据、查看变化详情等功能
- * @param {Object} props - 组件属性
- * @param {string} props.title - 标题
- * @param {Array} props.originalData - 原始数据
- * @param {Array} props.processedData - 处理后的数据
- * @param {Function} props.onReset - 重置回调
- * @param {Function} props.onDownload - 下载回调
- * @param {boolean} props.showCopyColumn - 是否显示复制列按钮
- * @param {string} props.downloadButtonText - 下载按钮文本
- * @param {string} props.resetButtonText - 重置按钮文本
- * @param {boolean} props.showRowNumber - 是否显示行号
- * @param {Array} props.amountFields - 金额字段列表
- * @param {Object} props.calculatedTotals - 预计算的总数
- * @param {React.ReactNode} props.children - 子元素
- * @param {boolean} props.showDataChanges - 是否显示数据变化
- * @param {Object} props.columnMapping - 列名映射
- */
 export default function DataDisplay({
   title = "处理结果",
   originalData,
@@ -62,6 +44,30 @@ export default function DataDisplay({
   const [modalSku, setModalSku] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showTotals, setShowTotals] = useState(true);
+  const [products, setProducts] = useState([]);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch("/api/products?pageSize=1000");
+        const data = await res.json();
+        if (data.success) {
+          setProducts(data.data || []);
+        }
+      } catch {}
+    };
+    fetchProducts();
+  }, []);
+
+  const getProductDisplayName = (sku) => {
+    if (!sku) return sku;
+    const product = products.find(p => p.sku === String(sku).trim());
+    if (product && product.product_name) {
+      const cleanName = product.product_name.replace(/\s+/g, '');
+      return `${cleanName}_${sku}`;
+    }
+    return sku;
+  };
 
   /**
    * 关闭模态框的回调函数
@@ -404,6 +410,7 @@ export default function DataDisplay({
                     amountFields={amountFields}
                     showRowNumber={showRowNumber}
                     showDataChanges={showDataChanges}
+                    getProductDisplayName={getProductDisplayName}
                     onShowModal={(sku) => {
                       setModalSku(sku);
                       setShowModal(true);
@@ -488,7 +495,7 @@ export default function DataDisplay({
   );
 }
 
-function TableRow({ row, rowIndex, amountFields, showRowNumber, showDataChanges, onShowModal }) {
+function TableRow({ row, rowIndex, amountFields, showRowNumber, showDataChanges, getProductDisplayName, onShowModal }) {
   const { dataChanges } = useSettlement();
 
   const isAmountField = (key) => {
@@ -520,6 +527,10 @@ function TableRow({ row, rowIndex, amountFields, showRowNumber, showDataChanges,
     }
   };
 
+  const isSkuColumn = (key) => {
+    return key === "商品编号" || key === "SKU";
+  };
+
   return (
     <tr
       className={`
@@ -538,9 +549,11 @@ function TableRow({ row, rowIndex, amountFields, showRowNumber, showDataChanges,
       )}
       {Object.entries(row).map(([key]) => (
         <td key={key} className="px-4 py-3 text-left border-b border-border/50 whitespace-nowrap">
-          {isAmountField(key)
-            ? formatAmountJSX(row[key], key === "直营服务费")
-            : row[key]}
+          {isSkuColumn(key)
+            ? getProductDisplayName(row[key])
+            : isAmountField(key)
+              ? formatAmountJSX(row[key], key === "直营服务费")
+              : row[key]}
         </td>
       ))}
       {hasChanges && showDataChanges && (
