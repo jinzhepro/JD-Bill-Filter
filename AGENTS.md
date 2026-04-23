@@ -4,7 +4,7 @@
 
 **JD Bill Filter** - 京东结算单处理系统（中文界面）
 
-**技术栈**: Next.js 16.2.3 (App Router), React 19.2.0, JavaScript (无 TypeScript), Tailwind CSS 3.4.18, shadcn/ui (New York 风格), Decimal.js, ExcelJS
+**技术栈**: Next.js 15.5.2 (App Router), React 19.2.0, JavaScript (无 TypeScript), Tailwind CSS 3.4.18, shadcn/ui (New York 风格), Decimal.js, ExcelJS, Cloudflare D1
 
 **Node 版本**: Volta 管理 (24.14.1)
 
@@ -15,9 +15,38 @@ npm run dev      # 开发服务器 (http://localhost:3000)
 npm run build    # 生产构建
 npm start        # 生产服务器
 npm run lint     # ESLint 9 flat config
+
+# Cloudflare Pages + D1
+npm run pages:dev    # 本地开发（端口8788）
+npm run pages:deploy # 部署到 Cloudflare Pages
+npx wrangler d1 migrations apply jd --remote  # 远程数据库迁移
+npx wrangler d1 migrations apply jd --local   # 本地数据库迁移
 ```
 
 **无测试框架** - 仅手动测试。
+
+## 部署架构
+
+**Cloudflare Pages + D1 数据库**
+
+- 所有 API routes 必须添加 `export const runtime = 'edge';`
+- 数据库绑定: `DB` (wrangler.toml)
+- 迁移文件: `migrations/*.sql`
+
+**数据库表名注意**: 商品表名是 `product_mappings`（不是 `products`）
+
+```javascript
+// API 中查询商品
+const res = await db.prepare('SELECT * FROM product_mappings').all();
+```
+
+## 认证保护
+
+简单密码保护，默认密码: `qingyun2026`
+
+修改密码: 
+- 设置环境变量 `AUTH_PASSWORD`
+- 或修改 `src/context/AuthContext.js` 和 `src/app/api/login/route.js`
 
 ## 关键规则
 
@@ -35,8 +64,6 @@ const { processedData, setProcessedData } = useSettlement();
 // ❌ processedData.push(newItem)
 ```
 
-Context 值已在 Provider 中用 `useMemo` 包装，组件中无需额外包装。
-
 ### 2. 金额计算
 
 **必须使用 Decimal.js** - 禁止使用浮点数:
@@ -53,7 +80,7 @@ const total = amount.plus(new Decimal(10));
 
 商品编号 **必须是字符串**。Excel 会自动转换为数字或使用公式格式。
 
-使用 `cleanProductCode()` 处理 Excel 公式前缀（`="123456"` → `"123456"`）:
+使用 `cleanProductCode()` 处理 Excel 公式前缀:
 
 ```javascript
 import { cleanProductCode } from "@/lib/utils";
@@ -61,11 +88,25 @@ import { cleanProductCode } from "@/lib/utils";
 const productCode = cleanProductCode(row["商品编号"]);
 ```
 
-Excel 公式单元格返回 `{ formula: '...', result: ... }` 对象。
-
 ### 4. 组件要求
 
 所有客户端组件必须以 `"use client"` 开头。
+
+### 5. API Routes
+
+所有 API routes 必须添加 edge runtime:
+
+```javascript
+export const runtime = 'edge';
+
+import { getRequestContext } from '@cloudflare/next-on-pages';
+
+export async function GET(request) {
+  const { env } = getRequestContext();
+  const db = env.DB;
+  // ...
+}
+```
 
 ## 核心工具函数 (`src/lib/utils.js`)
 
@@ -74,87 +115,21 @@ Excel 公式单元格返回 `{ formula: '...', result: ... }` 对象。
 - `cleanProductCode(value)` - 处理 Excel 公式前缀，返回字符串
 - `formatAmount(value, forcePositive)` - 格式化金额显示
 
-## 常量定义 (`src/lib/constants.js`)
+## 数据库表结构
 
-```javascript
-SETTLEMENT_AMOUNT_COLUMNS = ["应结金额", "金额", "合计金额", "总金额"];
-SETTLEMENT_QUANTITY_COLUMN = "商品数量";
-SETTLEMENT_FEE_NAME_FILTER = "货款";
-SETTLEMENT_SELF_OPERATION_FEE = "直营服务费";
-NUMERIC_COLUMNS = ["商品数量", "单价", "总价", "直营服务费"];
-PRODUCT_CODE_COLUMNS = ["商品编码", "商品编号"];
-PRODUCT_CODE_FORMAT = "@"; // Excel 文本格式
-```
+| 表名 | 用途 |
+|------|------|
+| `product_mappings` | 商品 SKU 映射 |
+| `brand_mappings` | 品牌发票名称映射 |
+| `purchase_orders` | 采购单批次数据 |
+| `invoice_history` | 发票导出历史 |
+| `invoice_history_items` | 发票明细项 |
 
 ## 文件处理
 
 - 支持格式：`.xlsx`, `.xls`, `.csv` (最大 50MB)
 - CSV 编码：先尝试 UTF-8，失败后尝试 GBK
 - Excel 导出：商品编号列设置为文本格式 (`numFmt: '@'`)
-- 无数据库 - 所有数据在内存中处理
-
-## 核心业务逻辑 (`src/lib/settlementProcessor.js`)
-
-1. **数据验证**: 检查必需列（商品编号、金额列）
-2. **过滤**: 只处理"货款"记录
-3. **合并**: 按 SKU 合并货款和数量
-4. **直营服务费**: 按商品编号分组累加
-5. **售后赔付费**: 计算总额，按货款比例分摊
-6. **最终计算**:
-   - 货款 = 应结金额 - 分摊的赔付费
-   - 收入 = 货款 + 直营服务费
-
-## Excel 处理 (`src/lib/excelHandler.js`)
-
-```javascript
-import { readFile, downloadExcel } from "@/lib/excelHandler";
-
-const data = await readFile(file, fileType);
-await downloadExcel(data, fileName, totals, dataChanges);
-```
-
-## 发票导出 (`src/lib/invoiceExporter.js`)
-
-```javascript
-import { exportInvoice } from "@/lib/invoiceExporter";
-
-await exportInvoice(basicInfo, customerInfo, lineItems);
-```
-
-## 供应商转换 (`src/data/suppliers.js`)
-
-```javascript
-import { findSupplierByMatchString, convertTextToSuppliers } from "@/data/suppliers";
-
-const supplier = findSupplierByMatchString(text);
-const results = convertTextToSuppliers(text);
-```
-
-## 项目结构
-
-```
-src/
-├── app/
-│   ├── page.js              # 首页（结算单处理）
-│   ├── invoice/page.js      # 发票开具申请
-│   ├── suppliers/page.js    # 供应商转换
-│   └── layout.js            # 根布局
-├── components/ui/           # shadcn/ui 基础组件
-├── context/
-│   ├── SettlementContext.js # 结算单状态（核心）
-│   ├── InvoiceContext.js    # 发票状态
-│   └── SupplierContext.js   # 供应商状态
-├── lib/
-│   ├── settlementProcessor.js   # 结算单处理
-│   ├── excelHandler.js          # Excel 处理
-│   ├── invoiceExporter.js       # 发票导出
-│   ├── settlementHelpers.js     # 辅助函数
-│   ├── utils.js                 # 工具函数
-│   ├── constants.js             # 常量定义
-│   └── fileValidation.js        # 文件验证
-├── data/suppliers.js        # 供应商配置
-└── hooks/use-toast.js       # Toast 提示
-```
 
 ## 导入顺序
 
@@ -177,7 +152,7 @@ import { MyComponent } from "./MyComponent";
 
 ## 样式规范
 
-使用 shadcn/ui 语义化 CSS 变量，避免自定义颜色:
+使用 shadcn/ui 语义化 CSS 变量:
 
 ```javascript
 // ✅ bg-card text-foreground border-border
@@ -192,4 +167,11 @@ import { MyComponent } from "./MyComponent";
 
 **CSV 文件中文乱码？** 系统自动尝试 UTF-8 和 GBK 编码。
 
+**API 报错 "no such table"？** 表名是 `product_mappings`，不是 `products`。
+
 **添加新供应商？** 在 `src/data/suppliers.js` 的 `SUPPLIERS` 数组添加配置。
+
+**添加新数据库字段？** 
+1. 创建迁移文件 `migrations/00XX_xxx.sql`
+2. 运行 `npx wrangler d1 migrations apply jd --remote`
+3. 运行 `npx wrangler d1 migrations apply jd --local`
