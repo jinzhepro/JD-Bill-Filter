@@ -60,14 +60,29 @@ export default function DataDisplay({
   }, []);
 
   const getProductDisplayName = (sku) => {
-    if (!sku) return sku;
+    if (!sku) return null;
     const product = products.find(p => p.sku === String(sku).trim());
     if (product && product.product_name) {
       const cleanName = product.product_name.replace(/\s+/g, '');
       return `${cleanName}_${sku}`;
     }
-    return sku;
+    return null;
   };
+
+  const unmatchedSkus = React.useMemo(() => {
+    if (!processedData || products.length === 0) return [];
+    const skuSet = new Set();
+    processedData.forEach(row => {
+      const sku = row["商品编号"] || row["SKU"];
+      if (sku) {
+        const product = products.find(p => p.sku === String(sku).trim());
+        if (!product) {
+          skuSet.add(String(sku).trim());
+        }
+      }
+    });
+    return Array.from(skuSet);
+  }, [processedData, products]);
 
   /**
    * 关闭模态框的回调函数
@@ -193,6 +208,19 @@ export default function DataDisplay({
 
   return (
     <div className="space-y-6">
+      {/* 未匹配SKU提示 */}
+      {unmatchedSkus.length > 0 && (
+        <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <Info className="w-5 h-5 text-destructive mt-0.5" />
+            <div>
+              <h4 className="font-semibold text-destructive mb-1">未匹配到商品的SKU ({unmatchedSkus.length}个)</h4>
+              <p className="text-sm text-destructive/80">{unmatchedSkus.join("、")}</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="flex justify-between items-center">
         <Button
           onClick={handleReset}
@@ -395,7 +423,10 @@ export default function DataDisplay({
                         </th>
                       );
                     })}
-                  <th className="px-4 py-3 text-left font-semibold text-foreground whitespace-nowrap">
+                  <th className="px-4 py-3 text-left font-semibold text-foreground whitespace-nowrap bg-muted/30">
+                    商品名称_sku
+                  </th>
+                  <th className="px-4 py-3 text-left font-semibold text-foreground whitespace-nowrap bg-muted/30">
                     变化详情
                   </th>
                 </tr>
@@ -508,6 +539,7 @@ function TableRow({ row, rowIndex, amountFields, showRowNumber, showDataChanges,
   const sku = row["商品编号"] || row["SKU"];
   const hasChanges = sku && dataChanges[sku];
   const changes = hasChanges ? dataChanges[sku] : null;
+  const displayName = getProductDisplayName(sku);
 
   const getRowBackgroundClass = () => {
     if (!hasChanges || !showDataChanges) {
@@ -525,10 +557,6 @@ function TableRow({ row, rowIndex, amountFields, showRowNumber, showDataChanges,
     } else {
       return rowIndex % 2 === 0 ? "bg-background" : "bg-muted/30";
     }
-  };
-
-  const isSkuColumn = (key) => {
-    return key === "商品编号" || key === "SKU";
   };
 
   return (
@@ -549,13 +577,16 @@ function TableRow({ row, rowIndex, amountFields, showRowNumber, showDataChanges,
       )}
       {Object.entries(row).map(([key]) => (
         <td key={key} className="px-4 py-3 text-left border-b border-border/50 whitespace-nowrap">
-          {isSkuColumn(key)
-            ? getProductDisplayName(row[key])
-            : isAmountField(key)
-              ? formatAmountJSX(row[key], key === "直营服务费")
-              : row[key]}
+          {isAmountField(key)
+            ? formatAmountJSX(row[key], key === "直营服务费")
+            : row[key]}
         </td>
       ))}
+      {displayName && (
+        <td className="px-4 py-3 text-left border-b border-border/50 whitespace-nowrap text-muted-foreground">
+          {displayName}
+        </td>
+      )}
       {hasChanges && showDataChanges && (
         <td className="px-4 py-3 text-left border-b border-border/50 whitespace-nowrap">
           <button
