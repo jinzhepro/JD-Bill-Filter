@@ -76,20 +76,21 @@ export function InvoiceLineItems() {
   const groupedByMonth = useMemo(() => {
     const currentMonth = getCurrentMonth();
     return lineItems.reduce((acc, item, index) => {
-      const month = item.date ? item.date.substring(0, 7) : currentMonth;
-      if (!acc[month]) acc[month] = [];
-      acc[month].push({ ...item, originalIndex: index });
+      const itemMonth = item.date ? item.date.substring(0, 7) : currentMonth;
+      const monthKey = itemMonth === currentMonth ? currentMonth : "其他月";
+      if (!acc[monthKey]) acc[monthKey] = [];
+      acc[monthKey].push({ ...item, originalIndex: index });
       return acc;
     }, {});
   }, [lineItems]);
 
   const sortedMonths = useMemo(() => {
     const currentMonth = getCurrentMonth();
-    return Object.keys(groupedByMonth).sort((a, b) => {
-      if (a === currentMonth) return -1;
-      if (b === currentMonth) return 1;
-      return a.localeCompare(b);
-    });
+    const keys = Object.keys(groupedByMonth);
+    if (keys.includes(currentMonth)) {
+      return [currentMonth, ...keys.filter(k => k !== currentMonth)];
+    }
+    return keys;
   }, [groupedByMonth]);
 
   const totals = calculateTotals();
@@ -97,7 +98,7 @@ export function InvoiceLineItems() {
   const renderMonthTable = (month, items, showTotal = false) => {
     const currentMonth = getCurrentMonth();
     const isCurrentMonth = month === currentMonth;
-    const monthLabel = isCurrentMonth ? `${month}（本月）` : `${month}（其他月）`;
+    const monthLabel = isCurrentMonth ? `${month}（本月）` : "其他月";
     
     const monthTotals = items.reduce((sum, item) => {
       const row = calculateRow(item);

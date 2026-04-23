@@ -137,9 +137,7 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month) {
     row.getCell(1).alignment = { horizontal: "center" };
   });
 
-  const currentMonth = new Date().toISOString().substring(0, 7);
-  const fileMonth = month || currentMonth;
-  const monthLabel = fileMonth === currentMonth ? "当月" : "其他月";
+  const monthLabel = month ? "当月" : "其他月";
   
   const monthRow = worksheet.addRow(["", "", "", "", "", "", "", "", "", monthLabel]);
   monthRow.getCell(TOTAL_COLUMNS).font = { bold: true };
@@ -165,7 +163,8 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `${fileMonth}_${customerInfo.customerName || "未命名"}.xlsx`;
+  const fileName = month ? `${month}_${customerInfo.customerName || "未命名"}.xlsx` : `其他月_${customerInfo.customerName || "未命名"}.xlsx`;
+  link.download = fileName;
   link.click();
 
   URL.revokeObjectURL(url);

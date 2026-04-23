@@ -65,21 +65,33 @@ export function InvoiceForm() {
     setIsExporting(true);
     
     try {
+      const currentMonth = getCurrentMonth();
       const groupedByMonth = lineItems.reduce((acc, item) => {
-        const month = item.date ? item.date.substring(0, 7) : getCurrentMonth();
-        if (!acc[month]) acc[month] = [];
-        acc[month].push(item);
+        const itemMonth = item.date ? item.date.substring(0, 7) : currentMonth;
+        const monthKey = itemMonth === currentMonth ? currentMonth : "其他月";
+        if (!acc[monthKey]) acc[monthKey] = [];
+        acc[monthKey].push(item);
         return acc;
       }, {});
 
       const months = Object.keys(groupedByMonth);
+      if (months.includes(currentMonth)) {
+        months.sort((a, b) => {
+          if (a === currentMonth) return -1;
+          if (b === currentMonth) return 1;
+          return 0;
+        });
+      }
+
       const exportedMonths = [];
 
-      for (const month of months) {
-        const monthItems = groupedByMonth[month];
+      for (const monthKey of months) {
+        const monthItems = groupedByMonth[monthKey];
+        const isCurrentMonth = monthKey === currentMonth;
+        const exportMonth = isCurrentMonth ? currentMonth : null;
         
-        await exportInvoice(basicInfo, customerInfo, monthItems, month);
-        exportedMonths.push(month);
+        await exportInvoice(basicInfo, customerInfo, monthItems, exportMonth);
+        exportedMonths.push(isCurrentMonth ? currentMonth : "其他月");
 
         const totalAmount = monthItems.reduce((sum, item) => {
           const quantity = new Decimal(item.quantity || 0);
@@ -104,7 +116,9 @@ export function InvoiceForm() {
           };
         });
 
-        const invoiceDateForHistory = monthItems[0]?.date || `${month}-01`;
+        const invoiceDateForHistory = isCurrentMonth 
+          ? `${currentMonth}-01` 
+          : monthItems[0]?.date || new Date().toISOString().split("T")[0];
 
         const historyRes = await fetch("/api/invoice-history", {
           method: "POST",
