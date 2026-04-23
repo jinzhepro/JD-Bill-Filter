@@ -137,6 +137,16 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month) {
     row.getCell(1).alignment = { horizontal: "center" };
   });
 
+  const currentMonth = new Date().toISOString().substring(0, 7);
+  const fileMonth = month || currentMonth;
+  const monthLabel = fileMonth === currentMonth ? "当月" : `${fileMonth} 其他月`;
+  
+  const monthRow = worksheet.addRow(["月份标识", monthLabel, "", "", "", "", "", "", "", ""]);
+  worksheet.mergeCells(monthRow.number, 2, monthRow.number, TOTAL_COLUMNS);
+  monthRow.getCell(1).font = { bold: true };
+  monthRow.getCell(1).alignment = { horizontal: "center" };
+  monthRow.getCell(2).alignment = { horizontal: "left" };
+
   worksheet.eachRow((row) => {
     row.height = 25;
     row.eachCell((cell) => {
@@ -153,8 +163,6 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  const defaultMonth = new Date().toISOString().substring(0, 7);
-  const fileMonth = month || defaultMonth;
   link.download = `${fileMonth}_${customerInfo.customerName || "未命名"}.xlsx`;
   link.click();
 
