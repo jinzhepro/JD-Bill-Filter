@@ -130,14 +130,9 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month) {
     ["发票号码", ""],
   ];
 
-  footerFields.forEach(([label, value], index) => {
+  footerFields.forEach(([label, value]) => {
     const row = worksheet.addRow([label, value, "", "", "", "", "", "", "", ""]);
-    const isLastRow = index === footerFields.length - 1;
-    if (isLastRow) {
-      worksheet.mergeCells(row.number, 2, row.number, TOTAL_COLUMNS - 1);
-    } else {
-      worksheet.mergeCells(row.number, 2, row.number, TOTAL_COLUMNS);
-    }
+    worksheet.mergeCells(row.number, 2, row.number, TOTAL_COLUMNS);
     row.getCell(1).font = { bold: true };
     row.getCell(1).alignment = { horizontal: "center" };
   });
@@ -146,11 +141,9 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month) {
   const fileMonth = month || currentMonth;
   const monthLabel = fileMonth === currentMonth ? "当月" : "其他月";
   
-  const lastFooterRow = footerStartRow + footerFields.length - 1;
-  const monthCell = worksheet.getCell(lastFooterRow, TOTAL_COLUMNS);
-  monthCell.value = monthLabel;
-  monthCell.font = { bold: true };
-  monthCell.alignment = { horizontal: "right", vertical: "middle" };
+  const monthRow = worksheet.addRow(["", "", "", "", "", "", "", "", "", monthLabel]);
+  monthRow.getCell(TOTAL_COLUMNS).font = { bold: true };
+  monthRow.getCell(TOTAL_COLUMNS).alignment = { horizontal: "right", vertical: "middle" };
 
   worksheet.eachRow((row) => {
     row.height = 25;
