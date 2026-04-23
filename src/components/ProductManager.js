@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Edit, Search, Upload } from "lucide-react";
+import { Plus, Trash2, Edit, Search, Upload, RefreshCw } from "lucide-react";
 
 const getInvoiceName = (name, brandMappings) => {
   for (const mapping of brandMappings) {
@@ -272,6 +272,30 @@ export function ProductManager() {
     setImporting(false);
   };
 
+  const handleUpdateInvoiceNames = async () => {
+    if (!confirm("确定根据品牌映射更新所有商品的发票名称？")) return;
+
+    try {
+      const res = await fetch("/api/products/update-invoice-names", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        toast({ 
+          title: `更新完成：成功 ${data.updated} 条，未匹配 ${data.unmatched} 条` 
+        });
+        fetchProducts();
+      } else {
+        toast({ title: data.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "更新失败", variant: "destructive" });
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Card>
@@ -304,6 +328,10 @@ export function ProductManager() {
             <Button variant="outline" onClick={() => setImportModalOpen(true)}>
               <Upload className="w-4 h-4 mr-1" />
               导入
+            </Button>
+            <Button variant="outline" onClick={handleUpdateInvoiceNames}>
+              <RefreshCw className="w-4 h-4 mr-1" />
+              更新发票名称
             </Button>
             <Button onClick={handleAdd}>
               <Plus className="w-4 h-4 mr-1" />
