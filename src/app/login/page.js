@@ -46,7 +46,7 @@ export default function LoginPage() {
           <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
             <Lock className="w-6 h-6 text-primary" />
           </div>
-          <CardTitle>青云通结算系统</CardTitle>
+          <CardTitle>电商业务结算助手</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

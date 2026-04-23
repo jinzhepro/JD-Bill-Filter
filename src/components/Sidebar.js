@@ -63,9 +63,9 @@ export function Sidebar() {
           </div>
           <div>
             <h2 className="text-sm font-bold text-foreground tracking-tight">
-              京东单据处理
+              电商业务结算助手
             </h2>
-            <p className="text-xs text-muted-foreground">JD Bill Filter</p>
+            <p className="text-xs text-muted-foreground">青云通</p>
           </div>
         </div>
       </div>
@@ -118,7 +118,7 @@ export function Sidebar() {
           退出登录
         </Button>
         <p className="text-xs text-muted-foreground text-center">
-          © {new Date().getFullYear()} JD Bill Filter
+          © {new Date().getFullYear()} 青云通
         </p>
       </div>
     </aside>

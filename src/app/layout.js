@@ -7,8 +7,8 @@ import { AuthGuard } from "@/components/AuthGuard";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export const metadata = {
-  title: "京东单据处理系统",
-  description: "智能单据处理系统",
+  title: "电商业务结算助手",
+  description: "京东结算单处理系统",
 };
 
 export default function RootLayout({ children }) {

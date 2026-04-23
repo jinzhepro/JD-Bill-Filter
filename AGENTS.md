@@ -2,7 +2,7 @@
 
 ## 项目概述
 
-**JD Bill Filter** - 京东结算单处理系统（中文界面）
+**电商业务结算助手** - 京东结算单处理系统（中文界面）
 
 **技术栈**: Next.js 15.5.2 (App Router), React 19.2.0, JavaScript (无 TypeScript), Tailwind CSS 3.4.18, shadcn/ui (New York 风格), Decimal.js, ExcelJS, Cloudflare D1
 
