@@ -213,7 +213,7 @@ function parseCSVText(csvText, resolve, reject) {
 }
 
 // 下载Excel文件
-export async function downloadExcel(data, fileName, totals = null, dataChanges = null) {
+export async function downloadExcel(data, fileName, totals = null, dataChanges = null, getProductDisplayName = null) {
   let url = null;
   let link = null;
 
@@ -234,8 +234,14 @@ export async function downloadExcel(data, fileName, totals = null, dataChanges =
       "应结金额": "货款",
     };
 
+    // 是否添加商品名称列
+    const addProductNameColumn = getProductDisplayName !== null;
+
     // 映射后的表头
     const displayHeaders = headers.map((h) => columnMapping[h] || h);
+    if (addProductNameColumn) {
+      displayHeaders.push("商品名称_sku");
+    }
 
     // 找到商品编码列的索引
     const productCodeColumnIndex = headers.findIndex((h) =>
@@ -272,7 +278,6 @@ export async function downloadExcel(data, fileName, totals = null, dataChanges =
     data.forEach((item) => {
       const rowValues = [];
       headers.forEach((header, index) => {
-        const displayHeader = displayHeaders[index];
         let value = item[header];
         if (PRODUCT_CODE_COLUMNS.includes(header)) {
           value = String(value || "");
@@ -281,6 +286,14 @@ export async function downloadExcel(data, fileName, totals = null, dataChanges =
         }
         rowValues.push(value);
       });
+      
+      // 添加商品名称_sku列
+      if (addProductNameColumn) {
+        const sku = item["商品编号"] || item["SKU"];
+        const displayName = getProductDisplayName(sku) || "";
+        rowValues.push(displayName);
+      }
+      
       const row = worksheet.addRow(rowValues);
       // 设置数据行边框
       row.eachCell((cell) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSettlement } from "@/context/SettlementContext";
 import { downloadExcel } from "@/lib/excelHandler";
 import { calculateColumnTotals } from "@/lib/utils";
@@ -10,15 +10,50 @@ import { Button } from "./ui/button";
 import { Clipboard, Undo2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-/**
- * 结算单结果显示组件
- * 显示处理后的结算单数据，并包含处理表单用于调整 SKU 数量
- */
 export default function SettlementResultDisplay() {
   const { originalData, processedData, resetSettlement, processingHistory, dataChanges, previousProcessedData, undoProcessing } = useSettlement();
   const [showDataChanges, setShowDataChanges] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [products, setProducts] = useState([]);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch("/api/products?pageSize=1000");
+        const data = await res.json();
+        if (data.success) {
+          setProducts(data.data || []);
+        }
+      } catch {}
+    };
+    fetchProducts();
+  }, []);
+
+  const getUnmatchedSkus = () => {
+    if (!processedData || products.length === 0) return [];
+    const skuSet = new Set();
+    processedData.forEach(row => {
+      const sku = row["商品编号"] || row["SKU"];
+      if (sku) {
+        const product = products.find(p => p.sku === String(sku).trim());
+        if (!product) {
+          skuSet.add(String(sku).trim());
+        }
+      }
+    });
+    return Array.from(skuSet);
+  };
+
+  const getProductDisplayName = (sku) => {
+    if (!sku) return null;
+    const product = products.find(p => p.sku === String(sku).trim());
+    if (product && product.product_name) {
+      const cleanName = product.product_name.replace(/\s+/g, '');
+      return `${cleanName}_${sku}`;
+    }
+    return null;
+  };
 
   const handleReset = () => {
     resetSettlement();
@@ -27,12 +62,22 @@ export default function SettlementResultDisplay() {
   const handleDownloadExcel = () => {
     if (!processedData || processedData.length === 0) return;
 
+    const unmatchedSkus = getUnmatchedSkus();
+    if (unmatchedSkus.length > 0) {
+      toast({
+        title: `存在未匹配商品的SKU，无法导出`,
+        description: `未匹配SKU：${unmatchedSkus.slice(0, 5).join("、")}${unmatchedSkus.length > 5 ? "..." : ""}（共${unmatchedSkus.length}个）`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const fileName = `结算单合并结果_${new Date()
         .toISOString()
         .slice(0, 10)}.xlsx`;
       const totals = calculateColumnTotals(processedData);
-      downloadExcel(processedData, fileName, totals, dataChanges);
+      downloadExcel(processedData, fileName, totals, dataChanges, getProductDisplayName);
     } catch (error) {
       toast({
         title: "下载失败",
