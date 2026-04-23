@@ -10,7 +10,7 @@ export async function POST() {
     const brandMappingsRes = await db.prepare('SELECT brand_keywords, invoice_name FROM brand_mappings').all();
     const brandMappings = brandMappingsRes.results || [];
 
-    const productsRes = await db.prepare('SELECT id, product_name FROM products').all();
+    const productsRes = await db.prepare('SELECT id, product_name FROM product_mappings').all();
     const products = productsRes.results || [];
 
     let updated = 0;
@@ -31,7 +31,7 @@ export async function POST() {
       }
 
       if (invoiceName) {
-        await db.prepare('UPDATE products SET invoice_name = ? WHERE id = ?').bind(invoiceName, product.id).run();
+        await db.prepare('UPDATE product_mappings SET invoice_name = ? WHERE id = ?').bind(invoiceName, product.id).run();
         updated++;
       } else {
         unmatched++;
