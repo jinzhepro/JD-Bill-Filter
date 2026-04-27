@@ -1,6 +1,6 @@
 # 电商业务结算助手
 
-基于 Next.js 的京东对帐单处理系统，支持 Excel/CSV 文件导入、智能订单合并、结算单处理和供应商转换等功能。
+基于 Next.js 的京东对账单处理系统，支持 Excel/CSV 文件导入、智能订单合并、结算单处理和供应商转换等功能。部署于 Cloudflare Pages + D1 数据库。
 
 ## 📋 目录
 
@@ -9,12 +9,9 @@
 - [快速开始](#-快速开始)
 - [项目结构](#-项目结构)
 - [核心功能](#-核心功能)
+- [部署](#-部署)
 - [开发规范](#-开发规范)
-- [安全注意事项](#-安全注意事项)
 - [许可证](#-许可证)
-- [贡献](#-贡献)
-- [联系方式](#-联系方式)
-- [版本信息](#-版本信息)
 
 ## ✨ 功能特性
 
@@ -34,6 +31,18 @@
 - 📝 自定义供应商匹配规则
 - 🔄 批量供应商信息转换
 
+### 商品与品牌管理
+
+- 📦 商品 SKU 映射管理（支持批量导入）
+- 🏷️ 品牌发票名称映射
+- 🔍 商品搜索与分页
+
+### 发票管理
+
+- 📄 发票开具（客户信息导入、明细行管理）
+- 📋 发票历史记录与导出
+- 📊 采购单批次管理
+
 ### 数据展示
 
 - 📊 表格化展示处理结果
@@ -43,21 +52,21 @@
 
 ## 🚀 技术栈
 
-- **框架**: Next.js 16.0.10 (App Router)
+- **框架**: Next.js 15.5.2 (App Router)
 - **语言**: JavaScript (无 TypeScript)
-- **UI 库**: shadcn/ui + Tailwind CSS
+- **UI 库**: shadcn/ui (New York 风格) + Tailwind CSS 3.4.18
 - **状态管理**: React Context + useReducer
 - **数值计算**: Decimal.js (高精度数学)
 - **文件处理**: ExcelJS (Excel), 原生 API (CSV)
 - **图标**: Lucide React
-- **测试**: 无 (推荐安装 Vitest + Testing Library)
+- **部署**: Cloudflare Pages + D1 数据库
 
 ## 🚀 快速开始
 
 ### 环境要求
 
-- Node.js 18+
-- npm 或 yarn
+- Node.js 24.14.1（由 Volta 管理）
+- npm
 
 ### 安装依赖
 
@@ -72,6 +81,12 @@ npm run dev
 ```
 
 访问 http://localhost:3000
+
+### Cloudflare Pages 本地开发
+
+```bash
+npm run pages:dev    # 端口 8788，自动先 build
+```
 
 ### 构建生产版本
 
@@ -93,57 +108,59 @@ JD-Bill-Filter/
 ├── src/
 │   ├── app/                    # Next.js App Router 页面
 │   │   ├── page.js            # 首页（结算单处理）
-│   │   ├── suppliers/         # 供应商转换页面
-│   │   │   └── page.js        # 供应商管理页面
+│   │   ├── suppliers/         # 供应商转换
+│   │   ├── products/          # 商品管理
+│   │   ├── brands/            # 品牌管理
+│   │   ├── invoice/           # 发票开具
+│   │   ├── invoice-history/   # 发票历史
+│   │   ├── purchase/          # 采购单管理
+│   │   ├── login/             # 登录页
+│   │   ├── api/               # API Routes（D1 数据库操作）
 │   │   ├── layout.js          # 根布局
-│   │   └── globals.css        # 全局样式（shadcn/ui）
+│   │   └── globals.css        # 全局样式
 │   ├── components/            # React 组件
 │   │   ├── ui/               # shadcn/ui 基础组件
-│   │   │   ├── button.js     # 按钮组件
-│   │   │   ├── input.js      # 输入框组件
-│   │   │   ├── table.js      # 表格组件
-│   │   │   ├── toast.js      # Toast 提示
-│   │   │   └── modal.js      # 模态框组件（含 ErrorModal）
-│   │   ├── SettlementContent.js        # 结算单内容
-│   │   ├── SettlementFolderUpload.js   # 结算单文件夹上传
-│   │   ├── SettlementResultDisplay.js  # 结算单结果展示
-│   │   ├── SettlementProcessModal.js   # 结算单处理模态框
-│   │   ├── Sidebar.js        # 侧边栏导航
-│   │   ├── SupplierManager.js # 供应商管理
-│   │   ├── FileUploader.js   # 文件上传
-│   │   ├── DataDisplay.js    # 数据展示
-│   │   ├── SimpleLayout.js   # 简单布局
-│   │   ├── ErrorBoundary.js  # 错误边界
-│   │   ├── LoadingOverlay.js # 加载遮罩
-│   │   ├── LoadingStates.js  # 加载状态
-│   │   └── ThemeToggle.js    # 主题切换
+│   │   ├── SettlementContent.js
+│   │   ├── SettlementFolderUpload.js
+│   │   ├── SettlementResultDisplay.js
+│   │   ├── SettlementProcessModal.js
+│   │   ├── SupplierManager.js
+│   │   ├── ProductManager.js
+│   │   ├── BrandManager.js
+│   │   ├── InvoiceForm.js
+│   │   ├── InvoiceHistoryManager.js
+│   │   ├── PurchaseOrderManager.js
+│   │   ├── AuthGuard.js
+│   │   ├── Sidebar.js
+│   │   └── ...
 │   ├── context/              # React Context 状态管理
-│   │   ├── SettlementContext.js # 结算单状态（核心）
-│   │   ├── SupplierContext.js # 供应商状态
-│   │   ├── ThemeContext.js   # 主题状态
-│   │   └── LoadingContext.js # 全局加载状态
+│   │   ├── SettlementContext.js
+│   │   ├── InvoiceContext.js
+│   │   ├── SupplierContext.js
+│   │   ├── AuthContext.js
+│   │   ├── ThemeContext.js
+│   │   └── LoadingContext.js
 │   ├── lib/                  # 核心业务逻辑
-│   │   ├── settlementProcessor.js # 结算单数据处理
-│   │   ├── settlementHelpers.js   # 结算辅助函数
-│   │   ├── excelHandler.js   # Excel 文件处理
-│   │   ├── fileValidation.js # 文件验证（仅保留必要函数）
-│   │   ├── logger.js         # 日志工具
-│   │   ├── utils.js          # 工具函数（cn, cleanAmount, cleanProductCode, formatAmount）
-│   │   └── constants.js      # 常量定义
+│   │   ├── settlementProcessor.js
+│   │   ├── settlementHelpers.js
+│   │   ├── invoiceExporter.js
+│   │   ├── excelHandler.js
+│   │   ├── fileValidation.js
+│   │   ├── utils.js
+│   │   └── constants.js
 │   ├── data/                 # 静态数据
-│   │   └── suppliers.js      # 供应商数据
-│   └── hooks/                # 自定义 Hooks
-│       └── use-toast.js      # Toast 提示
-├── public/                   # 静态资源
+│   │   └── suppliers.js
+│   └── hooks/
+│       └── use-toast.js
+├── migrations/               # D1 数据库迁移文件
+├── wrangler.toml             # Cloudflare 配置
 ├── package.json
-├── tailwind.config.js        # Tailwind 配置
-├── next.config.mjs           # Next.js 配置
-├── components.json           # shadcn/ui 配置
-├── eslint.config.mjs         # ESLint 配置
-├── jsconfig.json             # JavaScript 配置
-├── AGENTS.md                 # Agent 指南
-├── IFLOW.md                  # 详细文档
-└── README.md                 # 本文档
+├── tailwind.config.js
+├── next.config.mjs
+├── components.json
+├── eslint.config.mjs
+├── jsconfig.json
+└── README.md
 ```
 
 ## 🔧 核心功能
@@ -162,166 +179,100 @@ JD-Bill-Filter/
    - 收入 = 货款 + 直营服务费
 5. **导出结果**: 生成 Excel 文件，商品编号设置为文本格式
 
-### 手动调整功能
-
-- 支持多行输入，批量处理
-- 相同 SKU 自动合并计算
-- SKU 未找到或数量不足时显示错误提示
-- 只有所有验证通过才提交数据
-
 ### 供应商转换
 
 - 根据匹配字符串自动识别文本中的供应商信息
 - 支持自定义供应商匹配规则
 - 批量转换供应商信息
 
+## ☁️ 部署
+
+### Cloudflare Pages
+
+```bash
+npm run pages:build   # 构建 Pages 输出
+npm run pages:deploy  # 部署到 Cloudflare Pages
+```
+
+### D1 数据库迁移
+
+```bash
+npx wrangler d1 migrations apply jd --local   # 本地
+npx wrangler d1 migrations apply jd --remote  # 远程
+```
+
+### 认证
+
+系统使用简单密码保护，默认密码 `qingyun2026`。可通过环境变量 `AUTH_PASSWORD` 或修改 `src/context/AuthContext.js` 和 `src/app/api/login/route.js` 更改。
+
 ## 📝 开发规范
 
 ### 代码风格
 
-- 使用 ESLint 进行代码检查
-- 遵循 React 19 最佳实践
+- 使用 ESLint 9 (flat config) 进行代码检查
 - 所有客户端组件必须以 `"use client"` 开头
 - 使用 shadcn/ui 组件库，遵循其设计规范
 
-### 导入顺序
-
-```javascript
-// 1. React
-import React, { useState, useEffect } from "react";
-
-// 2. 第三方库
-import Decimal from "decimal.js";
-import ExcelJS from "exceljs";
-
-// 3. 项目内部（使用 @/ 别名）
-import { useSettlement } from "@/context/SettlementContext";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-
-// 4. 相对路径
-import { MyComponent } from "./MyComponent";
-```
-
-### 金额计算规范
+### 金额计算
 
 ```javascript
 // 始终使用 Decimal.js 避免浮点数精度问题
 import Decimal from "decimal.js";
+import { cleanAmount } from "@/lib/utils";
 
-function cleanNumber(value) {
-  if (typeof value === "string") {
-    return parseFloat(value.replace(/[^0-9.-]/g, "")) || 0;
-  }
-  return value;
-}
-
-const amount = new Decimal(cleanNumber(value));
-const total = amount.plus(new Decimal(10));
-const displayValue = total.toNumber();
+const amount = new Decimal(cleanAmount(value));
 ```
 
-**重要**: 商品编号必须强制转换为字符串，防止 Excel 自动转换为数字：
+### 商品编号处理
+
+商品编号必须是字符串，使用 `cleanProductCode()` 处理 Excel 公式前缀：
+
 ```javascript
-const productCode = String(row["商品编号"] || "");
+import { cleanProductCode } from "@/lib/utils";
+
+const productCode = cleanProductCode(row["商品编号"]);
 ```
 
-### 错误处理规范
+### API Routes
 
 ```javascript
-// 所有异步操作使用 try-catch
-try {
-  const result = await someAsyncOperation();
-  // 处理结果
-} catch (error) {
-  console.error("操作失败:", error);
-  setError(error.message);
-}
-```
+export const runtime = 'edge';  // 必须在文件第一行
 
-### Context 使用规范
+import { getRequestContext } from '@cloudflare/next-on-pages';
 
-```javascript
-// 使用自定义 Hook 访问 Context
-import { useSettlement } from "@/context/SettlementContext";
-
-function MyComponent() {
-  const { processedData, setProcessedData, addLog } = useSettlement();
+export async function GET(request) {
+  const { env } = getRequestContext();
+  const db = env.DB;
   // ...
 }
-
-// CRITICAL: 永远不要直接修改 state，始终使用 Context actions
 ```
 
-**注意**: `SettlementContext` 是主要的状态管理 Context，包含了结算单处理所需的所有状态和方法。
+### 状态管理
+
+禁止直接修改 Context state，始终使用 actions：
+
+```javascript
+import { useSettlement } from "@/context/SettlementContext";
+
+const { processedData, setProcessedData } = useSettlement();
+// ✅ setProcessedData(newData)
+// ❌ processedData.push(newItem)
+```
 
 ### 样式规范
 
-- 使用 shadcn/ui 的语义化 CSS 变量
-- 避免使用自定义颜色类名
-- 使用 Tailwind 的工具类和 shadcn/ui 的组件变体
+使用 shadcn/ui 语义化 CSS 变量：
 
 ```javascript
-// ✅ 推荐 - 使用 shadcn/ui 语义化类名
-<div className="bg-card text-foreground border-border" />
-
-// ❌ 避免 - 使用自定义颜色
-<div className="bg-white text-gray-800 border-gray-200" />
+// ✅ bg-card text-foreground border-border
+// ❌ bg-white text-gray-800 border-gray-200
 ```
 
-### 文件处理规范
+### 文件处理
 
 - **CSV 编码**: 先尝试 UTF-8，失败后尝试 GBK
-- **Excel 数字列**: 商品编号设置为文本格式 (`numFmt: '@'`)
-- **Excel 公式**: 处理 `{ formula: '...', result: ... }` 对象
-- **文件验证**: 使用 `isValidFileExtension` 和 `isValidFileSize` 进行验证
-
-## 🔒 安全注意事项
-
-- ✅ 文件大小限制（50MB）
-- ✅ 支持的文件类型验证（.xlsx, .xls, .csv）
-- ✅ 文件扩展名验证
-- ✅ 无数据库依赖，数据仅在内存中处理
-- ✅ 生产环境建议添加身份验证和授权
+- **Excel 导出**: 商品编号列设置为文本格式 (`numFmt: '@'`)
 
 ## 📄 许可证
 
 MIT License
-
-## 🤝 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-### 贡献步骤
-
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 打开 Pull Request
-
-## 📞 联系方式
-
-如有问题，请通过 GitHub Issues 反馈。
-
-## 📦 版本信息
-
-- **当前版本**: 0.1.0
-- **Next.js**: 16.0.10
-- **React**: 19.2.0
-- **Node.js**: 18+
-- **Tailwind CSS**: 3.4.18
-- **shadcn/ui**: New York style
-
-## 📚 相关文档
-
-- **AGENTS.md**: AI Agent 开发指南
-- **IFLOW.md**: 详细技术文档
-- **package.json**: 依赖和脚本配置
-
-## 🎯 下一步
-
-1. **开发**: 运行 `npm run dev` 开始开发
-2. **测试**: 安装 Vitest + Testing Library 添加测试
-3. **部署**: 运行 `npm run build` 构建生产版本
-4. **自定义**: 修改 `src/data/suppliers.js` 添加供应商
