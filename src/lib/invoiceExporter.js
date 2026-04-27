@@ -20,6 +20,15 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month) {
     { width: 12 },
   ];
 
+  worksheet.pageSetup = {
+    orientation: 'portrait',
+    paperSize: 9,
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0,
+    margin: { left: 0.5, right: 0.5, top: 0.5, bottom: 0.5 },
+  };
+
   const rowOffset = 1;
 
   const titleRow = worksheet.addRow(["发票开具申请表"]);

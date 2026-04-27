@@ -16,7 +16,7 @@ const parseCustomerText = (text) => {
       const value = valueParts.join("：").trim();
       const keyLower = key.toLowerCase();
       
-      if (keyLower.includes("抬头") || keyLower.includes("购方名称")) {
+      if (keyLower.includes("抬头") || keyLower.includes("购方名称") || keyLower.includes("签约主体") || keyLower.includes("客户名称")) {
         result.customerName = value;
       } else if (keyLower.includes("税号") || keyLower.includes("识别号")) {
         result.taxId = value;
@@ -30,11 +30,12 @@ const parseCustomerText = (text) => {
         result.phone = value;
       }
     } else if (line.includes(":")) {
-      const [key, ...valueParts] = line.split(":");
-      const value = valueParts.join(":").trim();
+      const colonIndex = line.indexOf(":");
+      const key = line.substring(0, colonIndex);
+      const value = line.substring(colonIndex + 1).trim();
       const keyLower = key.toLowerCase();
       
-      if (keyLower.includes("抬头") || keyLower.includes("购方名称")) {
+      if (keyLower.includes("抬头") || keyLower.includes("购方名称") || keyLower.includes("签约主体") || keyLower.includes("客户名称")) {
         result.customerName = value;
       } else if (keyLower.includes("税号") || keyLower.includes("识别号")) {
         result.taxId = value;
