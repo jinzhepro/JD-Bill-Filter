@@ -4,9 +4,11 @@
 
 **电商业务结算助手** - 京东对账单处理系统（中文界面）
 
-**技术栈**: Next.js 15.5.2 (App Router), React 19.2.0, JavaScript (无 TypeScript), Tailwind CSS 3.4.18, shadcn/ui (New York 风格), Decimal.js, ExcelJS, Cloudflare Pages + D1
+**技术栈**: Next.js 15.5.2 (App Router), React 19.2.0, JavaScript (无 TypeScript), Tailwind CSS 3.4.18, shadcn/ui (New York 风格), Decimal.js, ExcelJS, Tesseract.js (OCR), Cloudflare Pages + D1
 
 **Node 版本**: Volta 管理 (24.14.1)
+
+**路径别名**: `@/*` → `./src/*`（jsconfig.json）
 
 ## 命令
 
@@ -132,7 +134,9 @@ export async function GET(request) {
 - `cn(...inputs)` - 合并 Tailwind 类名 (clsx + tailwind-merge)
 - `cleanAmount(value)` - 清理货币字符串 (¥, ￥, $, 逗号, 空格)
 - `cleanProductCode(value)` - 处理 Excel 公式前缀 `="..."`，返回字符串
-- `formatAmount(value, forcePositive)` - 格式化金额显示
+- `formatAmount(value, forcePositive)` - 格式化金额显示（字符串）
+- `formatAmountJSX(value, forcePositive)` - 格式化金额显示（React 组件，正数 primary/负数 destructive）
+- `calculateColumnTotals(data, columns)` - 计算列总和
 
 ## 文件处理
 
@@ -154,3 +158,17 @@ export async function GET(request) {
 
 - **新供应商**: 在 `src/data/suppliers.js` 的 `SUPPLIERS` 数组添加配置
 - **新数据库字段**: 创建迁移文件 `migrations/00XX_xxx.sql`，然后运行 `npx wrangler d1 migrations apply jd --local` 和 `--remote`
+
+## 其他重要文件
+
+- `src/lib/settlementProcessor.js` - 结算单核心处理逻辑
+- `src/lib/settlementHelpers.js` - 结算辅助函数
+- `src/lib/invoiceExporter.js` - 发票导出逻辑
+- `src/lib/excelHandler.js` - Excel 文件处理
+- `src/lib/fileValidation.js` - 文件验证
+- `src/lib/constants.js` - 全局常量
+- `env.d.ts` - Cloudflare 环境类型声明（D1 绑定等）
+
+## ESLint 配置
+
+ESLint 9 flat config (`eslint.config.mjs`)，忽略 `.next/`, `.wrangler/`, `.vercel/`, `migrations/` 等目录。`no-unused-vars` 为 warn 级别，`react/prop-types` 已关闭。
