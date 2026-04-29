@@ -384,9 +384,6 @@ export default function DataDisplay({
                   <th className="px-4 py-3 text-left font-semibold text-foreground whitespace-nowrap bg-muted/30">
                     商品名称_sku
                   </th>
-                  <th className="px-4 py-3 text-left font-semibold text-foreground whitespace-nowrap bg-muted/30">
-                    变化详情
-                  </th>
                 </tr>
               </thead>
 
@@ -549,17 +546,6 @@ function TableRow({ row, rowIndex, amountFields, showRowNumber, showDataChanges,
       {displayName && (
         <td className="px-4 py-3 text-left border-b border-border/50 whitespace-nowrap text-muted-foreground">
           {displayName}
-        </td>
-      )}
-      {hasChanges && showDataChanges && (
-        <td className="px-4 py-3 text-left border-b border-border/50 whitespace-nowrap">
-          <button
-            onClick={() => onShowModal(sku)}
-            className="text-xs text-muted-foreground hover:text-primary cursor-pointer p-1.5 rounded-md hover:bg-primary/10 transition-colors"
-            title="点击查看数据变化详情"
-          >
-            <Info className="w-4 h-4" />
-          </button>
         </td>
       )}
     </tr>
