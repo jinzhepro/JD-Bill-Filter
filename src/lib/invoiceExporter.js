@@ -1,6 +1,14 @@
 import ExcelJS from "exceljs";
 import Decimal from "decimal.js";
 
+/**
+ * 导出发票申请表
+ * @param {Object} basicInfo - 基本信息 {companyName, contractNo, applyDate, department, applicant}
+ * @param {Object} customerInfo - 客户信息 {customerName, taxId, bankName, bankAccount, address, phone}
+ * @param {Array<Object>} lineItems - 开票明细 [{name, spec, unit, quantity, price, taxRate}]
+ * @param {string|null} month - 月份标签 (如 "2024-01" 或 null 表示其他月)
+ * @returns {Promise<void>}
+ */
 export async function exportInvoice(basicInfo, customerInfo, lineItems, month) {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("发票");
@@ -56,7 +64,6 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month) {
   worksheet.getRow(basicRow2).getCell(8).font = { bold: true };
   worksheet.getRow(basicRow2).getCell(8).alignment = { horizontal: "center", vertical: "middle" };
 
-  const customerStartRow = basicRow2 + 1;
   const customerFields = [
     ["客户名称", customerInfo.customerName],
     ["发票类型", "增值税专用发票（ √ ）     增值税普通发票（    ）"],
@@ -75,8 +82,6 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month) {
     row.getCell(1).alignment = { horizontal: "center" };
     row.getCell(2).alignment = { horizontal: "left" };
   });
-
-  const lineItemsStartRow = customerStartRow + customerFields.length;
 
   const lineHeaderRow = worksheet.addRow(["开票内容", "商品名称", "规格", "单位", "数量", "单价(含税)", "金额(不含税)", "税率", "税额", "合计金额"]);
   lineHeaderRow.eachCell((cell) => {
@@ -132,7 +137,6 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month) {
   worksheet.mergeCells(mergeStart, 1, mergeEnd, 1);
   worksheet.getCell(mergeStart, 1).alignment = { horizontal: "center", vertical: "middle" };
 
-  const footerStartRow = totalRow.number + 1;
   const footerFields = [
     ["审核人", ""],
     ["发票代码", ""],

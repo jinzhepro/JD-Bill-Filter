@@ -5,6 +5,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useSettlement } from "@/context/SettlementContext";
+import { useProductMatching } from "@/hooks/useProductMatching";
 import { formatAmountJSX } from "@/lib/utils";
 import {
   ArrowLeft,
@@ -23,13 +24,11 @@ import {
 
 export default function DataDisplay({
   title = "处理结果",
-  originalData,
   processedData,
   onReset,
   onDownload,
   showCopyColumn = false,
   downloadButtonText = "下载 Excel 结果",
-  resetButtonText = "重新上传",
   showRowNumber = false,
   amountFields = null,
   calculatedTotals = null,
@@ -44,45 +43,7 @@ export default function DataDisplay({
   const [modalSku, setModalSku] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showTotals, setShowTotals] = useState(true);
-  const [products, setProducts] = useState([]);
-
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const res = await fetch("/api/products?pageSize=1000");
-        const data = await res.json();
-        if (data.success) {
-          setProducts(data.data || []);
-        }
-      } catch {}
-    };
-    fetchProducts();
-  }, []);
-
-  const getProductDisplayName = (sku) => {
-    if (!sku) return null;
-    const product = products.find(p => p.sku === String(sku).trim());
-    if (product && product.product_name) {
-      const cleanName = product.product_name.replace(/\s+/g, '');
-      return `${cleanName}_${sku}`;
-    }
-    return null;
-  };
-
-  const unmatchedSkus = React.useMemo(() => {
-    if (!processedData || products.length === 0) return [];
-    const skuSet = new Set();
-    processedData.forEach(row => {
-      const sku = row["商品编号"] || row["SKU"];
-      if (sku) {
-        const product = products.find(p => p.sku === String(sku).trim());
-        if (!product) {
-          skuSet.add(String(sku).trim());
-        }
-      }
-    });
-    return Array.from(skuSet);
-  }, [processedData, products]);
+  const { unmatchedSkus, getProductDisplayName } = useProductMatching(processedData);
 
   /**
    * 关闭模态框的回调函数
@@ -167,25 +128,12 @@ export default function DataDisplay({
         .filter((value) => value !== null && value !== undefined);
       const textToCopy = dataToCopy.join("\n");
 
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(textToCopy);
-      } else {
-        const textArea = document.createElement("textarea");
-        textArea.value = textToCopy;
-        textArea.style.position = "fixed";
-        textArea.style.left = "-999999px";
-        textArea.style.top = "-999999px";
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textArea);
-      }
+      await navigator.clipboard.writeText(textToCopy);
 
       toast({
         title: `已复制列 "${columnName}" 的 ${dataToCopy.length} 条数据到剪贴板`,
       });
-    } catch (err) {
+    } catch {
       toast({
         variant: "destructive",
         title: `复制列 "${columnName}" 失败`,
@@ -393,10 +341,6 @@ export default function DataDisplay({
                   {processedData.length > 0 &&
                     Object.keys(processedData[0]).map((header) => {
                       const displayHeader = columnMapping?.[header] || header;
-                      const total = calculatedTotals?.[header];
-                      const isAmtField = amountFields && Array.isArray(amountFields)
-                        ? amountFields.includes(header)
-                        : header === "单价" || header === "总价";
 
                       return (
                         <th

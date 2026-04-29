@@ -96,7 +96,6 @@ export function InvoiceForm() {
         const totalAmount = monthItems.reduce((sum, item) => {
           const quantity = new Decimal(item.quantity || 0);
           const price = new Decimal(item.price || 0);
-          const taxRate = new Decimal(item.taxRate || 0.13);
           const total = quantity.times(price);
           return sum + total.toNumber();
         }, 0);

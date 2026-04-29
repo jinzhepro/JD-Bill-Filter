@@ -27,7 +27,14 @@ export default function Modal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className={`${sizeClasses[size]} p-0`}>
+      <DialogContent
+        className={`${sizeClasses[size]} p-0`}
+        onPointerDownOutside={(e) => {
+          if (!closeOnBackdropClick) {
+            e.preventDefault();
+          }
+        }}
+      >
         {(title || showCloseButton) && (
           <DialogHeader className="p-6 border-b border-border">
             {title && (

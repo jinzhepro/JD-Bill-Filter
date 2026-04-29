@@ -52,7 +52,7 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
     if (isOpen) {
       fetchCurrentMonthHistory();
     }
-  }, [isOpen]);
+  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePasteContentChange = (e) => {
     setPasteContent(e.target.value);

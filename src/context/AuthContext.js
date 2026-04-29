@@ -5,8 +5,6 @@ import { useRouter } from 'next/navigation';
 
 const AuthContext = createContext(null);
 
-const AUTH_PASSWORD = 'qingyun2026';
-
 export function AuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);

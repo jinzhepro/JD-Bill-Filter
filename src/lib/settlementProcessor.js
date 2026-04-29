@@ -15,19 +15,9 @@ function cleanString(value) {
 }
 
 /**
- * 从行数据中获取金额值
- * @param {Object} row - 行数据
- * @param {string} amountColumn - 金额列名
- * @returns {Decimal} 金额值
- */
-function getRowAmount(row, amountColumn) {
-  return new Decimal(cleanAmount(row[amountColumn] || 0));
-}
-
-/**
  * 验证结算单数据结构
  * 检查是否包含必要的列：商品编号、金额列，可选费用名称列
- * @param {Array} data - 结算单数据
+ * @param {Array<Object>} data - 结算单数据
  * @returns {boolean} 验证是否通过
  * @throws {Error} 如果数据结构不符合要求
  */
@@ -297,9 +287,9 @@ function checkQuantityColumn(data, hasFeeNameColumn) {
 
 /**
  * 处理结算单数据 - 合并相同SKU的应结金额和数量
- * 只处理费用名称为"货款"的记录
- * @param {Array} data - 结算单数据
- * @returns {Array} 处理后的结算单数据
+ * 只处理费用名称为"货款"的记录，收集直营服务费和交易服务费
+ * @param {Array<Object>} data - 结算单数据
+ * @returns {Promise<Array<{商品编号: string, 应结金额: number, 数量?: number, 直营服务费: number, 交易服务费: number}>>} 处理后的结算单数据
  * @throws {Error} 如果数据处理失败
  */
 export async function processSettlementData(data) {
@@ -330,7 +320,7 @@ export async function processSettlementData(data) {
   const transactionFeeMap = collectTransactionFees(data, actualAmountColumn, hasFeeNameColumn);
 
   // 合并SKU数据
-  const { mergedData, processedCount, skippedCount } = mergeSKUData(data, actualAmountColumn, hasFeeNameColumn, hasQuantityColumn);
+  const { mergedData } = mergeSKUData(data, actualAmountColumn, hasFeeNameColumn, hasQuantityColumn);
 
   // 查找可以扣除赔付费的SKU
   const compensationDeductedFromSku = findCompensationDeductionSKU(mergedData, totalAfterSalesCompensation);

@@ -4,7 +4,6 @@ import {
   createContext,
   useContext,
   useReducer,
-  useCallback,
   useMemo,
 } from "react";
 const LogType = {
@@ -249,7 +248,7 @@ export function SettlementProvider({ children }) {
         return JSON.parse(stored);
       }
       return [];
-    } catch (error) {
+    } catch {
       return [];
     }
   };

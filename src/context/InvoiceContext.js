@@ -6,14 +6,15 @@ import {
   useReducer,
   useMemo,
 } from "react";
+import { DEFAULT_COMPANY_INFO } from "@/lib/constants";
 
 const initialState = {
   basicInfo: {
-    companyName: "青岛青云通公共服务有限公司",
-    contractNo: "JK-GQ-250117",
+    companyName: DEFAULT_COMPANY_INFO.companyName,
+    contractNo: DEFAULT_COMPANY_INFO.contractNo,
     applyDate: new Date().toISOString().split("T")[0],
-    department: "青云通",
-    applicant: "付冰清",
+    department: DEFAULT_COMPANY_INFO.department,
+    applicant: DEFAULT_COMPANY_INFO.applicant,
   },
   customerInfo: {
     customerName: "",

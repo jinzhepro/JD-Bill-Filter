@@ -61,3 +61,13 @@ export const EXPORT_NUMERIC_FORMAT = "0.00";
  * Excel 导出时的商品编号格式（文本格式，防止自动转换）
  */
 export const PRODUCT_CODE_FORMAT = "@";
+
+/**
+ * 发票默认公司信息
+ */
+export const DEFAULT_COMPANY_INFO = {
+  companyName: "青岛青云通公共服务有限公司",
+  contractNo: "JK-GQ-250117",
+  department: "青云通",
+  applicant: "付冰清",
+};

@@ -27,7 +27,7 @@ async function processSingleFile(fileWithPath, index, totalFiles, addLog) {
 
   try {
     isValidFileSize(file);
-  } catch (error) {
+  } catch {
     const errorMsg = `文件过大（超过50MB），已跳过: ${path}`;
     addLog(errorMsg, "warning");
     return { error: errorMsg };
@@ -89,7 +89,6 @@ async function processAllFiles(filesWithPath, addLog) {
 export default function SettlementFolderUpload() {
   const {
     addLog,
-    setError,
     clearError,
     setProcessing,
     setOriginalData,
@@ -146,7 +145,7 @@ export default function SettlementFolderUpload() {
 
           setProcessedData(processedData);
           addLog("上传完成", "success");
-        } catch (error) {
+  } catch {
           handleError(error, "结算单数据处理");
           throw error;
         }

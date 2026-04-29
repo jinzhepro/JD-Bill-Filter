@@ -3,7 +3,6 @@ import {
   NUMERIC_COLUMNS,
   PRODUCT_CODE_COLUMNS,
   EXPORT_NUMERIC_FORMAT,
-  PRODUCT_CODE_FORMAT,
 } from "./constants";
 import { cleanProductCode, cleanAmount } from "./utils";
 
@@ -28,6 +27,11 @@ function getCellValue(cell) {
 }
 
 // 读取文件（支持Excel和CSV）
+/**
+ * @param {File} file - 文件对象
+ * @param {string} fileType - 文件类型 ('xlsx' | 'xls' | 'csv')
+ * @returns {Promise<Array<Object>>} 解析后的行数据数组
+ */
 export function readFile(file, fileType) {
   return new Promise((resolve, reject) => {
     if (fileType === "csv") {
@@ -51,7 +55,7 @@ export function readFile(file, fileType) {
                   parseCSVText(csvText, resolve, reject);
                 }
               })
-              .catch((error) => {
+              .catch(() => {
                 parseCSVText(csvText, resolve, reject);
               });
           } else {
@@ -124,7 +128,7 @@ export function readFile(file, fileType) {
         }
       };
 
-      reader.onerror = function (error) {
+      reader.onerror = function () {
         reject(new Error("Excel文件读取失败"));
       };
 
@@ -171,7 +175,7 @@ function parseCSVText(csvText, resolve, reject) {
     }
 
     // 添加数据到工作表
-    lines.forEach((line, index) => {
+    lines.forEach((line) => {
       const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map((v) => {
         // 移除引号
         let value = v.trim();
@@ -181,7 +185,7 @@ function parseCSVText(csvText, resolve, reject) {
         return value;
       });
 
-      const row = worksheet.addRow(values);
+      worksheet.addRow(values);
     });
 
     // 转换为JSON格式
@@ -213,7 +217,14 @@ function parseCSVText(csvText, resolve, reject) {
 }
 
 // 下载Excel文件
-export async function downloadExcel(data, fileName, totals = null, dataChanges = null, getProductDisplayName = null) {
+/**
+ * @param {Array<Object>} data - 导出数据
+ * @param {string} fileName - 文件名
+ * @param {Object|null} totals - 合计数据
+ * @param {function(string): string|null} getProductDisplayName - SKU转商品名称函数
+ * @returns {Promise<boolean>} 是否成功
+ */
+export async function downloadExcel(data, fileName, totals = null, getProductDisplayName = null) {
   let url = null;
   let link = null;
 
@@ -275,9 +286,9 @@ export async function downloadExcel(data, fileName, totals = null, dataChanges =
     });
 
     // 逐行添加数据，确保各列正确处理
-    data.forEach((item) => {
+      data.forEach((item) => {
       const rowValues = [];
-      headers.forEach((header, index) => {
+      headers.forEach((header) => {
         let value = item[header];
         if (PRODUCT_CODE_COLUMNS.includes(header)) {
           value = String(value || "");
@@ -337,8 +348,7 @@ export async function downloadExcel(data, fileName, totals = null, dataChanges =
     // 添加总计行
     if (totals && typeof totals === "object") {
       const totalRow = [];
-      headers.forEach((header, index) => {
-        const displayHeader = displayHeaders[index];
+      headers.forEach((header) => {
         if (header === "商品编号") {
           totalRow.push("总计");
         } else if (totals[header] !== undefined) {
