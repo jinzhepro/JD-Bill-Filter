@@ -136,7 +136,7 @@ export async function GET(request) {
 - `cleanProductCode(value)` - 处理 Excel 公式前缀 `="..."`，返回字符串
 - `formatAmount(value, forcePositive)` - 格式化金额显示（字符串）
 - `formatAmountJSX(value, forcePositive)` - 格式化金额显示（React 组件，正数 primary/负数 destructive）
-- `calculateColumnTotals(data, columns)` - 计算列总和
+- `calculateColumnTotals(data, columns)` - 计算列总和，默认计算 `["应结金额", "直营服务费", "交易服务费", "数量"]`
 
 ## 文件处理
 
@@ -144,6 +144,21 @@ export async function GET(request) {
 - CSV 编码：先尝试 UTF-8，失败后尝试 GBK
 - Excel 导出：商品编号列设置为文本格式 (`numFmt: '@'`)
 - 结算单处理：只处理"货款"记录，合并相同 SKU，分摊售后赔付费
+
+## 结算单处理逻辑 (`src/lib/settlementProcessor.js`)
+
+处理流程：
+1. 收集"直营服务费"和"交易服务费"数据（按 SKU 分组）
+2. 合并"货款"记录（相同 SKU 累加金额和数量）
+3. 计算售后卖家赔付费总额，从某个 SKU 扣除
+4. 生成最终结果，附加服务费数据
+
+**重要**：添加新的服务费类型时，需同步修改：
+- `src/lib/constants.js` - 添加常量
+- `src/lib/settlementProcessor.js` - 添加收集函数、更新合并/结果逻辑
+- `src/lib/utils.js` - 更新 `calculateColumnTotals` 默认列
+- `src/components/SettlementResultDisplay.js` - 更新 `amountFields`
+- `src/components/DataDisplay.js` - 更新合计计算和展示
 
 ## 样式规范
 
