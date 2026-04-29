@@ -75,6 +75,60 @@ export const runtime = 'edge';  // 必须在文件第一行
 | D1 迁移 | `migrations/*.sql` |
 | 配置 | `wrangler.toml`, `next.config.mjs`, `jsconfig.json` (`@/*` → `./src/*`) |
 
+## 页面路由
+
+| 路径 | 功能 |
+|------|------|
+| `/` | 首页（结算单处理） |
+| `/suppliers` | 供应商转换 |
+| `/products` | 商品管理 |
+| `/brands` | 品牌管理 |
+| `/invoice` | 发票开具 |
+| `/invoice-history` | 发票历史 |
+| `/purchase` | 采购单管理 |
+| `/login` | 登录页 |
+
+## 认证
+
+简单密码保护，默认密码: `qingyunyun2026`（硬编码在 `src/context/AuthContext.js:8`）。修改密码: 设置环境变量 `AUTH_PASSWORD`，或修改 `AuthContext.js` 和 `src/app/api/login/route.js`。
+
+## Context 状态管理
+
+| Context | 文件 | 用途 |
+|---------|------|------|
+| SettlementContext | `src/context/SettlementContext.js` | 结算单核心状态 |
+| InvoiceContext | `src/context/InvoiceContext.js` | 发票开具状态 |
+| SupplierContext | `src/context/SupplierContext.js` | 供应商状态 |
+| AuthContext | `src/context/AuthContext.js` | 认证状态 |
+
+**禁止直接修改 state** — 始终通过 Context actions（`useReducer` 模式）。
+
+## 文件处理
+
+- 支持格式：`.xlsx`, `.xls`, `.csv` (最大 50MB)
+- CSV 编码：先尝试 UTF-8，失败后尝试 GBK
+- Excel 导出：商品编号列设置为文本格式 (`numFmt: '@'`)
+- 结算单处理：只处理"货款"记录，合并相同 SKU，分摊售后赔付费
+
+## 结算单处理逻辑 (`src/lib/settlementProcessor.js`)
+
+处理流程：
+1. 收集"直营服务费"和"交易服务费"数据（按 SKU 分组）
+2. 合并"货款"记录（相同 SKU 累加金额和数量）
+3. 计算售后卖家赔付费总额，从某个 SKU 扣除
+4. 生成最终结果，附加服务费数据
+
+**添加新服务费类型时，需同步修改**：
+- `src/lib/constants.js` — 添加常量
+- `src/lib/settlementProcessor.js` — 添加收集函数、更新合并/结果逻辑
+- `src/lib/utils.js` — 更新 `calculateColumnTotals` 默认列
+- `src/components/SettlementResultDisplay.js` — 更新 `amountFields`
+- `src/components/DataDisplay.js` — 更新合计计算和展示
+
 ## 数据库
 
 5 张 D1 表：`product_mappings`, `brand_mappings`, `purchase_orders`, `invoice_history`, `invoice_history_items`。新增字段需创建迁移文件 `migrations/00XX_xxx.sql`。
+
+## ESLint
+
+ESLint 9 flat config (`eslint.config.mjs`)，忽略 `.next/`, `.wrangler/`, `.vercel/`, `migrations/` 等目录。`no-unused-vars` 为 warn 级别，`react/prop-types` 已关闭。
