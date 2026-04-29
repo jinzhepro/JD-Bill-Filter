@@ -17,8 +17,8 @@ export function cleanDecimalValue(value) {
   if (value instanceof Decimal) return value;
   if (typeof value === "number") return new Decimal(value);
   if (typeof value === "string") {
-    const cleaned = parseFloat(value.replace(/[^0-9.-]/g, ""));
-    return new Decimal(isNaN(cleaned) ? 0 : cleaned);
+    const cleaned = value.replace(/[^0-9.-]/g, "");
+    return new Decimal(cleaned || "0");
   }
   return new Decimal(0);
 }

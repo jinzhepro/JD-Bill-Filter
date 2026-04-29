@@ -14,7 +14,7 @@ import {
   parsePastedContent,
   mergeSameSkuRows,
 } from "@/lib/settlementHelpers";
-import { cleanAmount } from "@/lib/utils";
+import { cleanAmountString } from "@/lib/utils";
 
 /**
  * 结算单处理Modal组件
@@ -139,7 +139,7 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
     }
 
     const targetRow = updatedData[skuIndex];
-    const currentQuantity = new Decimal(cleanAmount(targetRow["数量"]));
+    const currentQuantity = new Decimal(cleanAmountString(targetRow["数量"]));
     const deductQuantity = cleanDecimalValue(row.quantity);
 
     if (currentQuantity.lt(deductQuantity)) {
@@ -292,8 +292,7 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
       const skuIndex = findSkuIndex(row.sku);
       if (skuIndex !== -1) {
         const targetRow = processedData[skuIndex];
-        // 使用 cleanAmount 处理，因为它会正确处理千位分隔符
-        const currentQuantity = new Decimal(cleanAmount(targetRow["数量"]));
+        const currentQuantity = new Decimal(cleanAmountString(targetRow["数量"]));
         const deductQuantity = cleanDecimalValue(row.quantity);
 
         if (currentQuantity.lt(deductQuantity)) {

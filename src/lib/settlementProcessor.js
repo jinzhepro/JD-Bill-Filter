@@ -1,6 +1,6 @@
 import Decimal from "decimal.js";
 import { SETTLEMENT_AMOUNT_COLUMNS, SETTLEMENT_QUANTITY_COLUMN, SETTLEMENT_FEE_NAME_FILTER, SETTLEMENT_SELF_OPERATION_FEE, SETTLEMENT_TRANSACTION_FEE } from "./constants";
-import { cleanAmount } from "./utils";
+import { cleanAmountString } from "./utils";
 
 /**
  * 清理字符串中的 Tab 和换行字符
@@ -58,8 +58,8 @@ function calculateTotalAfterSalesCompensation(data, actualAmountColumn, hasFeeNa
 
   for (const row of data) {
     if (hasFeeNameColumn && cleanString(row["费用名称"]) === "售后卖家赔付费") {
-      const cleanAmountValue = cleanAmount(row[actualAmountColumn] || 0);
-      total = total.plus(new Decimal(cleanAmountValue));
+      const cleanAmountStringValue = cleanAmountString(row[actualAmountColumn] || 0);
+      total = total.plus(new Decimal(cleanAmountStringValue));
     }
   }
 
@@ -81,14 +81,14 @@ function collectSelfOperationFees(data, actualAmountColumn, hasFeeNameColumn) {
     const feeName = cleanString(row["费用名称"]);
 
     if (hasFeeNameColumn && feeName === SETTLEMENT_SELF_OPERATION_FEE && productNo) {
-      const cleanAmountValue = cleanAmount(row[actualAmountColumn] || 0);
+      const cleanAmountStringValue = cleanAmountString(row[actualAmountColumn] || 0);
       if (selfOperationFeeMap.has(productNo)) {
         const existing = selfOperationFeeMap.get(productNo);
-        existing.直营服务费 = existing.直营服务费.plus(new Decimal(cleanAmountValue));
+        existing.直营服务费 = existing.直营服务费.plus(new Decimal(cleanAmountStringValue));
       } else {
         selfOperationFeeMap.set(productNo, {
           商品编号: productNo,
-          直营服务费: new Decimal(cleanAmountValue),
+          直营服务费: new Decimal(cleanAmountStringValue),
         });
       }
     }
@@ -112,14 +112,14 @@ function collectTransactionFees(data, actualAmountColumn, hasFeeNameColumn) {
     const feeName = cleanString(row["费用名称"]);
 
     if (hasFeeNameColumn && feeName === SETTLEMENT_TRANSACTION_FEE && productNo) {
-      const cleanAmountValue = cleanAmount(row[actualAmountColumn] || 0);
+      const cleanAmountStringValue = cleanAmountString(row[actualAmountColumn] || 0);
       if (transactionFeeMap.has(productNo)) {
         const existing = transactionFeeMap.get(productNo);
-        existing.交易服务费 = existing.交易服务费.plus(new Decimal(cleanAmountValue));
+        existing.交易服务费 = existing.交易服务费.plus(new Decimal(cleanAmountStringValue));
       } else {
         transactionFeeMap.set(productNo, {
           商品编号: productNo,
-          交易服务费: new Decimal(cleanAmountValue),
+          交易服务费: new Decimal(cleanAmountStringValue),
         });
       }
     }
@@ -159,26 +159,28 @@ function mergeSKUData(data, actualAmountColumn, hasFeeNameColumn, hasQuantityCol
       if (mergedData.has(productNo)) {
         // 已存在，累加金额和数量
         const existing = mergedData.get(productNo);
-        const cleanAmountValue = cleanAmount(row[actualAmountColumn] || 0);
-        existing.应结金额 = existing.应结金额.plus(new Decimal(cleanAmountValue));
+        const cleanAmountStringValue = cleanAmountString(row[actualAmountColumn] || 0);
+        existing.应结金额 = existing.应结金额.plus(new Decimal(cleanAmountStringValue));
 
         if (hasQuantityColumn) {
-          const cleanQuantityValue = cleanAmount(row[SETTLEMENT_QUANTITY_COLUMN] || 0);
-          const quantitySign = cleanAmountValue < 0 ? -1 : 1;
-          existing.数量 = existing.数量.plus(new Decimal(cleanQuantityValue).times(quantitySign));
+          const cleanQuantityValue = cleanAmountString(row[SETTLEMENT_QUANTITY_COLUMN] || 0);
+          const quantityDecimal = new Decimal(cleanQuantityValue);
+          const quantitySign = quantityDecimal.lt(0) ? -1 : 1;
+          existing.数量 = existing.数量.plus(quantityDecimal.times(quantitySign));
         }
       } else {
         // 新建记录
-        const cleanAmountValue = cleanAmount(row[actualAmountColumn] || 0);
+        const cleanAmountStringValue = cleanAmountString(row[actualAmountColumn] || 0);
         const initialData = {
           商品编号: productNo,
-          应结金额: new Decimal(cleanAmountValue),
+          应结金额: new Decimal(cleanAmountStringValue),
         };
 
         if (hasQuantityColumn) {
-          const cleanQuantityValue = cleanAmount(row[SETTLEMENT_QUANTITY_COLUMN] || 0);
-          const quantitySign = cleanAmountValue < 0 ? -1 : 1;
-          initialData.数量 = new Decimal(cleanQuantityValue).times(quantitySign);
+          const cleanQuantityValue = cleanAmountString(row[SETTLEMENT_QUANTITY_COLUMN] || 0);
+          const quantityDecimal = new Decimal(cleanQuantityValue);
+          const quantitySign = quantityDecimal.lt(0) ? -1 : 1;
+          initialData.数量 = quantityDecimal.times(quantitySign);
         }
 
         mergedData.set(productNo, initialData);

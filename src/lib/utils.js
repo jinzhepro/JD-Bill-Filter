@@ -31,6 +31,25 @@ export function cleanAmount(value) {
 }
 
 /**
+ * 清理金额字符串，返回 Decimal 安全的字符串格式
+ * 与 cleanAmount 不同，此函数不经过 parseFloat，避免精度丢失
+ * @param {string|number} value - 金额值
+ * @returns {string} 清理后的数字字符串，可直接传给 new Decimal()
+ * @example
+ * cleanAmountString("¥1,234.56") // "1234.56"
+ * new Decimal(cleanAmountString("¥1,234.56")) // 精确保留原始数值
+ */
+export function cleanAmountString(value) {
+  if (typeof value === "number") {
+    return String(value);
+  }
+  if (typeof value === "string") {
+    return value.replace(/[¥￥$,\s]/g, "") || "0";
+  }
+  return "0";
+}
+
+/**
  * 清理商品编号，处理 Excel 自动添加的等号前缀
  * 例如：="123456" -> 123456
  * @param {string|number} value - 商品编号值
