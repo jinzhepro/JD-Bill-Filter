@@ -111,7 +111,7 @@ export default function SettlementResultDisplay() {
       calculatedTotals={calculatedTotals}
       showStats={false}
       showDataChanges={showDataChanges}
-      amountFields={["应结金额", "直营服务费"]}
+      amountFields={["应结金额", "直营服务费", "交易服务费"]}
       columnMapping={{
         "应结金额": "货款",
       }}

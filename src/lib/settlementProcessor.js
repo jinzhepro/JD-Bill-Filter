@@ -1,5 +1,5 @@
 import Decimal from "decimal.js";
-import { SETTLEMENT_AMOUNT_COLUMNS, SETTLEMENT_QUANTITY_COLUMN, SETTLEMENT_FEE_NAME_FILTER, SETTLEMENT_SELF_OPERATION_FEE } from "./constants";
+import { SETTLEMENT_AMOUNT_COLUMNS, SETTLEMENT_QUANTITY_COLUMN, SETTLEMENT_FEE_NAME_FILTER, SETTLEMENT_SELF_OPERATION_FEE, SETTLEMENT_TRANSACTION_FEE } from "./constants";
 import { cleanAmount } from "./utils";
 
 /**
@@ -108,6 +108,37 @@ function collectSelfOperationFees(data, actualAmountColumn, hasFeeNameColumn) {
 }
 
 /**
+ * 收集交易服务费数据
+ * @param {Array} data - 结算单数据
+ * @param {string} actualAmountColumn - 实际金额列名
+ * @param {boolean} hasFeeNameColumn - 是否有费用名称列
+ * @returns {Map} 按商品编号分组的交易服务费
+ */
+function collectTransactionFees(data, actualAmountColumn, hasFeeNameColumn) {
+  const transactionFeeMap = new Map();
+
+  for (const row of data) {
+    const productNo = cleanString(row["商品编号"]);
+    const feeName = cleanString(row["费用名称"]);
+
+    if (hasFeeNameColumn && feeName === SETTLEMENT_TRANSACTION_FEE && productNo) {
+      const cleanAmountValue = cleanAmount(row[actualAmountColumn] || 0);
+      if (transactionFeeMap.has(productNo)) {
+        const existing = transactionFeeMap.get(productNo);
+        existing.交易服务费 = existing.交易服务费.plus(new Decimal(cleanAmountValue));
+      } else {
+        transactionFeeMap.set(productNo, {
+          商品编号: productNo,
+          交易服务费: new Decimal(cleanAmountValue),
+        });
+      }
+    }
+  }
+
+  return transactionFeeMap;
+}
+
+/**
  * 合并相同SKU的货款数据
  * @param {Array} data - 结算单数据
  * @param {string} actualAmountColumn - 实际金额列名
@@ -126,7 +157,7 @@ function mergeSKUData(data, actualAmountColumn, hasFeeNameColumn, hasQuantityCol
 
     // 跳过非货款记录
     if (hasFeeNameColumn && feeName !== SETTLEMENT_FEE_NAME_FILTER &&
-      feeName !== SETTLEMENT_SELF_OPERATION_FEE && feeName !== "售后卖家赔付费") {
+      feeName !== SETTLEMENT_SELF_OPERATION_FEE && feeName !== SETTLEMENT_TRANSACTION_FEE && feeName !== "售后卖家赔付费") {
       skippedCount++;
       continue;
     }
@@ -190,12 +221,13 @@ function findCompensationDeductionSKU(mergedData, totalAfterSalesCompensation) {
  * 应用赔付费扣除并生成最终结果
  * @param {Map} mergedData - 合并后的SKU数据
  * @param {Map} selfOperationFeeMap - 直营服务费数据
+ * @param {Map} transactionFeeMap - 交易服务费数据
  * @param {Decimal} totalAfterSalesCompensation - 售后赔付费总额
  * @param {string} compensationDeductedFromSku - 扣除赔付费的SKU
  * @param {boolean} hasQuantityColumn - 是否有数量列
  * @returns {Array} 最终处理结果
  */
-function applyCompensationDeduction(mergedData, selfOperationFeeMap, totalAfterSalesCompensation, compensationDeductedFromSku, hasQuantityColumn) {
+function applyCompensationDeduction(mergedData, selfOperationFeeMap, transactionFeeMap, totalAfterSalesCompensation, compensationDeductedFromSku, hasQuantityColumn) {
   const result = [];
 
   for (const item of mergedData.values()) {
@@ -228,6 +260,13 @@ function applyCompensationDeduction(mergedData, selfOperationFeeMap, totalAfterS
       resultItem.直营服务费 = selfOperationFeeMap.get(item.商品编号).直营服务费.toNumber();
     } else {
       resultItem.直营服务费 = 0;
+    }
+
+    // 添加交易服务费（如果有）
+    if (transactionFeeMap.has(item.商品编号)) {
+      resultItem.交易服务费 = transactionFeeMap.get(item.商品编号).交易服务费.toNumber();
+    } else {
+      resultItem.交易服务费 = 0;
     }
 
     result.push(resultItem);
@@ -287,6 +326,9 @@ export async function processSettlementData(data) {
   // 收集直营服务费数据
   const selfOperationFeeMap = collectSelfOperationFees(data, actualAmountColumn, hasFeeNameColumn);
 
+  // 收集交易服务费数据
+  const transactionFeeMap = collectTransactionFees(data, actualAmountColumn, hasFeeNameColumn);
+
   // 合并SKU数据
   const { mergedData, processedCount, skippedCount } = mergeSKUData(data, actualAmountColumn, hasFeeNameColumn, hasQuantityColumn);
 
@@ -297,6 +339,7 @@ export async function processSettlementData(data) {
   const result = applyCompensationDeduction(
     mergedData,
     selfOperationFeeMap,
+    transactionFeeMap,
     totalAfterSalesCompensation,
     compensationDeductedFromSku,
     hasQuantityColumn

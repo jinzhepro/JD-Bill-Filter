@@ -116,10 +116,10 @@ export default function DataDisplay({
     };
   }, [showModal, handleKeyDown]);
 
-  // 计算收入合计（货款 + 直营服务费）
+  // 计算收入合计（货款 - 交易服务费的绝对值）
   const incomeTotal = React.useMemo(() => {
     if (!calculatedTotals) return 0;
-    return (calculatedTotals["应结金额"] || 0) + (calculatedTotals["直营服务费"] || 0);
+    return (calculatedTotals["应结金额"] || 0) - Math.abs(calculatedTotals["交易服务费"] || 0);
   }, [calculatedTotals]);
 
   const handleSort = (key) => {
@@ -252,6 +252,7 @@ export default function DataDisplay({
                 <p className="text-xs text-muted-foreground mt-0.5">
                   货款 ¥{Math.abs(calculatedTotals["应结金额"] || 0).toFixed(2)} · 
                   直营服务费 ¥{Math.abs(calculatedTotals["直营服务费"] || 0).toFixed(2)} · 
+                  交易服务费 ¥{Math.abs(calculatedTotals["交易服务费"] || 0).toFixed(2)} · 
                   收入 ¥{Math.abs(incomeTotal).toFixed(2)} · 
                   数量 {(calculatedTotals["数量"] || 0).toFixed(0)}
                 </p>
@@ -266,7 +267,7 @@ export default function DataDisplay({
           
           {showTotals && (
             <div className="px-6 pb-6 pt-2 border-t border-border/50">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 {/* 货款合计 */}
                 <div className="bg-card rounded-lg border border-border p-5 shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between mb-2">
@@ -290,6 +291,19 @@ export default function DataDisplay({
                   </div>
                   <div className="text-2xl font-bold text-blue-600 font-mono">
                     ¥{Math.abs(calculatedTotals["直营服务费"] || 0).toFixed(2)}
+                  </div>
+                </div>
+
+                {/* 交易服务费合计 */}
+                <div className="bg-card rounded-lg border border-border p-5 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-muted-foreground">交易服务费合计</span>
+                    <div className="w-9 h-9 rounded-full bg-indigo-500/10 flex items-center justify-center">
+                      <span className="text-indigo-600 font-bold text-base">¥</span>
+                    </div>
+                  </div>
+                  <div className="text-2xl font-bold text-indigo-600 font-mono">
+                    ¥{Math.abs(calculatedTotals["交易服务费"] || 0).toFixed(2)}
                   </div>
                 </div>
 
@@ -511,6 +525,12 @@ export default function DataDisplay({
                       <div className="text-right text-destructive">-¥{Math.abs(deducted?.直营服务费 || 0).toFixed(2)}</div>
                       <div className="text-right font-bold text-primary">¥{Math.abs(current?.直营服务费 || 0).toFixed(2)}</div>
                     </div>
+                    <div className="grid grid-cols-4 gap-2 py-2">
+                      <div className="font-medium">交易服务费</div>
+                      <div className="text-right">¥{Math.abs(original?.交易服务费 || 0).toFixed(2)}</div>
+                      <div className="text-right text-destructive">-¥{Math.abs(deducted?.交易服务费 || 0).toFixed(2)}</div>
+                      <div className="text-right font-bold text-primary">¥{Math.abs(current?.交易服务费 || 0).toFixed(2)}</div>
+                    </div>
                     <div className="pt-4 mt-4 border-t border-border text-xs text-muted-foreground flex items-center gap-2">
                       <Clock className="w-4 h-4" />
                       处理时间: {new Date(changes.timestamp).toLocaleString()}
@@ -578,7 +598,7 @@ function TableRow({ row, rowIndex, amountFields, showRowNumber, showDataChanges,
       {Object.entries(row).map(([key]) => (
         <td key={key} className="px-4 py-3 text-left border-b border-border/50 whitespace-nowrap">
           {isAmountField(key)
-            ? formatAmountJSX(row[key], key === "直营服务费")
+            ? formatAmountJSX(row[key], key === "直营服务费" || key === "交易服务费")
             : row[key]}
         </td>
       ))}

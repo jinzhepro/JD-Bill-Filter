@@ -38,9 +38,14 @@ export const SETTLEMENT_FEE_NAME_FILTER = "货款";
 export const SETTLEMENT_SELF_OPERATION_FEE = "直营服务费";
 
 /**
+ * 交易服务费名称
+ */
+export const SETTLEMENT_TRANSACTION_FEE = "交易服务费";
+
+/**
  * 数值列名称（用于 Excel 导出时的格式化）
  */
-export const NUMERIC_COLUMNS = ["商品数量", "单价", "总价", "直营服务费"];
+export const NUMERIC_COLUMNS = ["商品数量", "单价", "总价", "直营服务费", "交易服务费"];
 
 /**
  * 商品编码/编号列名称

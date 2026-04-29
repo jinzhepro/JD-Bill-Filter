@@ -99,7 +99,7 @@ export function formatAmountJSX(value, forcePositive = false) {
  * @param {Array} columns - 需要计算的列名数组
  * @returns {Object} 各列的总和
  */
-export function calculateColumnTotals(data, columns = ["应结金额", "直营服务费", "数量"]) {
+export function calculateColumnTotals(data, columns = ["应结金额", "直营服务费", "交易服务费", "数量"]) {
   if (!data || data.length === 0) {
     return {};
   }
