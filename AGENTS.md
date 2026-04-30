@@ -61,9 +61,9 @@ npx wrangler d1 migrations apply jd --local   # 本地数据库迁移
 
 ## 认证保护
 
-简单密码保护，默认密码: `qingyun2026`（硬编码在 `src/context/AuthContext.js:8`）
+简单密码保护，默认密码: `qingyun2026`（通过 cookie 认证，30天有效期）
 
-修改密码: 设置环境变量 `AUTH_PASSWORD`，或修改 `AuthContext.js` 和 `src/app/api/login/route.js`。
+修改密码: 设置环境变量 `AUTH_PASSWORD`，或修改 `src/app/api/login/route.js`。
 
 ## Context 状态管理
 
@@ -73,8 +73,8 @@ npx wrangler d1 migrations apply jd --local   # 本地数据库迁移
 | InvoiceContext | `src/context/InvoiceContext.js` | 发票开具状态 |
 | SupplierContext | `src/context/SupplierContext.js` | 供应商状态 |
 | AuthContext | `src/context/AuthContext.js` | 认证状态 |
-| ThemeContext | `src/context/ThemeContext.js` | 主题状态 |
-| LoadingContext | `src/context/LoadingContext.js` | 全局加载状态 |
+
+**Hooks**: `src/hooks/use-toast.js` (shadcn toast), `src/hooks/useProductMatching.js`
 
 **禁止直接修改 state** - 始终使用 Context actions:
 
@@ -174,6 +174,18 @@ export async function GET(request) {
 - **新供应商**: 在 `src/data/suppliers.js` 的 `SUPPLIERS` 数组添加配置
 - **新数据库字段**: 创建迁移文件 `migrations/00XX_xxx.sql`，然后运行 `npx wrangler d1 migrations apply jd --local` 和 `--remote`
 
+## API Routes
+
+| 路径 | 用途 |
+|------|------|
+| `/api/login` | 登录/登出 (POST/DELETE) |
+| `/api/check-auth` | 检查认证状态 |
+| `/api/brand-mappings/*` | 品牌映射 CRUD |
+| `/api/products/*` | 商品映射 CRUD |
+| `/api/purchase-orders/*` | 采购单 CRUD |
+| `/api/invoice-history/*` | 发票历史 CRUD |
+| `/api/supply-orders/*` | 供货单相关 |
+
 ## 其他重要文件
 
 - `src/lib/settlementProcessor.js` - 结算单核心处理逻辑
@@ -182,6 +194,7 @@ export async function GET(request) {
 - `src/lib/excelHandler.js` - Excel 文件处理
 - `src/lib/fileValidation.js` - 文件验证
 - `src/lib/constants.js` - 全局常量
+- `src/data/suppliers.js` - 供应商配置
 - `env.d.ts` - Cloudflare 环境类型声明（D1 绑定等）
 
 ## ESLint 配置
