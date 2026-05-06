@@ -10,43 +10,57 @@ const parseCustomerText = (text) => {
   const lines = text.split(/[\n\r]+/).map(l => l.trim()).filter(Boolean);
   const result = {};
   
+  const keywordMap = {
+    "抬头": "customerName",
+    "购方名称": "customerName",
+    "签约主体": "customerName",
+    "客户名称": "customerName",
+    "税号": "taxId",
+    "识别号": "taxId",
+    "银行": "bankName",
+    "账号": "bankAccount",
+    "地址": "address",
+    "住址": "address",
+    "电话": "phone"
+  };
+  
   for (const line of lines) {
+    let key = "";
+    let value = "";
+    
     if (line.includes("：")) {
-      const [key, ...valueParts] = line.split("：");
-      const value = valueParts.join("：").trim();
-      const keyLower = key.toLowerCase();
-      
-      if (keyLower.includes("抬头") || keyLower.includes("购方名称") || keyLower.includes("签约主体") || keyLower.includes("客户名称")) {
-        result.customerName = value;
-      } else if (keyLower.includes("税号") || keyLower.includes("识别号")) {
-        result.taxId = value;
-      } else if (keyLower.includes("银行") && !keyLower.includes("账号")) {
-        result.bankName = value;
-      } else if (keyLower.includes("账号")) {
-        result.bankAccount = value;
-      } else if (keyLower.includes("地址") || keyLower.includes("住址")) {
-        result.address = value;
-      } else if (keyLower.includes("电话")) {
-        result.phone = value;
-      }
+      const parts = line.split("：");
+      key = parts[0];
+      value = parts.slice(1).join("：").trim();
     } else if (line.includes(":")) {
       const colonIndex = line.indexOf(":");
-      const key = line.substring(0, colonIndex);
-      const value = line.substring(colonIndex + 1).trim();
+      key = line.substring(0, colonIndex);
+      value = line.substring(colonIndex + 1).trim();
+    } else {
+      // 尝试匹配 "关键词 值" 格式
+      const spaceIndex = line.indexOf(" ");
+      if (spaceIndex > 0) {
+        const possibleKey = line.substring(0, spaceIndex);
+        const possibleValue = line.substring(spaceIndex + 1).trim();
+        
+        for (const keyword of Object.keys(keywordMap)) {
+          if (possibleKey.includes(keyword)) {
+            key = possibleKey;
+            value = possibleValue;
+            break;
+          }
+        }
+      }
+    }
+    
+    if (key && value) {
       const keyLower = key.toLowerCase();
       
-      if (keyLower.includes("抬头") || keyLower.includes("购方名称") || keyLower.includes("签约主体") || keyLower.includes("客户名称")) {
-        result.customerName = value;
-      } else if (keyLower.includes("税号") || keyLower.includes("识别号")) {
-        result.taxId = value;
-      } else if (keyLower.includes("银行") && !keyLower.includes("账号")) {
-        result.bankName = value;
-      } else if (keyLower.includes("账号")) {
-        result.bankAccount = value;
-      } else if (keyLower.includes("地址") || keyLower.includes("住址")) {
-        result.address = value;
-      } else if (keyLower.includes("电话")) {
-        result.phone = value;
+      for (const [keyword, field] of Object.entries(keywordMap)) {
+        if (keyLower.includes(keyword)) {
+          result[field] = value;
+          break;
+        }
       }
     }
   }
