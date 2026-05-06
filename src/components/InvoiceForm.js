@@ -10,7 +10,7 @@ import { InvoiceImportModal } from "./InvoiceImportModal";
 import { exportInvoice } from "@/lib/invoiceExporter";
 import { useToast } from "@/hooks/use-toast";
 import { FileDown, FileText } from "lucide-react";
-import { getCurrentMonth, calculateRowAmount } from "@/lib/utils";
+import { getCurrentMonth, calculateRowAmount, groupItemsByMonth } from "@/lib/utils";
 import Decimal from "decimal.js";
 
 export function InvoiceForm() {
