@@ -397,10 +397,6 @@ export default function DataDisplay({
                     showRowNumber={showRowNumber}
                     showDataChanges={showDataChanges}
                     getProductDisplayName={getProductDisplayName}
-                    onShowModal={(sku) => {
-                      setModalSku(sku);
-                      setShowModal(true);
-                    }}
                   />
                 ))}
               </tbody>
@@ -487,7 +483,7 @@ export default function DataDisplay({
   );
 }
 
-function TableRow({ row, rowIndex, amountFields, showRowNumber, showDataChanges, getProductDisplayName, onShowModal }) {
+function TableRow({ row, rowIndex, amountFields, showRowNumber, showDataChanges, getProductDisplayName }) {
   const { dataChanges } = useSettlement();
 
   const isAmountField = (key) => {

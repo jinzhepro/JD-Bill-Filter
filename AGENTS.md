@@ -54,10 +54,15 @@ npx wrangler d1 migrations apply jd --local   # 本地数据库迁移
 | `/suppliers` | 供应商转换 |
 | `/products` | 商品管理 |
 | `/brands` | 品牌管理 |
-| `/invoice` | 发票开具 |
+| `/invoice` | 发票开具（导入JSON/导出Excel） |
 | `/invoice-history` | 发票历史 |
 | `/purchase` | 采购单管理 |
 | `/login` | 登录页 |
+
+**发票开具页面** (`/invoice`):
+- 顶部"导入开票信息"按钮：识别客户信息+订单号
+- 开票内容：仅通过导入添加（已移除编辑功能）
+- 按钮布局：清空明细 / 导入 / 导出发票
 
 ## 认证保护
 
@@ -84,6 +89,11 @@ import { useSettlement } from "@/context/SettlementContext";
 const { processedData, setProcessedData } = useSettlement();
 // ✅ setProcessedData(newData)
 // ❌ processedData.push(newItem)
+
+// InvoiceContext 批量添加条目
+const { addLineItems } = useInvoice();
+// ✅ addLineItems(items)  // 批量添加
+// ❌ items.forEach(item => addLineItem(item))  // 逐条添加
 ```
 
 ## 关键规则
@@ -131,12 +141,19 @@ export async function GET(request) {
 
 ## 核心工具函数 (`src/lib/utils.js`)
 
+**基础工具**:
 - `cn(...inputs)` - 合并 Tailwind 类名 (clsx + tailwind-merge)
 - `cleanAmount(value)` - 清理货币字符串 (¥, ￥, $, 逗号, 空格)
 - `cleanProductCode(value)` - 处理 Excel 公式前缀 `="..."`，返回字符串
 - `formatAmount(value, forcePositive)` - 格式化金额显示（字符串）
-- `formatAmountJSX(value, forcePositive)` - 格式化金额显示（React 组件，正数 primary/负数 destructive）
-- `calculateColumnTotals(data, columns)` - 计算列总和，默认计算 `["应结金额", "直营服务费", "交易服务费", "数量"]`
+- `formatAmountJSX(value, forcePositive)` - 格式化金额显示（React 组件）
+- `calculateColumnTotals(data, columns)` - 计算列总和
+
+**发票相关**:
+- `getCurrentMonth()` - 获取当前月份字符串 (YYYY-MM)
+- `formatTimestamp(timestamp)` - 转换时间戳为日期字符串 (YYYY-MM-DD)
+- `calculateRowAmount(item)` - 计算发票行金额（不含税、税额、合计）
+- `groupItemsByMonth(items)` - 按月份分组发票条目（当前月 vs 其他月）
 
 ## 文件处理
 
@@ -144,6 +161,24 @@ export async function GET(request) {
 - CSV 编码：先尝试 UTF-8，失败后尝试 GBK
 - Excel 导出：商品编号列设置为文本格式 (`numFmt: '@'`)
 - 结算单处理：只处理"货款"记录，合并相同 SKU，分摊售后赔付费
+
+## 发票导入导出
+
+**发票导入** (`src/components/InvoiceImportModal.js`):
+- **仅支持 JSON 格式**（已移除制表符分隔格式）
+- 解析结算单 JSON，提取货款记录 (`feeCode === 30`)
+- 使用 `finishTime` 作为发票日期
+- 从商品映射表匹配 SKU 获取发票名称
+
+**客户信息导入** (`src/components/CustomerImportModal.js`):
+- 支持识别：抬头/税号/银行/账号/地址/电话/订单号
+- 订单号识别模式：12位数字 + 空格 + 数字（不依赖"订单号："文字）
+- 自动复制订单号到剪贴板（逗号分隔）
+
+**发票导出**:
+- 按月份分组导出（当前月单独文件，其他月合并）
+- 自动保存到发票历史记录
+- Context 使用 `addLineItems` 批量添加条目（而非逐条添加）
 
 ## 结算单处理逻辑 (`src/lib/settlementProcessor.js`)
 
