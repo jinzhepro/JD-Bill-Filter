@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileSpreadsheet, ArrowLeftRight, Receipt, Package, Tag, History, ShoppingCart, LogOut } from "lucide-react";
+import { FileSpreadsheet, ArrowLeftRight, Receipt, Package, Tag, ShoppingCart, LogOut } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 
@@ -35,11 +35,6 @@ export function Sidebar() {
       name: "发票导出",
       href: "/invoice",
       icon: <Receipt className="w-5 h-5" />,
-    },
-    {
-      name: "发票历史",
-      href: "/invoice-history",
-      icon: <History className="w-5 h-5" />,
     },
     {
       name: "商品管理",
