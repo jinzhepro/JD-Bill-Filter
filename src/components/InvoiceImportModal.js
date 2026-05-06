@@ -25,15 +25,69 @@ export function InvoiceImportModal({ open, onOpenChange, onImport, onSetInvoiceD
     fetchProducts();
   }, []);
 
-  const parseDate = (dateStr) => {
-    const parts = dateStr.split(/[\/\-]/);
-    if (parts.length === 3) {
-      const year = parts[0];
-      const month = parts[1].padStart(2, '0');
-      const day = parts[2].padStart(2, '0');
-      return `${year}-${month}-${day}`;
+  const formatTimestamp = (timestamp) => {
+    const date = new Date(timestamp);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const parseJsonData = (jsonText) => {
+    try {
+      const data = JSON.parse(jsonText);
+      if (!data.content || !Array.isArray(data.content)) {
+        return null;
+      }
+
+      const items = [];
+      const unmatchedSkus = [];
+      let firstDate = "";
+
+      for (const order of data.content) {
+        if (!order.billDetailDoList || !Array.isArray(order.billDetailDoList)) {
+          continue;
+        }
+
+        const paymentRecord = order.billDetailDoList.find(detail => detail.feeCode === 30);
+        
+        if (paymentRecord) {
+          const sku = paymentRecord.skuId;
+          const quantity = paymentRecord.num || 1;
+          const amount = paymentRecord.bal || paymentRecord.settleBal || 0;
+          const finishTime = paymentRecord.finishTime;
+          
+          if (!firstDate && finishTime) {
+            firstDate = formatTimestamp(finishTime);
+          }
+
+          if (sku && quantity > 0 && amount > 0) {
+            const product = products.find(p => p.sku === sku);
+            
+            if (product) {
+              const price = new Decimal(amount).div(new Decimal(quantity)).toFixed(2);
+              items.push({
+                sku: sku,
+                orderId: order.orderId,
+                name: product.invoice_name || "其他",
+                spec: product.spec || "",
+                unit: "箱",
+                quantity,
+                price: parseFloat(price),
+                taxRate: 0.13,
+                date: finishTime ? formatTimestamp(finishTime) : new Date().toISOString().split("T")[0],
+              });
+            } else {
+              unmatchedSkus.push(sku);
+            }
+          }
+        }
+      }
+
+      return { items, unmatchedSkus, firstDate };
+    } catch {
+      return null;
     }
-    return dateStr;
   };
 
   const handleImport = () => {
@@ -47,65 +101,27 @@ export function InvoiceImportModal({ open, onOpenChange, onImport, onSetInvoiceD
       return;
     }
 
-    const lines = pasteText.trim().split("\n");
-    const items = [];
-    const unmatchedSkus = [];
-    let firstDate = "";
+    const result = parseJsonData(pasteText);
 
-    for (const line of lines) {
-      const parts = line.split(/\t+/);
-      if (parts.length >= 4) {
-        const date = parts[0].trim();
-        const sku = parts[1].trim();
-        const rawQuantity = parts[2].trim().replace(/^~/, "");
-        const quantity = parseFloat(rawQuantity) || 0;
-        const totalAmount = parseFloat(parts[3]) || 0;
-        
-        if (!firstDate && date) {
-          firstDate = parseDate(date);
-        }
-        
-        if (sku && quantity > 0 && totalAmount > 0) {
-          const product = products.find(p => p.sku === sku);
-          
-          if (product) {
-            const price = new Decimal(totalAmount).div(new Decimal(quantity)).toFixed(2);
-items.push({
-          sku: sku,
-          name: product.invoice_name || "其他",
-          spec: product.spec || "",
-          unit: "箱",
-          quantity,
-          price: parseFloat(price),
-          taxRate: 0.13,
-          date: parseDate(date),
-        });
-          } else {
-            unmatchedSkus.push(sku);
-          }
-        }
-      }
+    if (!result || result.items.length === 0) {
+      toast({ title: "未能解析任何有效数据，请检查JSON格式", variant: "destructive" });
+      return;
     }
 
-    if (unmatchedSkus.length > 0) {
+    if (result.unmatchedSkus.length > 0) {
       toast({ 
-        title: `以下 SKU 未找到商品：${unmatchedSkus.join(", ")}`, 
+        title: `以下 SKU 未找到商品：${result.unmatchedSkus.join(", ")}`, 
         variant: "destructive" 
       });
       return;
     }
 
-    if (items.length === 0) {
-      toast({ title: "未能解析任何有效数据", variant: "destructive" });
-      return;
+    if (result.firstDate && onSetInvoiceDate) {
+      onSetInvoiceDate(result.firstDate);
     }
 
-    if (firstDate && onSetInvoiceDate) {
-      onSetInvoiceDate(firstDate);
-    }
-
-    onImport(items);
-    toast({ title: `成功导入 ${items.length} 条数据` });
+    onImport(result.items);
+    toast({ title: `成功导入 ${result.items.length} 条数据` });
     setPasteText("");
     onOpenChange(false);
   };
@@ -118,12 +134,12 @@ items.push({
         </DialogHeader>
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">
-            粘贴数据，格式：日期 + 制表符 + SKU + 制表符 + 数量 + 制表符 + 金额
+            粘贴结算单JSON数据
           </p>
           <Textarea
             value={pasteText}
             onChange={(e) => setPasteText(e.target.value)}
-            placeholder="2026/4/6	10205802436048	10	549.9"
+            placeholder={"粘贴结算单JSON数据..."}
             rows={10}
           />
         </div>

@@ -6,14 +6,14 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { InvoiceLineItems } from "./InvoiceLineItems";
-import { CustomerImportModal } from "./CustomerImportModal";
+import { InvoiceImportModal } from "./InvoiceImportModal";
 import { exportInvoice } from "@/lib/invoiceExporter";
 import { useToast } from "@/hooks/use-toast";
 import { FileDown, FileText } from "lucide-react";
 import Decimal from "decimal.js";
 
 export function InvoiceForm() {
-  const { basicInfo, customerInfo, lineItems, invoiceDate, setBasicInfo, setCustomerInfo, clearLineItems } = useInvoice();
+  const { basicInfo, customerInfo, lineItems, invoiceDate, setBasicInfo, setCustomerInfo, clearLineItems, addLineItem, setInvoiceDate } = useInvoice();
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -26,8 +26,8 @@ export function InvoiceForm() {
     setCustomerInfo({ [field]: value });
   };
 
-  const handleImportCustomer = (data) => {
-    setCustomerInfo(data);
+  const handleImport = (items) => {
+    items.forEach((item) => addLineItem(item));
   };
 
   const getCurrentMonth = () => {
@@ -190,12 +190,6 @@ export function InvoiceForm() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="md:col-span-4 flex justify-end">
-              <Button variant="outline" size="sm" onClick={() => setImportModalOpen(true)}>
-                <FileText className="w-4 h-4 mr-1" />
-                导入
-              </Button>
-            </div>
             <div className="space-y-2 md:col-span-4">
               <label className="text-sm font-medium">客户名称（公司全称） *</label>
               <Input value={customerInfo.customerName} onChange={(e) => handleCustomerChange("customerName", e.target.value)} />
@@ -232,9 +226,13 @@ export function InvoiceForm() {
           )}
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-end items-center gap-2">
             <Button variant="outline" onClick={handleReset}>
               清空明细
+            </Button>
+            <Button variant="outline" onClick={() => setImportModalOpen(true)}>
+              <FileText className="w-4 h-4 mr-2" />
+              导入
             </Button>
             <Button onClick={handleExport} disabled={isExporting}>
               <FileDown className="w-4 h-4 mr-2" />
@@ -245,10 +243,11 @@ export function InvoiceForm() {
         </CardContent>
       </Card>
 
-      <CustomerImportModal
+      <InvoiceImportModal
         open={importModalOpen}
         onOpenChange={setImportModalOpen}
-        onImport={handleImportCustomer}
+        onImport={handleImport}
+        onSetInvoiceDate={setInvoiceDate}
       />
     </div>
   );

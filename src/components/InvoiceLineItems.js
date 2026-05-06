@@ -1,44 +1,17 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useMemo } from "react";
 import { useInvoice } from "@/context/InvoiceContext";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Plus, Trash2, FileText } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import Decimal from "decimal.js";
-import { InvoiceImportModal } from "./InvoiceImportModal";
 
 export function InvoiceLineItems() {
-  const { lineItems, addLineItem, updateLineItem, removeLineItem, setInvoiceDate } = useInvoice();
-  const [importModalOpen, setImportModalOpen] = useState(false);
+  const { lineItems, removeLineItem } = useInvoice();
 
   const getCurrentMonth = () => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  };
-
-  const handleAddItem = () => {
-    addLineItem({
-      name: "",
-      spec: "",
-      unit: "箱",
-      quantity: 0,
-      price: 0,
-      taxRate: 0.13,
-      date: new Date().toISOString().split("T")[0],
-    });
-  };
-
-  const handleImport = (items) => {
-    items.forEach((item) => addLineItem(item));
-  };
-
-  const handleChange = (index, field, value) => {
-    let parsedValue = value;
-    if (field === "quantity" || field === "price" || field === "taxRate") {
-      parsedValue = parseFloat(value) || 0;
-    }
-    updateLineItem(index, { [field]: parsedValue });
   };
 
   const calculateRow = (item) => {
@@ -144,27 +117,15 @@ export function InvoiceLineItems() {
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </Button>
                     </td>
-                    <td className="border border-border px-1 py-1">
-                      <Input className="h-8 border-0" value={item.name} onChange={(e) => handleChange(item.originalIndex, "name", e.target.value)} />
-                    </td>
-                    <td className="border border-border px-1 py-1">
-                      <Input className="h-8 border-0" value={item.spec} onChange={(e) => handleChange(item.originalIndex, "spec", e.target.value)} />
-                    </td>
-                    <td className="border border-border px-1 py-1">
-                      <Input className="h-8 border-0" value={item.unit} onChange={(e) => handleChange(item.originalIndex, "unit", e.target.value)} />
-                    </td>
-                    <td className="border border-border px-1 py-1">
-                      <Input className="h-8 border-0 text-right" type="number" value={item.quantity} onChange={(e) => handleChange(item.originalIndex, "quantity", e.target.value)} />
-                    </td>
-                    <td className="border border-border px-1 py-1">
-                      <Input className="h-8 border-0 text-right" type="number" value={item.price} onChange={(e) => handleChange(item.originalIndex, "price", e.target.value)} />
-                    </td>
-                    <td className="border border-border px-1 py-2 text-right">{row.amount}</td>
-                    <td className="border border-border px-1 py-1">
-                      <Input className="h-8 border-0 text-right" type="number" step="0.01" value={item.taxRate} onChange={(e) => handleChange(item.originalIndex, "taxRate", e.target.value)} />
-                    </td>
-                    <td className="border border-border px-1 py-2 text-right">{row.tax}</td>
-                    <td className="border border-border px-1 py-2 text-right">{row.total}</td>
+                    <td className="border border-border px-2 py-2">{item.name}</td>
+                    <td className="border border-border px-2 py-2">{item.spec}</td>
+                    <td className="border border-border px-2 py-2 text-center">{item.unit}</td>
+                    <td className="border border-border px-2 py-2 text-right">{item.quantity}</td>
+                    <td className="border border-border px-2 py-2 text-right">{item.price.toFixed(2)}</td>
+                    <td className="border border-border px-2 py-2 text-right">{row.amount}</td>
+                    <td className="border border-border px-2 py-2 text-right">{(item.taxRate * 100).toFixed(0)}%</td>
+                    <td className="border border-border px-2 py-2 text-right">{row.tax}</td>
+                    <td className="border border-border px-2 py-2 text-right">{row.total}</td>
                   </tr>
                 );
               })}
@@ -189,27 +150,6 @@ export function InvoiceLineItems() {
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-between items-center">
-        <h3 className="font-medium">开票内容明细</h3>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setImportModalOpen(true)}>
-            <FileText className="w-4 h-4 mr-1" />
-            导入
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleAddItem}>
-            <Plus className="w-4 h-4 mr-1" />
-            添加行
-          </Button>
-        </div>
-      </div>
-
-      <InvoiceImportModal
-        open={importModalOpen}
-        onOpenChange={setImportModalOpen}
-        onImport={handleImport}
-        onSetInvoiceDate={setInvoiceDate}
-      />
-
       {lineItems.length === 0 ? (
         <p className="text-muted-foreground text-center py-4">暂无数据</p>
       ) : (
