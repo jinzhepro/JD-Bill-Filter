@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { formatTimestamp } from "@/lib/utils";
 
 export function InvoiceImportModal({ open, onOpenChange, onImport, onSetInvoiceDate }) {
   const [pasteText, setPasteText] = useState("");
@@ -24,14 +25,6 @@ export function InvoiceImportModal({ open, onOpenChange, onImport, onSetInvoiceD
     };
     fetchProducts();
   }, []);
-
-  const formatTimestamp = (timestamp) => {
-    const date = new Date(timestamp);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
 
   const parseJsonData = (jsonText) => {
     try {
@@ -121,7 +114,6 @@ export function InvoiceImportModal({ open, onOpenChange, onImport, onSetInvoiceD
     }
 
     onImport(result.items);
-    toast({ title: `成功导入 ${result.items.length} 条数据` });
     setPasteText("");
     onOpenChange(false);
   };

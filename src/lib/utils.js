@@ -118,18 +118,49 @@ export function formatAmountJSX(value, forcePositive = false) {
  * @returns {Object.<string, number>} 各列的总和
  */
 export function calculateColumnTotals(data, columns = ["应结金额", "直营服务费", "交易服务费", "数量"]) {
-  if (!data || data.length === 0) {
-    return {};
-  }
+  return columns.reduce((totals, col) => {
+    totals[col] = data.reduce((sum, row) => {
+      const value = parseFloat(String(row[col] || 0).replace(/[^\d.-]/g, ""));
+      return sum + value;
+    }, 0);
+    return totals;
+  }, {});
+}
 
-  const totals = {};
+export function getCurrentMonth() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
 
-  columns.forEach((column) => {
-    const total = data.reduce((sum, row) => {
-      return sum.plus(new Decimal(row[column] || 0));
-    }, new Decimal(0));
-    totals[column] = total.toNumber();
-  });
+export function formatTimestamp(timestamp) {
+  const date = new Date(timestamp);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
-  return totals;
+export function calculateRowAmount(item) {
+  const quantity = new Decimal(item.quantity || 0);
+  const price = new Decimal(item.price || 0);
+  const taxRate = new Decimal(item.taxRate || 0.13);
+  const amount = quantity.times(price).div(new Decimal(1).plus(taxRate));
+  const tax = amount.times(taxRate);
+  const total = amount.plus(tax);
+  return {
+    amount: amount.toFixed(2),
+    tax: tax.toFixed(2),
+    total: total.toFixed(2),
+  };
+}
+
+export function groupItemsByMonth(items) {
+  const currentMonth = getCurrentMonth();
+  return items.reduce((acc, item, index) => {
+    const itemMonth = item.date ? item.date.substring(0, 7) : currentMonth;
+    const monthKey = itemMonth === currentMonth ? currentMonth : "其他月";
+    if (!acc[monthKey]) acc[monthKey] = [];
+    acc[monthKey].push({ ...item, originalIndex: index });
+    return acc;
+  }, {});
 }

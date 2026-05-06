@@ -4,79 +4,44 @@ import React, { useMemo } from "react";
 import { useInvoice } from "@/context/InvoiceContext";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
-import Decimal from "decimal.js";
+import { getCurrentMonth, calculateRowAmount, groupItemsByMonth } from "@/lib/utils";
 
 export function InvoiceLineItems() {
   const { lineItems, removeLineItem } = useInvoice();
 
-  const getCurrentMonth = () => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  };
-
-  const calculateRow = (item) => {
-    const quantity = new Decimal(item.quantity || 0);
-    const price = new Decimal(item.price || 0);
-    const taxRate = new Decimal(item.taxRate || 0.13);
-    const amount = quantity.times(price).div(new Decimal(1).plus(taxRate));
-    const tax = amount.times(taxRate);
-    const total = amount.plus(tax);
-    return {
-      amount: amount.toFixed(2),
-      tax: tax.toFixed(2),
-      total: total.toFixed(2),
-    };
-  };
-
-  const calculateTotals = () => {
-    const totalQuantity = lineItems.reduce((sum, item) => sum + (parseFloat(item.quantity) || 0), 0);
-    const totals = lineItems.reduce((sum, item) => {
-      const row = calculateRow(item);
-      return {
-        amount: sum.amount + parseFloat(row.amount),
-        tax: sum.tax + parseFloat(row.tax),
-        total: sum.total + parseFloat(row.total),
-      };
-    }, { amount: 0, tax: 0, total: 0 });
-    return {
-      quantity: totalQuantity.toFixed(2),
-      amount: totals.amount.toFixed(2),
-      tax: totals.tax.toFixed(2),
-      total: totals.total.toFixed(2),
-    };
-  };
-
-  const groupedByMonth = useMemo(() => {
-    const currentMonth = getCurrentMonth();
-    return lineItems.reduce((acc, item, index) => {
-      const itemMonth = item.date ? item.date.substring(0, 7) : currentMonth;
-      const monthKey = itemMonth === currentMonth ? currentMonth : "其他月";
-      if (!acc[monthKey]) acc[monthKey] = [];
-      acc[monthKey].push({ ...item, originalIndex: index });
-      return acc;
-    }, {});
-  }, [lineItems]);
+  const groupedByMonth = useMemo(() => groupItemsByMonth(lineItems), [lineItems]);
 
   const sortedMonths = useMemo(() => {
     const currentMonth = getCurrentMonth();
     const keys = Object.keys(groupedByMonth);
-    if (keys.includes(currentMonth)) {
-      return [currentMonth, ...keys.filter(k => k !== currentMonth)];
-    }
-    return keys;
+    return keys.sort((a, b) => {
+      if (a === currentMonth) return -1;
+      if (b === currentMonth) return 1;
+      return 0;
+    });
   }, [groupedByMonth]);
 
-  const totals = calculateTotals();
+  const totals = useMemo(() => {
+    return lineItems.reduce((sum, item) => {
+      const row = calculateRowAmount(item);
+      return {
+        quantity: sum.quantity + (item.quantity || 0),
+        amount: sum.amount + parseFloat(row.amount),
+        tax: sum.tax + parseFloat(row.tax),
+        total: sum.total + parseFloat(row.total),
+      };
+    }, { quantity: 0, amount: 0, tax: 0, total: 0 });
+  }, [lineItems]);
 
   const renderMonthTable = (month, items, showTotal = false) => {
     const currentMonth = getCurrentMonth();
     const isCurrentMonth = month === currentMonth;
-    const monthLabel = isCurrentMonth ? `${month}（本月）` : "其他月";
+    const monthLabel = isCurrentMonth ? `${month}（本月）` : month;
     
     const monthTotals = items.reduce((sum, item) => {
-      const row = calculateRow(item);
+      const row = calculateRowAmount(item);
       return {
-        quantity: sum.quantity + (parseFloat(item.quantity) || 0),
+        quantity: sum.quantity + (item.quantity || 0),
         amount: sum.amount + parseFloat(row.amount),
         tax: sum.tax + parseFloat(row.tax),
         total: sum.total + parseFloat(row.total),
@@ -109,7 +74,7 @@ export function InvoiceLineItems() {
             </thead>
             <tbody>
               {items.map((item) => {
-                const row = calculateRow(item);
+                const row = calculateRowAmount(item);
                 return (
                   <tr key={item.originalIndex}>
                     <td className="border border-border px-1 py-1 text-center">
@@ -133,12 +98,12 @@ export function InvoiceLineItems() {
                 <tr className="bg-muted font-medium border-t-2 border-border">
                   <td className="border border-border px-2 py-2"></td>
                   <td className="border border-border px-2 py-2 text-center" colSpan={3}>总计（{sortedMonths.length} 个月份）</td>
-                  <td className="border border-border px-2 py-2 text-right">{totals.quantity}</td>
+                  <td className="border border-border px-2 py-2 text-right">{totals.quantity.toFixed(2)}</td>
                   <td className="border border-border px-2 py-2"></td>
-                  <td className="border border-border px-2 py-2 text-right">{totals.amount}</td>
+                  <td className="border border-border px-2 py-2 text-right">{totals.amount.toFixed(2)}</td>
                   <td className="border border-border px-2 py-2"></td>
-                  <td className="border border-border px-2 py-2 text-right">{totals.tax}</td>
-                  <td className="border border-border px-2 py-2 text-right">{totals.total}</td>
+                  <td className="border border-border px-2 py-2 text-right">{totals.tax.toFixed(2)}</td>
+                  <td className="border border-border px-2 py-2 text-right">{totals.total.toFixed(2)}</td>
                 </tr>
               )}
             </tbody>
@@ -151,7 +116,7 @@ export function InvoiceLineItems() {
   return (
     <div className="space-y-3">
       {lineItems.length === 0 ? (
-        <p className="text-muted-foreground text-center py-4">暂无数据</p>
+        <p className="text-muted-foreground text-center py-4">暂无数据，请点击导入按钮添加</p>
       ) : (
         <>
           {sortedMonths.map((month, idx) => renderMonthTable(month, groupedByMonth[month], idx === sortedMonths.length - 1))}

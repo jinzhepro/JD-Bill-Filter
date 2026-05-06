@@ -32,6 +32,7 @@ const ActionTypes = {
   SET_BASIC_INFO: "SET_BASIC_INFO",
   SET_CUSTOMER_INFO: "SET_CUSTOMER_INFO",
   ADD_LINE_ITEM: "ADD_LINE_ITEM",
+  ADD_LINE_ITEMS: "ADD_LINE_ITEMS",
   UPDATE_LINE_ITEM: "UPDATE_LINE_ITEM",
   REMOVE_LINE_ITEM: "REMOVE_LINE_ITEM",
   RESET: "RESET",
@@ -47,6 +48,8 @@ function invoiceReducer(state, action) {
       return { ...state, customerInfo: { ...state.customerInfo, ...action.payload } };
     case ActionTypes.ADD_LINE_ITEM:
       return { ...state, lineItems: [...state.lineItems, action.payload] };
+    case ActionTypes.ADD_LINE_ITEMS:
+      return { ...state, lineItems: [...state.lineItems, ...action.payload] };
     case ActionTypes.UPDATE_LINE_ITEM:
       return {
         ...state,
@@ -79,6 +82,7 @@ export function InvoiceProvider({ children }) {
     setBasicInfo: (data) => dispatch({ type: ActionTypes.SET_BASIC_INFO, payload: data }),
     setCustomerInfo: (data) => dispatch({ type: ActionTypes.SET_CUSTOMER_INFO, payload: data }),
     addLineItem: (item) => dispatch({ type: ActionTypes.ADD_LINE_ITEM, payload: item }),
+    addLineItems: (items) => dispatch({ type: ActionTypes.ADD_LINE_ITEMS, payload: items }),
     updateLineItem: (index, data) => dispatch({ type: ActionTypes.UPDATE_LINE_ITEM, payload: { index, data } }),
     removeLineItem: (index) => dispatch({ type: ActionTypes.REMOVE_LINE_ITEM, payload: index }),
     reset: () => dispatch({ type: ActionTypes.RESET }),

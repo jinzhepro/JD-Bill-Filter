@@ -10,10 +10,11 @@ import { InvoiceImportModal } from "./InvoiceImportModal";
 import { exportInvoice } from "@/lib/invoiceExporter";
 import { useToast } from "@/hooks/use-toast";
 import { FileDown, FileText } from "lucide-react";
+import { getCurrentMonth, calculateRowAmount } from "@/lib/utils";
 import Decimal from "decimal.js";
 
 export function InvoiceForm() {
-  const { basicInfo, customerInfo, lineItems, invoiceDate, setBasicInfo, setCustomerInfo, clearLineItems, addLineItem, setInvoiceDate } = useInvoice();
+  const { basicInfo, customerInfo, lineItems, invoiceDate, setBasicInfo, setCustomerInfo, clearLineItems, addLineItems, setInvoiceDate } = useInvoice();
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -27,26 +28,19 @@ export function InvoiceForm() {
   };
 
   const handleImport = (items) => {
-    items.forEach((item) => addLineItem(item));
+    addLineItems(items);
+    toast({ title: `成功导入 ${items.length} 条数据` });
   };
 
-  const getCurrentMonth = () => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  };
-
-  const handleExport = async () => {
+  const validateInvoice = () => {
     if (!basicInfo.companyName || !basicInfo.contractNo) {
-      toast({ title: "请填写公司名称和合同号", variant: "destructive" });
-      return;
+      return "请填写公司名称和合同号";
     }
     if (!customerInfo.customerName || !customerInfo.taxId) {
-      toast({ title: "请填写客户名称和纳税人识别号", variant: "destructive" });
-      return;
+      return "请填写客户名称和纳税人识别号";
     }
     if (lineItems.length === 0) {
-      toast({ title: "请添加开票内容明细", variant: "destructive" });
-      return;
+      return "请添加开票内容明细";
     }
     
     const incompleteIndex = lineItems.findIndex((item) => 
@@ -54,11 +48,42 @@ export function InvoiceForm() {
     );
     if (incompleteIndex !== -1) {
       const item = lineItems[incompleteIndex];
-      let reason = "信息不完整";
-      if (item.name === "其他") {
-        reason = "商品未匹配品牌规则";
+      const reason = item.name === "其他" ? "商品未匹配品牌规则" : "信息不完整";
+      return `第 ${incompleteIndex + 1} 行${reason}，请检查`;
+    }
+    return null;
+  };
+
+  const saveInvoiceHistory = async (monthItems, invoiceDateForHistory, totalAmount) => {
+    const itemsWithCalculations = monthItems.map(item => ({
+      ...item,
+      ...calculateRowAmount(item)
+    }));
+
+    try {
+      const res = await fetch("/api/invoice-history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          invoiceDate: invoiceDateForHistory,
+          customerInfo,
+          items: itemsWithCalculations,
+          totalAmount
+        })
+      });
+      const data = await res.json();
+      if (!data.success) {
+        console.error("保存历史失败:", data.error);
       }
-      toast({ title: `第 ${incompleteIndex + 1} 行${reason}，请检查`, variant: "destructive" });
+    } catch (error) {
+      console.error("保存历史失败:", error);
+    }
+  };
+
+  const handleExport = async () => {
+    const error = validateInvoice();
+    if (error) {
+      toast({ title: error, variant: "destructive" });
       return;
     }
 
@@ -66,80 +91,38 @@ export function InvoiceForm() {
     
     try {
       const currentMonth = getCurrentMonth();
-      const groupedByMonth = lineItems.reduce((acc, item) => {
-        const itemMonth = item.date ? item.date.substring(0, 7) : currentMonth;
-        const monthKey = itemMonth === currentMonth ? currentMonth : "其他月";
-        if (!acc[monthKey]) acc[monthKey] = [];
-        acc[monthKey].push(item);
-        return acc;
-      }, {});
-
-      const months = Object.keys(groupedByMonth);
-      if (months.includes(currentMonth)) {
-        months.sort((a, b) => {
-          if (a === currentMonth) return -1;
-          if (b === currentMonth) return 1;
-          return 0;
-        });
-      }
+      const groupedByMonth = groupItemsByMonth(lineItems);
+      const months = Object.keys(groupedByMonth).sort((a, b) => {
+        if (a === currentMonth) return -1;
+        if (b === currentMonth) return 1;
+        return 0;
+      });
 
       const exportedMonths = [];
 
       for (const monthKey of months) {
         const monthItems = groupedByMonth[monthKey];
         const isCurrentMonth = monthKey === currentMonth;
-        const exportMonth = isCurrentMonth ? currentMonth : null;
         
-        await exportInvoice(basicInfo, customerInfo, monthItems, exportMonth);
+        await exportInvoice(basicInfo, customerInfo, monthItems, isCurrentMonth ? currentMonth : null);
         exportedMonths.push(isCurrentMonth ? currentMonth : "其他月");
 
-        const totalAmount = monthItems.reduce((sum, item) => {
-          const quantity = new Decimal(item.quantity || 0);
-          const price = new Decimal(item.price || 0);
-          const total = quantity.times(price);
-          return sum + total.toNumber();
-        }, 0);
-
-        const itemsWithCalculations = monthItems.map(item => {
-          const quantity = new Decimal(item.quantity || 0);
-          const price = new Decimal(item.price || 0);
-          const taxRate = new Decimal(item.taxRate || 0.13);
-          const amount = quantity.times(price).div(new Decimal(1).plus(taxRate));
-          const tax = amount.times(taxRate);
-          const total = amount.plus(tax);
-          return {
-            ...item,
-            amount: amount.toNumber(),
-            tax: tax.toNumber(),
-            total: total.toNumber()
-          };
-        });
+        const totalAmount = monthItems.reduce((sum, item) => 
+          sum + new Decimal(item.quantity).times(item.price).toNumber(), 0
+        );
 
         const invoiceDateForHistory = isCurrentMonth 
           ? `${currentMonth}-01` 
           : monthItems[0]?.date || new Date().toISOString().split("T")[0];
 
-        const historyRes = await fetch("/api/invoice-history", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            invoiceDate: invoiceDateForHistory,
-            customerInfo,
-            items: itemsWithCalculations,
-            totalAmount
-          })
-        });
-        const historyData = await historyRes.json();
-        if (!historyData.success) {
-          console.error("保存历史失败:", historyData.error);
-        }
+        await saveInvoiceHistory(monthItems, invoiceDateForHistory, totalAmount);
       }
 
-      if (months.length === 1) {
-        toast({ title: "发票导出成功" });
-      } else {
-        toast({ title: `导出完成：已生成 ${months.length} 个文件（${exportedMonths.join("、")}）` });
-      }
+      toast({ 
+        title: months.length === 1 
+          ? "发票导出成功" 
+          : `导出完成：已生成 ${months.length} 个文件（${exportedMonths.join("、")}）`
+      });
     } catch (error) {
       toast({ title: `导出失败: ${error.message}`, variant: "destructive" });
     } finally {
@@ -227,9 +210,11 @@ export function InvoiceForm() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex justify-end items-center gap-2">
-            <Button variant="outline" onClick={handleReset}>
-              清空明细
-            </Button>
+            {lineItems.length > 0 && (
+              <Button variant="outline" onClick={handleReset}>
+                清空明细
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setImportModalOpen(true)}>
               <FileText className="w-4 h-4 mr-2" />
               导入

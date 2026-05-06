@@ -25,6 +25,15 @@ const parseCustomerText = (text) => {
     "电话": "phone"
   };
   
+  // 先识别所有订单号（12位数字 + 空格 + 数字）
+  for (const line of lines) {
+    const orderMatches = line.matchAll(/(\d{12})\s+\d+(\.\d+)?/g);
+    for (const match of orderMatches) {
+      result.orderNumbers.push(match[1]);
+    }
+  }
+  
+  // 再识别客户信息
   for (const line of lines) {
     let key = "";
     let value = "";
@@ -62,15 +71,6 @@ const parseCustomerText = (text) => {
           result.customerInfo[field] = cleanedValue;
           break;
         }
-      }
-    }
-    
-    if (!key && !value) {
-      const orderMatch = line.match(/^(\d{10,15})[\s\t]+/);
-      if (orderMatch) {
-        result.orderNumbers.push(orderMatch[1]);
-      } else if (/^\d{10,15}$/.test(line)) {
-        result.orderNumbers.push(line);
       }
     }
   }
