@@ -165,9 +165,9 @@ export async function GET(request) {
 ## 发票导入导出
 
 **发票导入** (`src/components/InvoiceImportModal.js`):
-- **仅支持 JSON 格式**（已移除制表符分隔格式）
-- 解析结算单 JSON，提取货款记录 (`feeCode === 30`)
-- 使用 `finishTime` 作为发票日期
+- **支持两种格式**：
+  - JSON 格式：解析结算单 JSON，提取货款记录 (`feeCode === 30`)，使用 `finishTime` 作为发票日期
+  - 制表符分隔格式：日期 + SKU + 数量 + 金额（老数据格式）
 - 从商品映射表匹配 SKU 获取发票名称
 
 **客户信息导入** (`src/components/CustomerImportModal.js`):

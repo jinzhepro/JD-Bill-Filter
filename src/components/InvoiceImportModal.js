@@ -26,6 +26,17 @@ export function InvoiceImportModal({ open, onOpenChange, onImport, onSetInvoiceD
     fetchProducts();
   }, []);
 
+  const parseDate = (dateStr) => {
+    const parts = dateStr.split(/[\/\-]/);
+    if (parts.length === 3) {
+      const year = parts[0];
+      const month = parts[1].padStart(2, '0');
+      const day = parts[2].padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    return dateStr;
+  };
+
   const parseJsonData = (jsonText) => {
     try {
       const data = JSON.parse(jsonText);
@@ -83,6 +94,50 @@ export function InvoiceImportModal({ open, onOpenChange, onImport, onSetInvoiceD
     }
   };
 
+  const parseTabData = (text) => {
+    const lines = text.trim().split("\n");
+    const items = [];
+    const unmatchedSkus = [];
+    let firstDate = "";
+
+    for (const line of lines) {
+      const parts = line.split(/\t+/);
+      if (parts.length >= 4) {
+        const date = parts[0].trim();
+        const sku = parts[1].trim();
+        const rawQuantity = parts[2].trim().replace(/^~/, "");
+        const quantity = parseFloat(rawQuantity) || 0;
+        const totalAmount = parseFloat(parts[3]) || 0;
+        
+        if (!firstDate && date) {
+          firstDate = parseDate(date);
+        }
+        
+        if (sku && quantity > 0 && totalAmount > 0) {
+          const product = products.find(p => p.sku === sku);
+          
+          if (product) {
+            const price = new Decimal(totalAmount).div(new Decimal(quantity)).toFixed(2);
+            items.push({
+              sku: sku,
+              name: product.invoice_name || "其他",
+              spec: product.spec || "",
+              unit: "箱",
+              quantity,
+              price: parseFloat(price),
+              taxRate: 0.13,
+              date: parseDate(date),
+            });
+          } else {
+            unmatchedSkus.push(sku);
+          }
+        }
+      }
+    }
+
+    return { items, unmatchedSkus, firstDate };
+  };
+
   const handleImport = () => {
     if (!pasteText.trim()) {
       toast({ title: "请粘贴数据", variant: "destructive" });
@@ -94,10 +149,14 @@ export function InvoiceImportModal({ open, onOpenChange, onImport, onSetInvoiceD
       return;
     }
 
-    const result = parseJsonData(pasteText);
+    let result = parseJsonData(pasteText);
+    
+    if (!result) {
+      result = parseTabData(pasteText);
+    }
 
     if (!result || result.items.length === 0) {
-      toast({ title: "未能解析任何有效数据，请检查JSON格式", variant: "destructive" });
+      toast({ title: "未能解析任何有效数据", variant: "destructive" });
       return;
     }
 
@@ -114,6 +173,7 @@ export function InvoiceImportModal({ open, onOpenChange, onImport, onSetInvoiceD
     }
 
     onImport(result.items);
+    toast({ title: `成功导入 ${result.items.length} 条数据` });
     setPasteText("");
     onOpenChange(false);
   };
@@ -126,12 +186,12 @@ export function InvoiceImportModal({ open, onOpenChange, onImport, onSetInvoiceD
         </DialogHeader>
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">
-            粘贴结算单JSON数据
+            支持 JSON 格式或制表符分隔格式（日期 + SKU + 数量 + 金额）
           </p>
           <Textarea
             value={pasteText}
             onChange={(e) => setPasteText(e.target.value)}
-            placeholder={"粘贴结算单JSON数据..."}
+            placeholder={"JSON格式或：\n2026/4/6\t10205802436048\t10\t549.9"}
             rows={10}
           />
         </div>
