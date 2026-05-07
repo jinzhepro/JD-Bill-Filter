@@ -26,10 +26,13 @@ export function PurchaseOrderManager() {
       if (data.success) {
         setProducts(data.data);
       }
-    } catch {}
+    } catch (error) {
+      console.error('获取商品映射失败:', error);
+      setProducts([]);
+    }
   }, []);
 
-  const fetchOrders = useCallback(async () => {
+const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ search });
@@ -41,7 +44,8 @@ export function PurchaseOrderManager() {
       } else {
         toast({ title: data.error, variant: "destructive" });
       }
-    } catch {
+    } catch (error) {
+      console.error('获取采购单数据失败:', error);
       toast({ title: "获取数据失败", variant: "destructive" });
     }
     setLoading(false);
@@ -140,7 +144,8 @@ export function PurchaseOrderManager() {
       } else {
         toast({ title: data.error, variant: "destructive" });
       }
-    } catch {
+    } catch (error) {
+      console.error('操作失败:', error);
       toast({ title: "导入失败", variant: "destructive" });
     }
     
@@ -160,7 +165,8 @@ export function PurchaseOrderManager() {
       } else {
         toast({ title: data.error, variant: "destructive" });
       }
-    } catch {
+    } catch (error) {
+      console.error('操作失败:', error);
       toast({ title: "删除失败", variant: "destructive" });
     }
   };
@@ -185,7 +191,8 @@ export function PurchaseOrderManager() {
       } else {
         toast({ title: data.error, variant: "destructive" });
       }
-    } catch {
+    } catch (error) {
+      console.error('操作失败:', error);
       toast({ title: "更新失败", variant: "destructive" });
     }
   };
@@ -228,7 +235,8 @@ export function PurchaseOrderManager() {
     try {
       await navigator.clipboard.writeText(values);
       toast({ title: `${columnName} 已复制` });
-    } catch {
+    } catch (error) {
+      console.error('操作失败:', error);
       toast({ title: "复制失败", variant: "destructive" });
     }
   };

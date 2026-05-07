@@ -13,7 +13,7 @@ export function InvoiceImportModal({ open, onOpenChange, onImport, onSetInvoiceD
   const [products, setProducts] = useState([]);
   const { toast } = useToast();
 
-  useEffect(() => {
+useEffect(() => {
     const fetchProducts = async () => {
       try {
         const res = await fetch("/api/products?pageSize=1000");
@@ -21,7 +21,9 @@ export function InvoiceImportModal({ open, onOpenChange, onImport, onSetInvoiceD
         if (data.success) {
           setProducts(data.data);
         }
-      } catch {}
+      } catch {
+        return null;
+      }
     };
     fetchProducts();
   }, []);

@@ -38,9 +38,14 @@ export default function FileUploader({
     try {
       isValidFileExtension(fileName);
       return true;
-    } catch {
-      return false;
-    }
+} catch (error) {
+        console.error('文件处理失败:', error);
+        toast({
+          variant: "destructive",
+          title: "文件读取失败",
+          description: error instanceof Error ? error.message : "请确保文件格式正确",
+        });
+      }
   }, []);
 
   // 处理文件选择
@@ -66,8 +71,13 @@ export default function FileUploader({
         if (onFilesSelected) {
           onFilesSelected(filesWithPath);
         }
-      } catch (error) {
-        console.error("文件选择错误:", error);
+} catch (error) {
+        console.error('文件选择错误:', error);
+        toast({
+          variant: "destructive",
+          title: "文件选择失败",
+          description: error instanceof Error ? error.message : "请重试",
+        });
       }
     },
     [isValidFileExtensionMemo, onFilesSelected]
@@ -101,8 +111,13 @@ export default function FileUploader({
         if (onFilesSelected) {
           onFilesSelected(filesWithPath);
         }
-      } catch (error) {
-        console.error("文件拖拽错误:", error);
+} catch (error) {
+        console.error('文件拖拽错误:', error);
+        toast({
+          variant: "destructive",
+          title: "文件拖拽失败",
+          description: error instanceof Error ? error.message : "请重试",
+        });
       }
     },
     [isValidFileExtensionMemo, onFilesSelected]

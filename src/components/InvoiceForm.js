@@ -73,10 +73,10 @@ export function InvoiceForm() {
       });
       const data = await res.json();
       if (!data.success) {
-        console.error("保存历史失败:", data.error);
+        console.error('保存历史失败:', data.error);
       }
     } catch (error) {
-      console.error("保存历史失败:", error);
+      console.error('保存历史失败:', error);
     }
   };
 

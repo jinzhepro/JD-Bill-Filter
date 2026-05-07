@@ -18,9 +18,9 @@ export function AuthProvider({ children }) {
       if (!data.authenticated) {
         router.push('/login');
       }
-    } catch {
+} catch (error) {
+      console.error('检查认证状态失败:', error);
       setIsAuthenticated(false);
-      router.push('/login');
     }
     setLoading(false);
   }, [router]);

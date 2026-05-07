@@ -6,6 +6,7 @@ import {
   useReducer,
   useMemo,
 } from "react";
+import { safeLocalStorageGet, safeLocalStorageSet } from "@/lib/utils";
 const LogType = {
   INFO: "info",
   SUCCESS: "success",
@@ -163,18 +164,14 @@ function settlementReducer(state, action) {
 
     case ActionTypes.SET_PASTE_HISTORY: {
       const limitedHistory = action.payload.slice(-3);
-      if (typeof window !== "undefined") {
-        localStorage.setItem("pasteHistory", JSON.stringify(limitedHistory));
-      }
+      safeLocalStorageSet("pasteHistory", limitedHistory);
       return { ...state, pasteHistory: limitedHistory };
     }
 
     case ActionTypes.ADD_PASTE_HISTORY: {
       const newHistory = [...state.pasteHistory, action.payload];
       const limitedNewHistory = newHistory.slice(-3);
-      if (typeof window !== "undefined") {
-        localStorage.setItem("pasteHistory", JSON.stringify(limitedNewHistory));
-      }
+      safeLocalStorageSet("pasteHistory", limitedNewHistory);
       return {
         ...state,
         pasteHistory: limitedNewHistory,
@@ -239,18 +236,7 @@ const SettlementContext = createContext();
 
 export function SettlementProvider({ children }) {
   const loadPasteHistoryFromStorage = () => {
-    if (typeof window === "undefined") {
-      return [];
-    }
-    try {
-      const stored = localStorage.getItem("pasteHistory");
-      if (stored) {
-        return JSON.parse(stored);
-      }
-      return [];
-    } catch {
-      return [];
-    }
+    return safeLocalStorageGet("pasteHistory") || [];
   };
 
   const initialStateWithStorage = {

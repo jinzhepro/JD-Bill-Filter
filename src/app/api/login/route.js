@@ -24,8 +24,9 @@ export async function POST(request) {
     }
 
     return NextResponse.json({ success: false, error: '密码错误' }, { status: 401 });
-  } catch {
-    return NextResponse.json({ success: false, error: '请求错误' }, { status: 400 });
+  } catch (error) {
+    console.error('登录请求处理失败:', error);
+    return NextResponse.json({ success: false, error: '请求处理失败' }, { status: 500 });
   }
 }
 

@@ -133,10 +133,12 @@ export default function DataDisplay({
       toast({
         title: `已复制列 "${columnName}" 的 ${dataToCopy.length} 条数据到剪贴板`,
       });
-    } catch {
+    } catch (error) {
+      console.error('复制列失败:', error);
       toast({
         variant: "destructive",
         title: `复制列 "${columnName}" 失败`,
+        description: error instanceof Error ? error.message : "请重试",
       });
     }
   };

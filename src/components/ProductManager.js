@@ -55,7 +55,10 @@ export function ProductManager() {
       if (data.success) {
         setBrandMappings(data.data);
       }
-    } catch {}
+    } catch (error) {
+      console.error('获取商品映射失败:', error);
+      setMappings([]);
+    }
   }, []);
 
   const fetchProducts = useCallback(async () => {
@@ -70,7 +73,8 @@ export function ProductManager() {
       } else {
         toast({ title: data.error, variant: "destructive" });
       }
-    } catch {
+    } catch (error) {
+      console.error('获取商品数据失败:', error);
       toast({ title: "获取数据失败", variant: "destructive" });
     }
     setLoading(false);
@@ -115,9 +119,7 @@ export function ProductManager() {
     setFormData({ ...formData, product_name: name, spec, invoice_name: invoiceName });
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("确定删除此商品？")) return;
-    
+const handleDelete = async (id) => {
     try {
       const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
       const data = await res.json();
@@ -128,7 +130,8 @@ export function ProductManager() {
       } else {
         toast({ title: data.error, variant: "destructive" });
       }
-    } catch {
+    } catch (error) {
+      console.error('删除商品失败:', error);
       toast({ title: "删除失败", variant: "destructive" });
     }
   };
@@ -174,7 +177,8 @@ export function ProductManager() {
       } else {
         toast({ title: data.error, variant: "destructive" });
       }
-    } catch {
+    } catch (error) {
+      console.error('保存商品失败:', error);
       toast({ title: "操作失败", variant: "destructive" });
     }
   };
@@ -266,7 +270,8 @@ export function ProductManager() {
       } else {
         toast({ title: data.error, variant: "destructive" });
       }
-    } catch {
+    } catch (error) {
+      console.error('批量导入商品失败:', error);
       toast({ title: "导入失败", variant: "destructive" });
     }
     
@@ -292,7 +297,8 @@ export function ProductManager() {
       } else {
         toast({ title: data.error, variant: "destructive" });
       }
-    } catch {
+    } catch (error) {
+      console.error('更新发票名称失败:', error);
       toast({ title: "更新失败", variant: "destructive" });
     }
 

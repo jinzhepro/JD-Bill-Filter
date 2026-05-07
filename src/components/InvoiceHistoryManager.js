@@ -34,7 +34,8 @@ export function InvoiceHistoryManager() {
       } else {
         toast({ title: data.error, variant: "destructive" });
       }
-    } catch {
+    } catch (error) {
+      console.error('操作失败:', error);
       toast({ title: "获取历史数据失败", variant: "destructive" });
     }
     setLoading(false);
@@ -82,6 +83,7 @@ export function InvoiceHistoryManager() {
       await exportInvoice(basicInfo, customerInfo, lineItems);
       toast({ title: "发票重新导出成功" });
     } catch (error) {
+      console.error('操作失败:', error);
       toast({ title: `导出失败: ${error.message}`, variant: "destructive" });
     } finally {
       setExporting(false);
@@ -101,7 +103,8 @@ export function InvoiceHistoryManager() {
       } else {
         toast({ title: data.error, variant: "destructive" });
       }
-    } catch {
+    } catch (error) {
+      console.error('操作失败:', error);
       toast({ title: "删除失败", variant: "destructive" });
     }
   };

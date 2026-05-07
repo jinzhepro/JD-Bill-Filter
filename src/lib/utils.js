@@ -164,3 +164,60 @@ export function groupItemsByMonth(items) {
     return acc;
   }, {});
 }
+
+/**
+ * 安全解析 JSON，失败时返回 null
+ * @param {string} jsonString - JSON 字符串
+ * @returns {Object|null} 解析结果或 null
+ */
+export function safeJsonParse(jsonString) {
+  try {
+    return JSON.parse(jsonString);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 安全获取 localStorage 数据
+ * @param {string} key - 存储键名
+ * @returns {any} 存储的值或 null
+ */
+export function safeLocalStorageGet(key) {
+  if (typeof window === "undefined") return null;
+  try {
+    const item = localStorage.getItem(key);
+    return item ? safeJsonParse(item) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 安全设置 localStorage 数据
+ * @param {string} key - 存储键名
+ * @param {any} value - 要存储的值
+ * @returns {boolean} 是否成功
+ */
+export function safeLocalStorageSet(key, value) {
+  if (typeof window === "undefined") return false;
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 静默处理错误（用于非关键操作）
+ * @param {Function} fn - 要执行的函数
+ * @returns {any} 函数返回值或 undefined（失败时）
+ */
+export function silentTry(fn) {
+  try {
+    return fn();
+  } catch {
+    return undefined;
+  }
+}

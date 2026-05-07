@@ -16,9 +16,10 @@ export function useProductMatching(processedData) {
         if (data.success) {
           setProducts(data.data || []);
         }
-      } catch {
-        // 静默失败
-      }
+} catch (error) {
+      console.error('获取商品映射失败:', error);
+      return [];
+    }
     };
     fetchProducts();
   }, []);

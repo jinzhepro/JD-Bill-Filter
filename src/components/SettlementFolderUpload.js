@@ -27,7 +27,8 @@ async function processSingleFile(fileWithPath, index, totalFiles, addLog) {
 
   try {
     isValidFileSize(file);
-  } catch {
+  } catch (error) {
+    console.error('操作失败:', error);
     const errorMsg = `文件过大（超过50MB），已跳过: ${path}`;
     addLog(errorMsg, "warning");
     return { error: errorMsg };
@@ -57,6 +58,7 @@ async function processSingleFile(fileWithPath, index, totalFiles, addLog) {
     addLog(`已添加 ${data.length} 行数据到处理队列`, "info");
     return { data };
   } catch (error) {
+    console.error('操作失败:', error);
     const errorMsg = `${path}: ${error.message}`;
     addLog(`文件处理失败: ${errorMsg}`, "error");
     return { error: errorMsg };
@@ -145,11 +147,13 @@ export default function SettlementFolderUpload() {
 
           setProcessedData(processedData);
           addLog("上传完成", "success");
-  } catch {
+  } catch (error) {
+    console.error('操作失败:', error);
           handleError(error, "结算单数据处理");
           throw error;
         }
       } catch (error) {
+        console.error('操作失败:', error);
         handleError(error, "文件上传处理");
         throw error;
       } finally {

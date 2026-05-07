@@ -42,7 +42,8 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
       if (data.success) {
         setCurrentMonthHistory(data.data || []);
       }
-    } catch {
+    } catch (error) {
+      console.error('操作失败:', error);
       toast({ title: "获取发票历史失败", variant: "destructive" });
     }
     setLoadingHistory(false);
