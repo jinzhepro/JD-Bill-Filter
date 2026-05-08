@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileSpreadsheet, ArrowLeftRight, Receipt, Package, Tag, ShoppingCart, LogOut, ChevronDown } from "lucide-react";
+import { FileSpreadsheet, ArrowLeftRight, Receipt, Package, Tag, ShoppingCart, LogOut, ChevronDown, UtensilsCrossed, ShoppingBag } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 
@@ -63,6 +63,21 @@ export function Sidebar() {
           name: "供应商转换",
           href: "/suppliers",
           icon: <ArrowLeftRight className="w-5 h-5" />,
+        },
+      ],
+    },
+    {
+      title: "其他管理",
+      items: [
+        {
+          name: "食堂管理",
+          href: "/canteen",
+          icon: <UtensilsCrossed className="w-5 h-5" />,
+        },
+        {
+          name: "食堂采购单",
+          href: "/canteen-purchase",
+          icon: <ShoppingBag className="w-5 h-5" />,
         },
       ],
     },
