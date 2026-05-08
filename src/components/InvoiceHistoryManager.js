@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, FileDown, Trash2 } from "lucide-react";
+import { Eye, FileDown, Trash2, RefreshCw } from "lucide-react";
 import { exportInvoice } from "@/lib/invoiceExporter";
 
 export function InvoiceHistoryManager() {
@@ -15,6 +15,7 @@ export function InvoiceHistoryManager() {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedHistory, setSelectedHistory] = useState(null);
   const [exporting, setExporting] = useState(false);
+  const [updating, setUpdating] = useState(false);
   const { toast } = useToast();
 
   const currentMonth = new Date().toISOString().slice(0, 7);
@@ -109,6 +110,26 @@ export function InvoiceHistoryManager() {
     }
   };
 
+  const handleUpdateNames = async () => {
+    setUpdating(true);
+    try {
+      const res = await fetch("/api/invoice-history/update-names", { method: "POST" });
+      const data = await res.json();
+      
+      if (data.success) {
+        toast({ title: `成功更新 ${data.updatedCount} 条记录的发票名称` });
+        fetchHistory();
+      } else {
+        toast({ title: data.error, variant: "destructive" });
+      }
+    } catch (error) {
+      console.error('操作失败:', error);
+      toast({ title: "更新发票名称失败", variant: "destructive" });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
     return dateStr;
@@ -120,6 +141,12 @@ export function InvoiceHistoryManager() {
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end mb-4">
+        <Button variant="outline" onClick={handleUpdateNames} disabled={updating}>
+          <RefreshCw className={`w-4 h-4 mr-2 ${updating ? "animate-spin" : ""}`} />
+          {updating ? "更新中..." : "更新发票名称"}
+        </Button>
+      </div>
       <Card>
         <CardHeader>
           <CardTitle>当前月份 ({currentMonth})</CardTitle>
