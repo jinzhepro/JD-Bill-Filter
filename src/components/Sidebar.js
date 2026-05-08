@@ -1,9 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileSpreadsheet, ArrowLeftRight, Receipt, Package, Tag, ShoppingCart, LogOut } from "lucide-react";
+import { FileSpreadsheet, ArrowLeftRight, Receipt, Package, Tag, ShoppingCart, LogOut, ChevronDown } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 
@@ -15,38 +15,74 @@ export function Sidebar() {
   const pathname = usePathname();
   const { logout } = useAuth();
 
-  const menuItems = [
+  const groups = [
     {
-      name: "结算单处理",
-      href: "/",
-      icon: <FileSpreadsheet className="w-5 h-5" />,
+      title: "结算相关",
+      items: [
+        {
+          name: "结算单处理",
+          href: "/",
+          icon: <FileSpreadsheet className="w-5 h-5" />,
+        },
+        {
+          name: "采购单",
+          href: "/purchase",
+          icon: <ShoppingCart className="w-5 h-5" />,
+        },
+      ],
     },
     {
-      name: "供应商转换",
-      href: "/suppliers",
-      icon: <ArrowLeftRight className="w-5 h-5" />,
+      title: "发票管理",
+      items: [
+        {
+          name: "发票导出",
+          href: "/invoice",
+          icon: <Receipt className="w-5 h-5" />,
+        },
+      ],
     },
     {
-      name: "采购单",
-      href: "/purchase",
-      icon: <ShoppingCart className="w-5 h-5" />,
+      title: "商品管理",
+      items: [
+        {
+          name: "商品管理",
+          href: "/products",
+          icon: <Package className="w-5 h-5" />,
+        },
+        {
+          name: "品牌映射",
+          href: "/brands",
+          icon: <Tag className="w-5 h-5" />,
+        },
+      ],
     },
     {
-      name: "发票导出",
-      href: "/invoice",
-      icon: <Receipt className="w-5 h-5" />,
-    },
-    {
-      name: "商品管理",
-      href: "/products",
-      icon: <Package className="w-5 h-5" />,
-    },
-    {
-      name: "品牌映射",
-      href: "/brands",
-      icon: <Tag className="w-5 h-5" />,
+      title: "供应商管理",
+      items: [
+        {
+          name: "供应商转换",
+          href: "/suppliers",
+          icon: <ArrowLeftRight className="w-5 h-5" />,
+        },
+      ],
     },
   ];
+
+  // 每个分组的展开状态，默认全部展开
+  const [expandedGroups, setExpandedGroups] = useState(() => {
+    const initial = {};
+    groups.forEach((group) => {
+      initial[group.title] = true;
+    });
+    return initial;
+  });
+
+  const toggleGroup = (title) => {
+    setExpandedGroups((prev) => ({
+      ...prev,
+      [title]: !prev[title],
+    }));
+  };
 
   return (
     <aside className="bg-card border-r border-border w-64 min-h-screen flex flex-col shadow-sm">
@@ -67,38 +103,57 @@ export function Sidebar() {
 
       {/* 菜单项 */}
       <nav className="p-4 flex-1">
-        <ul className="space-y-1.5">
-          {menuItems.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <li key={item.name}>
-                <Link
-                  href={item.href}
-                  className={`
-                    flex items-center px-4 py-3 rounded-xl
-                    transition-all duration-200 ease-out cursor-pointer
-                    ${
-                      isActive
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }
-                  `}
-                >
-                  <span
-                    className={`flex-shrink-0 transition-colors duration-200 ${
-                      isActive
-                        ? "text-primary-foreground"
-                        : "text-muted-foreground group-hover:text-foreground"
-                    }`}
-                  >
-                    {item.icon}
-                  </span>
-                  <span className="ml-3 font-medium">{item.name}</span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="space-y-4">
+          {groups.map((group) => (
+            <div key={group.title}>
+              <button
+                onClick={() => toggleGroup(group.title)}
+                className="w-full px-4 py-1 flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+              >
+                <span>{group.title}</span>
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform duration-200 ${
+                    expandedGroups[group.title] ? "rotate-0" : "-rotate-90"
+                  }`}
+                />
+              </button>
+              {expandedGroups[group.title] && (
+                <ul className="space-y-1.5 mt-1">
+                  {group.items.map((item) => {
+                    const isActive = pathname === item.href;
+                    return (
+                      <li key={item.name}>
+                        <Link
+                          href={item.href}
+                          className={`
+                            flex items-center px-4 py-3 rounded-xl
+                            transition-all duration-200 ease-out cursor-pointer
+                            ${
+                              isActive
+                                ? "bg-primary text-primary-foreground"
+                                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                            }
+                          `}
+                        >
+                          <span
+                            className={`flex-shrink-0 transition-colors duration-200 ${
+                              isActive
+                                ? "text-primary-foreground"
+                                : "text-muted-foreground group-hover:text-foreground"
+                            }`}
+                          >
+                            {item.icon}
+                          </span>
+                          <span className="ml-3 font-medium">{item.name}</span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
       </nav>
 
       {/* 底部版权信息 */}
