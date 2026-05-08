@@ -2,7 +2,7 @@ export const runtime = 'edge';
 
 import { getRequestContext } from '@cloudflare/next-on-pages';
 
-export async function POST(request) {
+export async function POST() {
   const { env } = getRequestContext();
   const db = env.DB;
 
