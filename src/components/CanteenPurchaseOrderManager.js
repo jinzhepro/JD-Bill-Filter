@@ -5,37 +5,31 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Trash2, Search, Copy, FileText } from "lucide-react";
+import { Upload, Trash2, Search, Copy, FileText, Link2 } from "lucide-react";
 import ExcelJS from "exceljs";
 import * as XLSX from "xlsx";
+import { reconcileOrderWithInvoice } from "@/lib/reconciliation";
 
 export function CanteenPurchaseOrderManager() {
   const [orders, setOrders] = useState([]);
-  const [canteens, setCanteens] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const [fileName, setFileName] = useState("");
-  const [selectedCanteen, setSelectedCanteen] = useState("");
   const [fileData, setFileData] = useState(null);
   const [previewItems, setPreviewItems] = useState([]);
   const [previewErrors, setPreviewErrors] = useState([]);
+  const [linkOrderModalOpen, setLinkOrderModalOpen] = useState(false);
+  const [linkingBatchNo, setLinkingBatchNo] = useState("");
+  const [orderText, setOrderText] = useState("");
+  const [linkingOrder, setLinkingOrder] = useState(false);
+  const [reconciliationResults, setReconciliationResults] = useState([]);
+  const [editingId, setEditingId] = useState(null);
+  const [editingValue, setEditingValue] = useState("");
   const { toast } = useToast();
-
-  const fetchCanteens = useCallback(async () => {
-    try {
-      const res = await fetch("/api/canteens?pageSize=100");
-      const data = await res.json();
-      if (data.success) {
-        setCanteens(data.data);
-      }
-    } catch (error) {
-      console.error('获取食堂列表失败:', error);
-    }
-  }, []);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
@@ -60,18 +54,16 @@ export function CanteenPurchaseOrderManager() {
     fetchOrders();
   };
 
-const parseExcelData = useCallback((rows, canteenName) => {
+const parseExcelData = useCallback((rows) => {
     const items = [];
     const errors = [];
     
-    // 先提取发票号码（从所有行中查找）
     let invoiceNo = '';
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       if (!row || row.length < 4) continue;
       
       const dCol = String(row[3] || '').trim();
-      // 从文本中提取发票号码（格式：发票号码：   26922000000419467261）
       if (dCol.includes('发票号码')) {
         const match = dCol.match(/发票号码[：:\s]+(\d+)/);
         if (match) {
@@ -82,7 +74,6 @@ const parseExcelData = useCallback((rows, canteenName) => {
       }
     }
     
-    // 如果没有找到发票号码，生成临时批次号
     if (!invoiceNo) {
       const now = new Date();
       const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
@@ -91,7 +82,6 @@ const parseExcelData = useCallback((rows, canteenName) => {
       console.log('未找到发票号码，生成临时批次号:', invoiceNo);
     }
     
-    // 只解析以*开头的行
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       if (!row || row.length === 0) {
@@ -100,21 +90,55 @@ const parseExcelData = useCallback((rows, canteenName) => {
       
       const firstCol = String(row[0] || '').trim();
       
-      // 只处理以*开头的行
       if (!firstCol.startsWith('*')) {
         continue;
       }
       
-      console.log(`第${i + 1}行[已过滤]:`, row.slice(0, 12).map((cell, idx) => `[${idx}]${cell}`).join(' | '));
+      const compactRow = row.filter(cell => {
+        const strCell = String(cell || '').trim();
+        return strCell !== '';
+      });
       
-      const productName = firstCol;
-      const spec = String(row[3] || '').trim();
-      const unit = String(row[5] || '').trim();
-      const quantity = parseFloat(row[6]) || 0;
-      const unitPrice = parseFloat(row[7]) || 0;
-      const totalAmount = parseFloat(row[9]) || 0;
+      if (compactRow.length === 0) {
+        continue;
+      }
       
-      const taxRateStr = String(row[10] || '').trim();
+      console.log(`第${i + 1}行[紧凑后]:`, compactRow.map((cell, idx) => `[${idx}]${cell}`).join(' | '));
+      
+      const productName = String(compactRow[0] || '').trim();
+      
+      let quantityIdx = -1;
+      for (let j = 1; j < compactRow.length; j++) {
+        const cell = compactRow[j];
+        const num = parseFloat(cell);
+        if (!isNaN(num) && num > 0) {
+          const cellStr = String(cell || '').trim();
+          if (/^\d+(\.\d+)?$/.test(cellStr)) {
+            quantityIdx = j;
+            break;
+          }
+        }
+      }
+      
+      if (quantityIdx === -1) {
+        errors.push(`第${i + 1}行：未找到有效的数量`);
+        continue;
+      }
+      
+      const quantity = parseFloat(compactRow[quantityIdx]) || 0;
+      
+      let unit = '';
+      if (quantityIdx >= 2) {
+        unit = String(compactRow[quantityIdx - 1] || '').trim();
+        console.log(`第${i + 1}行取单位: quantityIdx=${quantityIdx}, 取索引${quantityIdx - 1}, 值="${unit}"`);
+      } else {
+        console.log(`第${i + 1}行取单位: quantityIdx=${quantityIdx}, 无单位`);
+      }
+      
+      const unitPrice = parseFloat(compactRow[quantityIdx + 1]) || 0;
+      const totalAmount = parseFloat(compactRow[quantityIdx + 2]) || 0;
+      
+      const taxRateStr = String(compactRow[quantityIdx + 3] || '').trim();
       let taxRateNum = 0;
       if (taxRateStr.includes('%')) {
         taxRateNum = parseFloat(taxRateStr.replace('%', '')) / 100;
@@ -122,9 +146,10 @@ const parseExcelData = useCallback((rows, canteenName) => {
         taxRateNum = parseFloat(taxRateStr) || 0;
       }
       
-      const taxAmount = parseFloat(row[11]) || 0;
+      const taxAmount = parseFloat(compactRow[quantityIdx + 4]) || 0;
+      const amountWithTax = totalAmount + taxAmount;
       
-      console.log(`第${i + 1}行解析:`, { productName, spec, unit, quantity, unitPrice, totalAmount, taxRate: taxRateNum, taxAmount, rawRow: row.slice(0, 12) });
+      console.log(`第${i + 1}行解析:`, { productName, unit, quantity, unitPrice, totalAmount, taxRate: taxRateNum, taxAmount, amountWithTax });
       
       if (!productName) {
         errors.push(`第${i + 1}行：项目名称为空`);
@@ -148,15 +173,15 @@ const parseExcelData = useCallback((rows, canteenName) => {
       
       items.push({
         product_name: productName,
-        spec: spec,
         unit: unit,
         quantity: quantity,
         unit_price: unitPrice,
         total_amount: totalAmount,
         tax_rate: taxRateNum,
         tax_amount: taxAmount,
-        canteen_name: canteenName,
-        batch_no: invoiceNo  // 使用发票号码作为批次号
+        amount_with_tax: amountWithTax,
+        canteen_name: '',
+        batch_no: invoiceNo
       });
     }
     
@@ -167,20 +192,16 @@ const parseExcelData = useCallback((rows, canteenName) => {
   }, []);
 
   useEffect(() => {
-    fetchCanteens();
-  }, [fetchCanteens]);
-  
-  useEffect(() => {
     fetchOrders();
   }, [fetchOrders]);
 
   useEffect(() => {
-    if (fileData && selectedCanteen) {
-      const { items, errors } = parseExcelData(fileData, selectedCanteen);
+    if (fileData) {
+      const { items, errors } = parseExcelData(fileData);
       setPreviewItems(items);
       setPreviewErrors(errors);
     }
-  }, [selectedCanteen, fileData, parseExcelData]);
+  }, [fileData, parseExcelData]);
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
@@ -191,11 +212,6 @@ const parseExcelData = useCallback((rows, canteenName) => {
     const ext = file.name.split('.').pop().toLowerCase();
     if (!['xlsx', 'xls'].includes(ext)) {
       toast({ title: "请上传Excel文件(.xlsx或.xls)", variant: "destructive" });
-      return;
-    }
-
-    if (!selectedCanteen) {
-      toast({ title: "请先选择食堂", variant: "destructive" });
       return;
     }
 
@@ -294,7 +310,7 @@ const parseExcelData = useCallback((rows, canteenName) => {
       
       setFileData(rows);
       
-      const { items, errors } = parseExcelData(rows, selectedCanteen);
+      const { items, errors } = parseExcelData(rows);
       
       console.log('parseExcelData 返回结果:', { items, errors });
       
@@ -421,7 +437,7 @@ const parseExcelData = useCallback((rows, canteenName) => {
       
       setFileData(rows);
       
-      const { items, errors } = parseExcelData(rows, selectedCanteen);
+      const { items, errors } = parseExcelData(rows);
       
       console.log('解析结果:', { itemsCount: items.length, errorsCount: errors.length, items, errors });
       
@@ -485,10 +501,120 @@ const parseExcelData = useCallback((rows, canteenName) => {
   const handleCloseModal = () => {
     setImportModalOpen(false);
     setFileName("");
-    setSelectedCanteen("");
     setFileData(null);
     setPreviewItems([]);
     setPreviewErrors([]);
+  };
+
+  const parseOrderText = (text) => {
+    const lines = text.trim().split("\n");
+    const mergedItems = {};
+    
+    for (const line of lines) {
+      const parts = line.split("\t");
+      if (parts.length >= 5) {
+        const productName = parts[0].trim();
+        const unit = parts[1].trim();
+        const quantity = parseFloat(parts[2]) || 0;
+        const unitPrice = parseFloat(parts[3]) || 0;
+        const amountWithTax = parseFloat(parts[4]) || 0;
+        
+        const key = `${productName}_${unit}_${unitPrice}`;
+        
+        if (mergedItems[key]) {
+          mergedItems[key].quantity += quantity;
+          mergedItems[key].amount_with_tax += amountWithTax;
+        } else {
+          mergedItems[key] = {
+            product_name: productName,
+            unit: unit,
+            quantity: quantity,
+            unit_price: unitPrice,
+            amount_with_tax: amountWithTax
+          };
+        }
+      }
+    }
+    
+    return Object.values(mergedItems);
+  };
+
+  const handleOpenLinkOrderModal = (batchNo) => {
+    setLinkingBatchNo(batchNo);
+    setLinkOrderModalOpen(true);
+    setOrderText("");
+    setReconciliationResults([]);
+  };
+
+  const handleLinkOrder = async () => {
+    if (!orderText.trim()) {
+      toast({ title: "请粘贴订单数据", variant: "destructive" });
+      return;
+    }
+
+    const orderItems = parseOrderText(orderText);
+    
+    if (orderItems.length === 0) {
+      toast({ title: "无法解析订单数据，请检查格式", variant: "destructive" });
+      return;
+    }
+
+    setLinkingOrder(true);
+
+    try {
+      const res = await fetch("/api/canteen-purchase-orders/link-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ batch_no: linkingBatchNo, order_items: orderItems })
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        const invoiceItems = batches[linkingBatchNo] || [];
+        const results = reconcileOrderWithInvoice(orderItems, invoiceItems);
+        setReconciliationResults(results);
+        
+        fetchOrders();
+        
+        toast({ title: `关联完成：匹配 ${data.results.matched} 条，未匹配 ${data.results.unmatched} 条` });
+      } else {
+        toast({ title: data.error, variant: "destructive" });
+      }
+    } catch (error) {
+      console.error('关联订单失败:', error);
+      toast({ title: "关联订单失败", variant: "destructive" });
+    }
+
+    setLinkingOrder(false);
+  };
+
+  const handleClearOrderData = async () => {
+    if (!confirm(`确定清除发票 ${linkingBatchNo} 的订单数据？`)) return;
+
+    try {
+      const res = await fetch(`/api/canteen-purchase-orders/link-order?batch_no=${linkingBatchNo}`, { method: "DELETE" });
+      const data = await res.json();
+      
+      if (data.success) {
+        toast({ title: `清除成功，共 ${data.updated} 条` });
+        setReconciliationResults([]);
+        setOrderText("");
+        fetchOrders();
+      } else {
+        toast({ title: data.error, variant: "destructive" });
+      }
+    } catch (error) {
+      console.error('清除失败:', error);
+      toast({ title: "清除失败", variant: "destructive" });
+    }
+  };
+
+  const handleCloseLinkOrderModal = () => {
+    setLinkOrderModalOpen(false);
+    setLinkingBatchNo("");
+    setOrderText("");
+    setReconciliationResults([]);
   };
 
   const handleDeleteBatch = async (batchNo) => {
@@ -514,6 +640,42 @@ const parseExcelData = useCallback((rows, canteenName) => {
     return new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'CNY' }).format(amount || 0);
   };
 
+  const handleEditOrderName = (id, currentValue) => {
+    setEditingId(id);
+    setEditingValue(currentValue || "");
+  };
+
+  const handleSaveOrderName = async (id) => {
+    try {
+      const res = await fetch("/api/canteen-purchase-orders", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, order_name: editingValue })
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        setOrders(orders.map(order => 
+          order.id === id ? { ...order, order_name: editingValue } : order
+        ));
+        setEditingId(null);
+        setEditingValue("");
+        toast({ title: "保存成功" });
+      } else {
+        toast({ title: data.error, variant: "destructive" });
+      }
+    } catch (error) {
+      console.error('保存失败:', error);
+      toast({ title: "保存失败", variant: "destructive" });
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditingValue("");
+  };
+
   const batches = orders.reduce((acc, order) => {
     if (!acc[order.batch_no]) {
       acc[order.batch_no] = [];
@@ -537,10 +699,6 @@ const parseExcelData = useCallback((rows, canteenName) => {
 
   const copyColumn = async (items, columnKey, columnName) => {
     const values = items.map(item => {
-      if (columnKey === 'amount_with_tax') {
-        // 含税金额是计算字段
-        return ((item.total_amount || 0) + (item.tax_amount || 0)).toFixed(2);
-      }
       return item[columnKey] || "";
     }).join("\n");
     
@@ -609,50 +767,77 @@ const parseExcelData = useCallback((rows, canteenName) => {
                       <div>
                         <CardTitle className="text-lg">发票号码: {batchNo}</CardTitle>
                         <p className="text-sm text-muted-foreground mt-1">
-                          导入时间: {formatDateTime(items[0]?.created_at)} | 食堂: {items[0]?.canteen_name || '-'}
+                          导入时间: {formatDateTime(items[0]?.created_at)}
                         </p>
                         <p className="text-sm text-muted-foreground">
+                          数量: {items.reduce((sum, item) => sum + (item.quantity || 0), 0).toFixed(2)} | 
                           不含税金额: {formatAmount(items.reduce((sum, item) => sum + (item.total_amount || 0), 0))} | 
                           税额: {formatAmount(items.reduce((sum, item) => sum + (item.tax_amount || 0), 0))} | 
                           合计: {formatAmount(items.reduce((sum, item) => sum + (item.total_amount || 0) + (item.tax_amount || 0), 0))}
                         </p>
                       </div>
-                      <Button variant="ghost" size="sm" onClick={() => handleDeleteBatch(batchNo)}>
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={() => handleOpenLinkOrderModal(batchNo)} title="关联订单">
+                          <Link2 className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteBatch(batchNo)}>
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent>
                     <div className="overflow-x-auto">
                       <table className="w-full border-collapse">
 <thead>
-                            <tr className="bg-muted">
-                              <ThWithCopy items={items} columnKey="product_name" columnName="项目名称" className="text-left" />
-                              <ThWithCopy items={items} columnKey="spec" columnName="规格型号" className="text-center" />
-                              <ThWithCopy items={items} columnKey="unit" columnName="单位" className="text-center" />
-                              <ThWithCopy items={items} columnKey="quantity" columnName="数量" className="text-right" />
-                              <ThWithCopy items={items} columnKey="unit_price" columnName="单价" className="text-right" />
-                              <ThWithCopy items={items} columnKey="total_amount" columnName="金额" className="text-right" />
-                              <ThWithCopy items={items} columnKey="tax_rate" columnName="税率" className="text-right" />
-                              <ThWithCopy items={items} columnKey="tax_amount" columnName="税额" className="text-right" />
-                              <ThWithCopy items={items} columnKey="amount_with_tax" columnName="含税金额" className="text-right" />
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {items.map((item) => (
-                              <tr key={item.id}>
-                                <td className="border border-border px-3 py-2">{item.product_name}</td>
-                                <td className="border border-border px-3 py-2 text-center">{item.spec}</td>
-                                <td className="border border-border px-3 py-2 text-center">{item.unit}</td>
-                                <td className="border border-border px-3 py-2 text-right">{item.quantity}</td>
-                                <td className="border border-border px-3 py-2 text-right">{formatAmount(item.unit_price)}</td>
-                                <td className="border border-border px-3 py-2 text-right">{formatAmount(item.total_amount)}</td>
-                                <td className="border border-border px-3 py-2 text-right">{(item.tax_rate * 100).toFixed(0)}%</td>
-                                <td className="border border-border px-3 py-2 text-right">{formatAmount(item.tax_amount)}</td>
-                                <td className="border border-border px-3 py-2 text-right">{formatAmount((item.total_amount || 0) + (item.tax_amount || 0))}</td>
+<tr className="bg-muted">
+                                <ThWithCopy items={items} columnKey="product_name" columnName="项目名称" className="text-left" />
+                                <ThWithCopy items={items} columnKey="order_name" columnName="订单名称" className="text-left" />
+                                <ThWithCopy items={items} columnKey="unit" columnName="单位" className="text-center" />
+                                <ThWithCopy items={items} columnKey="quantity" columnName="数量" className="text-right" />
+                                <ThWithCopy items={items} columnKey="unit_price" columnName="单价" className="text-right" />
+                                <ThWithCopy items={items} columnKey="total_amount" columnName="金额" className="text-right" />
+                                <ThWithCopy items={items} columnKey="tax_rate" columnName="税率" className="text-right" />
+                                <ThWithCopy items={items} columnKey="tax_amount" columnName="税额" className="text-right" />
+                                <ThWithCopy items={items} columnKey="amount_with_tax" columnName="含税金额" className="text-right" />
                               </tr>
-                            ))}
-                          </tbody>
+                           </thead>
+                           <tbody>
+                             {items.map((item) => (
+<tr key={item.id}>
+                                  <td className="border border-border px-3 py-2">{item.product_name}</td>
+                                  <td className="border border-border px-3 py-2">
+                                    {editingId === item.id ? (
+                                      <Input
+                                        value={editingValue}
+                                        onChange={(e) => setEditingValue(e.target.value)}
+                                        onBlur={() => handleSaveOrderName(item.id)}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') handleSaveOrderName(item.id);
+                                          if (e.key === 'Escape') handleCancelEdit();
+                                        }}
+                                        className="h-8"
+                                        autoFocus
+                                      />
+                                    ) : (
+                                      <span 
+                                        className="text-muted-foreground cursor-pointer hover:text-foreground"
+                                        onClick={() => handleEditOrderName(item.id, item.order_name)}
+                                      >
+                                        {item.order_name || '-'}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="border border-border px-3 py-2 text-center">{item.unit}</td>
+                                  <td className="border border-border px-3 py-2 text-right">{item.quantity}</td>
+                                  <td className="border border-border px-3 py-2 text-right">{formatAmount(item.unit_price)}</td>
+                                  <td className="border border-border px-3 py-2 text-right">{formatAmount(item.total_amount)}</td>
+                                  <td className="border border-border px-3 py-2 text-right">{(item.tax_rate * 100).toFixed(0)}%</td>
+                                  <td className="border border-border px-3 py-2 text-right">{formatAmount(item.tax_amount)}</td>
+                                  <td className="border border-border px-3 py-2 text-right">{formatAmount(item.amount_with_tax || 0)}</td>
+                                </tr>
+                             ))}
+                           </tbody>
                       </table>
                     </div>
                   </CardContent>
@@ -670,22 +855,6 @@ const parseExcelData = useCallback((rows, canteenName) => {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">选择食堂 *</label>
-              <Select value={selectedCanteen} onValueChange={setSelectedCanteen}>
-                <SelectTrigger>
-                  <SelectValue placeholder="请选择食堂" />
-                </SelectTrigger>
-                <SelectContent>
-                  {canteens.map((canteen) => (
-                    <SelectItem key={canteen.id} value={canteen.name}>
-                      {canteen.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
               <label className="text-sm font-medium">上传Excel文件</label>
               <Input
                 type="file"
@@ -701,7 +870,7 @@ const parseExcelData = useCallback((rows, canteenName) => {
             </div>
 
             <p className="text-sm text-muted-foreground">
-              读取所有以「*」开头的数据行。列映射：A列项目名称、D列规格型号、F列单位、G列数量、H列单价、J列金额、K列税率、L列税额。
+              读取所有以「*」开头的数据行。自动删除空列，第一个数据为名称，找到第一个数字作为数量，后面依次为单价、金额、税率、税额。
             </p>
 
             {previewErrors.length > 0 && (
@@ -728,8 +897,91 @@ const parseExcelData = useCallback((rows, canteenName) => {
             <Button variant="outline" onClick={handleCloseModal}>
               取消
             </Button>
-            <Button onClick={handleConfirmImport} disabled={importing || previewItems.length === 0 || !selectedCanteen}>
+            <Button onClick={handleConfirmImport} disabled={importing || previewItems.length === 0}>
               {importing ? "导入中..." : "确认导入"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={linkOrderModalOpen} onOpenChange={handleCloseLinkOrderModal}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>关联订单 - 发票号码: {linkingBatchNo}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">粘贴订单数据（制表符分隔）</label>
+              <Textarea
+                placeholder="格式：名称\t单位\t数量\t单价\t金额\t税率（每行一条）"
+                value={orderText}
+                onChange={(e) => setOrderText(e.target.value)}
+                rows={10}
+                className="font-mono"
+              />
+            </div>
+
+            {reconciliationResults.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">核对结果</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-sm">
+                    <thead>
+                      <tr className="bg-muted">
+                        <th className="border border-border px-2 py-1 text-left">订单名称</th>
+                        <th className="border border-border px-2 py-1 text-right">订单数量</th>
+                        <th className="border border-border px-2 py-1 text-right">订单金额</th>
+                        <th className="border border-border px-2 py-1 text-left">发票名称</th>
+                        <th className="border border-border px-2 py-1 text-right">发票数量</th>
+                        <th className="border border-border px-2 py-1 text-right">发票含税金额</th>
+                        <th className="border border-border px-2 py-1 text-center">状态</th>
+                        <th className="border border-border px-2 py-1 text-left">差异</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reconciliationResults.map((result, idx) => {
+                        let bgColor = '';
+                        if (result.status === 'matched') bgColor = 'bg-green-50';
+                        else if (result.status === 'partial') bgColor = 'bg-yellow-50';
+                        else if (result.status === 'unmatched') bgColor = 'bg-red-50';
+                        else if (result.status === 'missing') bgColor = 'bg-orange-50';
+                        
+                        return (
+                          <tr key={idx} className={bgColor}>
+                            <td className="border border-border px-2 py-1">{result.order?.product_name || '-'}</td>
+                            <td className="border border-border px-2 py-1 text-right">{result.order?.quantity || '-'}</td>
+                            <td className="border border-border px-2 py-1 text-right">{result.order?.total_amount ? formatAmount(result.order.total_amount) : '-'}</td>
+                            <td className="border border-border px-2 py-1">{result.invoice?.product_name || '-'}</td>
+                            <td className="border border-border px-2 py-1 text-right">{result.invoice?.quantity || '-'}</td>
+                            <td className="border border-border px-2 py-1 text-right">{result.invoice ? formatAmount((result.invoice.total_amount || 0) + (result.invoice.tax_amount || 0)) : '-'}</td>
+                            <td className="border border-border px-2 py-1 text-center">
+                              {result.status === 'matched' && <span className="text-green-600">✓ 匹配</span>}
+                              {result.status === 'partial' && <span className="text-yellow-600">⚠ 部分匹配</span>}
+                              {result.status === 'unmatched' && <span className="text-red-600">✗ 不匹配</span>}
+                              {result.status === 'missing' && <span className="text-orange-600">⚡ 缺失</span>}
+                            </td>
+                            <td className="border border-border px-2 py-1 text-xs">
+                              {result.differences.quantity && <span className="text-red-600">数量: {result.differences.quantity > 0 ? '+' : ''}{result.differences.quantity}</span>}
+                              {result.differences.amount && <span className="text-red-600 ml-1">金额: {result.differences.amount > 0 ? '+' : ''}{formatAmount(result.differences.amount)}</span>}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleClearOrderData} disabled={reconciliationResults.length === 0}>
+              清除订单数据
+            </Button>
+            <Button variant="outline" onClick={handleCloseLinkOrderModal}>
+              关闭
+            </Button>
+            <Button onClick={handleLinkOrder} disabled={linkingOrder || !orderText.trim()}>
+              {linkingOrder ? "导入中..." : "确认导入"}
             </Button>
           </DialogFooter>
         </DialogContent>

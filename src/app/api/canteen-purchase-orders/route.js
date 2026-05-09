@@ -54,7 +54,7 @@ export async function POST(request) {
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      const { batch_no, product_name, spec, unit, quantity, unit_price, total_amount, tax_rate, tax_amount, canteen_name } = item;
+      const { batch_no, product_name, spec, unit, quantity, unit_price, total_amount, tax_rate, tax_amount, amount_with_tax, canteen_name } = item;
 
       if (!batch_no || !product_name || !quantity || !unit_price) {
         results.failed++;
@@ -64,7 +64,7 @@ export async function POST(request) {
 
       try {
         await db.prepare(
-          'INSERT INTO canteen_purchase_orders (batch_no, product_name, spec, unit, quantity, unit_price, total_amount, tax_rate, tax_amount, canteen_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+          'INSERT INTO canteen_purchase_orders (batch_no, product_name, spec, unit, quantity, unit_price, total_amount, tax_rate, tax_amount, amount_with_tax, canteen_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         ).bind(
           batch_no,
           product_name,
@@ -75,6 +75,7 @@ export async function POST(request) {
           total_amount || 0,
           tax_rate || 0,
           tax_amount || 0,
+          amount_with_tax || 0,
           canteen_name || ''
         ).run();
         results.success++;
@@ -85,6 +86,30 @@ export async function POST(request) {
     }
 
     return Response.json({ success: true, results });
+  } catch (error) {
+    return Response.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+export async function PUT(request) {
+  const { env } = getRequestContext();
+  const db = env.DB;
+
+  try {
+    const body = await request.json();
+    const { id, order_name } = body;
+
+    if (!id) {
+      return Response.json({ success: false, error: '需要记录ID' }, { status: 400 });
+    }
+
+    const result = await db.prepare('UPDATE canteen_purchase_orders SET order_name = ? WHERE id = ?').bind(order_name || '', id).run();
+
+    if (result.meta.changes > 0) {
+      return Response.json({ success: true, updated: result.meta.changes });
+    } else {
+      return Response.json({ success: false, error: '记录不存在' }, { status: 404 });
+    }
   } catch (error) {
     return Response.json({ success: false, error: error.message }, { status: 500 });
   }
