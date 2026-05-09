@@ -3,9 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
     "build": "next build",
-    "start": "next start",
     "lint": "eslint",
     "pages:build": "npx @cloudflare/next-on-pages",
     "pages:dev": "npm run pages:build && npx wrangler pages dev .vercel/output/static --persist-to=.wrangler/state --port=8788",

@@ -13,9 +13,7 @@
 ## 命令
 
 ```bash
-npm run dev      # 开发服务器 (http://localhost:3000)
 npm run build    # 生产构建
-npm start        # 生产服务器
 npm run lint     # ESLint 9 flat config
 
 # Cloudflare Pages + D1
@@ -27,6 +25,7 @@ npx wrangler d1 migrations apply jd --local   # 本地数据库迁移
 ```
 
 **无测试框架** - 仅手动测试。
+**无 dev/start** - 本地开发使用 `npm run pages:dev`（端口 8788）。
 
 ## 部署架构
 
@@ -45,6 +44,8 @@ npx wrangler d1 migrations apply jd --local   # 本地数据库迁移
 | `purchase_orders` | 采购单批次数据 |
 | `invoice_history` | 发票导出历史 |
 | `invoice_history_items` | 发票明细项 |
+| `canteens` | 食堂信息（预置10个食堂） |
+| `canteen_purchase_orders` | 食堂采购单数据 |
 
 ## 页面路由
 
@@ -57,6 +58,8 @@ npx wrangler d1 migrations apply jd --local   # 本地数据库迁移
 | `/invoice` | 发票开具（导入JSON/导出Excel） |
 | `/invoice-history` | 发票历史 |
 | `/purchase` | 采购单管理 |
+| `/canteen` | 食堂管理 |
+| `/canteen-purchase` | 食堂采购单管理 |
 | `/login` | 登录页 |
 
 **发票开具页面** (`/invoice`):
@@ -144,6 +147,7 @@ export async function GET(request) {
 **基础工具**:
 - `cn(...inputs)` - 合并 Tailwind 类名 (clsx + tailwind-merge)
 - `cleanAmount(value)` - 清理货币字符串 (¥, ￥, $, 逗号, 空格)
+- `cleanAmountString(value)` - 清理金额字符串，返回 Decimal 安全字符串（避免 parseFloat 精度丢失）
 - `cleanProductCode(value)` - 处理 Excel 公式前缀 `="..."`，返回字符串
 - `formatAmount(value, forcePositive)` - 格式化金额显示（字符串）
 - `formatAmountJSX(value, forcePositive)` - 格式化金额显示（React 组件）
@@ -220,6 +224,8 @@ export async function GET(request) {
 | `/api/purchase-orders/*` | 采购单 CRUD |
 | `/api/invoice-history/*` | 发票历史 CRUD |
 | `/api/supply-orders/*` | 供货单相关 |
+| `/api/canteens/*` | 食堂 CRUD |
+| `/api/canteen-purchase-orders/*` | 食堂采购单 CRUD |
 
 ## 其他重要文件
 
@@ -228,8 +234,11 @@ export async function GET(request) {
 - `src/lib/invoiceExporter.js` - 发票导出逻辑
 - `src/lib/excelHandler.js` - Excel 文件处理
 - `src/lib/fileValidation.js` - 文件验证
+- `src/lib/reconciliation.js` - 订单与发票对账匹配
 - `src/lib/constants.js` - 全局常量
 - `src/data/suppliers.js` - 供应商配置
+- `src/components/CanteenManager.js` - 食堂管理组件
+- `src/components/CanteenPurchaseOrderManager.js` - 食堂采购单管理组件
 - `env.d.ts` - Cloudflare 环境类型声明（D1 绑定等）
 
 ## ESLint 配置
