@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2, Search, Copy, ClipboardPaste, Download } from "lucide-react";
+import Decimal from "decimal.js";
 
 export function CanteenPurchaseOrderManager() {
   const [orders, setOrders] = useState([]);
@@ -79,48 +80,14 @@ export function CanteenPurchaseOrderManager() {
       }
       
       const productName = parts[0].trim();
+      const unit = parts[1].trim();
+      const quantity = parseFloat(parts[2]) || 0;
+      const unitPrice = parseFloat(parts[3]) || 0;
+      const totalAmountWithoutTax = new Decimal((parts[4] || '0').trim()).toNumber();
+      const taxRateStr = (parts[5] || '').trim();
+      const taxAmountStr = (parts[6] || '').trim();
       
       if (!productName.startsWith('*')) {
-        continue;
-      }
-      
-      let quantityIdx = -1;
-      let unit = '';
-      let quantity = 0;
-      let unitPrice = 0;
-      let totalAmount = 0;
-      let taxRateStr = '';
-      let taxAmountStr = '';
-      
-      for (let j = 1; j < parts.length - 3; j++) {
-        const val1 = parseFloat(parts[j]);
-        const val2 = parseFloat(parts[j + 1]);
-        const val3 = parseFloat(parts[j + 2]);
-        
-        if (!isNaN(val1) && !isNaN(val2) && !isNaN(val3) && 
-            val1 > 0 && val2 > 0 && val3 > 0 &&
-            /^\d+(\.\d+)?$/.test(parts[j].trim()) &&
-            /^\d+(\.\d+)?$/.test(parts[j + 1].trim()) &&
-            /^\d+(\.\d+)?$/.test(parts[j + 2].trim())) {
-          
-          const calculatedAmount = val1 * val2;
-          const diff = Math.abs(calculatedAmount - val3) / val3;
-          
-          if (diff < 0.05) {
-            quantityIdx = j;
-            unit = parts[j - 1].trim();
-            quantity = val1;
-            unitPrice = val2;
-            totalAmount = val3;
-            taxRateStr = (parts[j + 3] || '').trim();
-            taxAmountStr = (parts[j + 4] || '').trim();
-            break;
-          }
-        }
-      }
-      
-      if (quantityIdx === -1) {
-        errors.push(`第${i + 1}行：未找到有效的数量-单价-金额关系`);
         continue;
       }
       
@@ -131,9 +98,8 @@ export function CanteenPurchaseOrderManager() {
         taxRateNum = (parseFloat(taxRateStr) || 0) / 100;
       }
       
-      const totalAmountWithoutTax = totalAmount;
-      const taxAmount = taxAmountStr ? parseFloat(taxAmountStr) : Math.round(totalAmountWithoutTax * taxRateNum * 100) / 100;
-      const amountWithTax = Math.round((totalAmountWithoutTax + taxAmount) * 100) / 100;
+      const taxAmount = new Decimal(taxAmountStr || 0).toNumber();
+      const amountWithTax = new Decimal(totalAmountWithoutTax).plus(taxAmount).toNumber();
       
       if (!productName) {
         errors.push(`第${i + 1}行：项目名称为空`);
@@ -150,7 +116,7 @@ export function CanteenPurchaseOrderManager() {
         continue;
       }
       
-      if (totalAmount <= 0) {
+      if (totalAmountWithoutTax <= 0) {
         errors.push(`第${i + 1}行：金额无效`);
         continue;
       }
@@ -395,9 +361,9 @@ export function CanteenPurchaseOrderManager() {
                         </p>
                         <p className="text-sm text-muted-foreground">
                           数量: {items.reduce((sum, item) => sum + (item.quantity || 0), 0).toFixed(2)} | 
-                          不含税金额: {formatAmount(items.reduce((sum, item) => sum + (item.total_amount || 0), 0))} | 
-                          税额: {formatAmount(items.reduce((sum, item) => sum + (item.tax_amount || 0), 0))} | 
-                          合计: {formatAmount(items.reduce((sum, item) => sum + (item.total_amount || 0) + (item.tax_amount || 0), 0))}
+                          不含税金额: {formatAmount(items.reduce((sum, item) => sum.plus(item.total_amount || 0), new Decimal(0)).toNumber())} | 
+                          税额: {formatAmount(items.reduce((sum, item) => sum.plus(item.tax_amount || 0), new Decimal(0)).toNumber())} | 
+                          合计: {formatAmount(items.reduce((sum, item) => sum.plus(item.total_amount || 0).plus(item.tax_amount || 0), new Decimal(0)).toNumber())}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -483,9 +449,9 @@ export function CanteenPurchaseOrderManager() {
                 <p className="text-sm font-medium">解析结果</p>
                 <div className="flex gap-6 text-sm">
                   <span>共 {pastePreviewItems.length} 条</span>
-                  <span>不含税金额: {formatAmount(pastePreviewItems.reduce((sum, item) => sum + (item.total_amount || 0), 0))}</span>
-                  <span>税额: {formatAmount(pastePreviewItems.reduce((sum, item) => sum + (item.tax_amount || 0), 0))}</span>
-                  <span className="font-medium">合计: {formatAmount(pastePreviewItems.reduce((sum, item) => sum + (item.amount_with_tax || 0), 0))}</span>
+                  <span>不含税金额: {formatAmount(pastePreviewItems.reduce((sum, item) => sum.plus(item.total_amount || 0), new Decimal(0)).toNumber())}</span>
+                  <span>税额: {formatAmount(pastePreviewItems.reduce((sum, item) => sum.plus(item.tax_amount || 0), new Decimal(0)).toNumber())}</span>
+                  <span className="font-medium">合计: {formatAmount(pastePreviewItems.reduce((sum, item) => sum.plus(item.total_amount || 0).plus(item.tax_amount || 0), new Decimal(0)).toNumber())}</span>
                 </div>
               </div>
             )}
