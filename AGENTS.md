@@ -45,7 +45,7 @@ npx wrangler d1 migrations apply jd --local   # 本地数据库迁移
 | `invoice_history` | 发票导出历史 |
 | `invoice_history_items` | 发票明细项 |
 | `canteens` | 食堂信息（预置10个食堂） |
-| `canteen_purchase_orders` | 食堂采购单数据 |
+| `canteen_purchase_orders` | 食堂采购单数据（含amount_with_tax含税金额字段） |
 
 ## 页面路由
 

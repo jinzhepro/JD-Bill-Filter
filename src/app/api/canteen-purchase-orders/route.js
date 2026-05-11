@@ -91,30 +91,6 @@ export async function POST(request) {
   }
 }
 
-export async function PUT(request) {
-  const { env } = getRequestContext();
-  const db = env.DB;
-
-  try {
-    const body = await request.json();
-    const { id, order_name } = body;
-
-    if (!id) {
-      return Response.json({ success: false, error: '需要记录ID' }, { status: 400 });
-    }
-
-    const result = await db.prepare('UPDATE canteen_purchase_orders SET order_name = ? WHERE id = ?').bind(order_name || '', id).run();
-
-    if (result.meta.changes > 0) {
-      return Response.json({ success: true, updated: result.meta.changes });
-    } else {
-      return Response.json({ success: false, error: '记录不存在' }, { status: 404 });
-    }
-  } catch (error) {
-    return Response.json({ success: false, error: error.message }, { status: 500 });
-  }
-}
-
 export async function DELETE(request) {
   const { env } = getRequestContext();
   const db = env.DB;
