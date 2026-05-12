@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Search, Copy, Download, FileText, FileSpreadsheet } from "lucide-react";
+import { Trash2, Search, Copy, Download, FileText, FileSpreadsheet, History } from "lucide-react";
 import Decimal from "decimal.js";
 import mammoth from "mammoth";
 import { CanteenInvoiceModal } from "@/components/CanteenInvoiceModal";
+import { CanteenInvoiceHistoryModal } from "@/components/CanteenInvoiceHistoryModal";
 
 export function CanteenPurchaseOrderManager() {
   const [orders, setOrders] = useState([]);
@@ -17,6 +18,7 @@ export function CanteenPurchaseOrderManager() {
   const [search, setSearch] = useState("");
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [previewItems, setPreviewItems] = useState([]);
   const [previewErrors, setPreviewErrors] = useState([]);
   const [importing, setImporting] = useState(false);
@@ -415,6 +417,10 @@ export function CanteenPurchaseOrderManager() {
               <FileSpreadsheet className="w-4 h-4 mr-1" />
               开发票
             </Button>
+            <Button variant="outline" onClick={() => setHistoryModalOpen(true)}>
+              <History className="w-4 h-4 mr-1" />
+              开票记录
+            </Button>
             <Button variant="outline" onClick={handleExportAll} disabled={orders.length === 0}>
               <Download className="w-4 h-4 mr-1" />
               导出CSV
@@ -552,6 +558,11 @@ export function CanteenPurchaseOrderManager() {
         open={invoiceModalOpen}
         onOpenChange={setInvoiceModalOpen}
         products={orders}
+      />
+
+      <CanteenInvoiceHistoryModal
+        open={historyModalOpen}
+        onOpenChange={setHistoryModalOpen}
       />
     </div>
   );

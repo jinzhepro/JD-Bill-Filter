@@ -14,12 +14,18 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { exportInvoice } from "@/lib/invoiceExporter";
 
+function getCurrentMonth() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
 export function CanteenInvoiceModal({ open, onOpenChange, products }) {
   const [pasteData, setPasteData] = useState("");
   const [previewItems, setPreviewItems] = useState([]);
   const [matchErrors, setMatchErrors] = useState([]);
   const [canteenName, setCanteenName] = useState("");
-  const [customerInfo, setCustomerInfo] = useState({
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
+  const [customerInfo] = useState({
     customerName: "青岛开投餐饮酒店管理有限公司",
     taxId: "91370211MABQPQYQ7A",
     bankName: "北京银行股份有限公司青岛西海岸新区支行",
@@ -139,11 +145,6 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
       return;
     }
 
-    if (!customerInfo.customerName.trim()) {
-      toast({ title: "请输入客户名称", variant: "destructive" });
-      return;
-    }
-
     const now = new Date();
     const applyDate = now.toISOString().split("T")[0];
 
@@ -155,27 +156,57 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
       applicant: "刘雅超",
     };
 
+    const monthNum = parseInt(selectedMonth.split("-")[1]);
+    const exportLabel = canteenName ? `${canteenName}${monthNum}月` : `${monthNum}月`;
+
     try {
-      await exportInvoice(basicInfo, customerInfo, previewItems, canteenName || null);
+      await exportInvoice(basicInfo, customerInfo, previewItems, exportLabel);
+
+      const totalAmount = previewItems.reduce(
+        (sum, item) => sum + item.quantity * item.price,
+        0
+      );
+
+      const itemsForHistory = previewItems.map((item) => {
+        const amount = item.quantity * item.price / (1 + item.taxRate);
+        const tax = amount * item.taxRate;
+        const total = amount + tax;
+        return {
+          name: item.name,
+          spec: item.spec,
+          unit: item.unit,
+          quantity: item.quantity,
+          price: item.price,
+          taxRate: item.taxRate,
+          amount,
+          tax,
+          total,
+        };
+      });
+
+      await fetch("/api/canteen-invoice-history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          canteenName: exportLabel,
+          customerInfo,
+          items: itemsForHistory,
+          totalAmount,
+        }),
+      });
+
       toast({ title: "发票导出成功" });
       onOpenChange(false);
       setPasteData("");
       setPreviewItems([]);
       setMatchErrors([]);
       setCanteenName("");
-      setCustomerInfo({
-        customerName: "青岛开投餐饮酒店管理有限公司",
-        taxId: "91370211MABQPQYQ7A",
-        bankName: "北京银行股份有限公司青岛西海岸新区支行",
-        bankAccount: "20000059793200094551530",
-        address: "山东省青岛市黄岛区车轮山路388号1栋2办公2116户",
-        phone: "0532-86986696",
-      });
+      setSelectedMonth(getCurrentMonth());
     } catch (error) {
       console.error("导出发票失败:", error);
       toast({ title: "导出发票失败", variant: "destructive" });
     }
-  }, [previewItems, customerInfo, canteenName, toast, onOpenChange]);
+  }, [previewItems, customerInfo, canteenName, selectedMonth, toast, onOpenChange]);
 
   const handleClose = useCallback(() => {
     onOpenChange(false);
@@ -183,14 +214,7 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
     setPreviewItems([]);
     setMatchErrors([]);
     setCanteenName("");
-    setCustomerInfo({
-      customerName: "青岛开投餐饮酒店管理有限公司",
-      taxId: "91370211MABQPQYQ7A",
-      bankName: "北京银行股份有限公司青岛西海岸新区支行",
-      bankAccount: "20000059793200094551530",
-      address: "山东省青岛市黄岛区车轮山路388号1栋2办公2116户",
-      phone: "0532-86986696",
-    });
+    setSelectedMonth(getCurrentMonth());
   }, [onOpenChange]);
 
   const formatAmount = (amount) => {
@@ -208,81 +232,22 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="space-y-1">
-            <label className="text-sm font-medium">食堂名称</label>
-            <Input
-              value={canteenName}
-              onChange={(e) => setCanteenName(e.target.value)}
-              placeholder="输入食堂名称（导出时显示在右下角）"
-            />
-          </div>
-          
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-sm font-medium">客户名称 *</label>
-                <Input
-                  value={customerInfo.customerName}
-                  onChange={(e) =>
-                    setCustomerInfo({ ...customerInfo, customerName: e.target.value })
-                  }
-                  placeholder="青岛开投餐饮酒店管理有限公司"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">纳税人识别号</label>
-                <Input
-                  value={customerInfo.taxId}
-                  onChange={(e) =>
-                    setCustomerInfo({ ...customerInfo, taxId: e.target.value })
-                  }
-                  placeholder="91370211MABQPQYQ7A"
-                />
-              </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">食堂名称</label>
+              <Input
+                value={canteenName}
+                onChange={(e) => setCanteenName(e.target.value)}
+                placeholder="输入食堂名称"
+              />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-sm font-medium">开户银行</label>
-                <Input
-                  value={customerInfo.bankName}
-                  onChange={(e) =>
-                    setCustomerInfo({ ...customerInfo, bankName: e.target.value })
-                  }
-                  placeholder="北京银行股份有限公司青岛西海岸新区支行"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">银行账号</label>
-                <Input
-                  value={customerInfo.bankAccount}
-                  onChange={(e) =>
-                    setCustomerInfo({ ...customerInfo, bankAccount: e.target.value })
-                  }
-                  placeholder="20000059793200094551530"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-sm font-medium">公司地址</label>
-                <Input
-                  value={customerInfo.address}
-                  onChange={(e) =>
-                    setCustomerInfo({ ...customerInfo, address: e.target.value })
-                  }
-                  placeholder="山东省青岛市黄岛区车轮山路388号1栋2办公2116户"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">联系电话</label>
-                <Input
-                  value={customerInfo.phone}
-                  onChange={(e) =>
-                    setCustomerInfo({ ...customerInfo, phone: e.target.value })
-                  }
-                  placeholder="0532-86986696"
-                />
-              </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">月份</label>
+              <Input
+                type="month"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+              />
             </div>
           </div>
 
