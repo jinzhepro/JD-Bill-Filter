@@ -18,6 +18,8 @@ export function CanteenPurchaseOrderManager() {
   const [previewItems, setPreviewItems] = useState([]);
   const [previewErrors, setPreviewErrors] = useState([]);
   const [importing, setImporting] = useState(false);
+  const [suppliers, setSuppliers] = useState([]);
+  const [selectedSupplierId, setSelectedSupplierId] = useState("");
   const fileInputRef = useRef(null);
   const { toast } = useToast();
 
@@ -43,6 +45,25 @@ export function CanteenPurchaseOrderManager() {
   const handleSearch = () => {
     fetchOrders();
   };
+
+  const fetchSuppliers = useCallback(async () => {
+    try {
+      const res = await fetch('/api/canteen-suppliers');
+      const data = await res.json();
+      
+      if (data.success) {
+        setSuppliers(data.data);
+      } else {
+        console.error('获取供应商列表失败:', data.error);
+      }
+    } catch (error) {
+      console.error('获取供应商列表失败:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSuppliers();
+  }, [fetchSuppliers]);
   
   const parseWordFile = useCallback(async (file) => {
     const items = [];
@@ -206,6 +227,7 @@ export function CanteenPurchaseOrderManager() {
     setImportModalOpen(false);
     setPreviewItems([]);
     setPreviewErrors([]);
+    setSelectedSupplierId("");
   };
   
   const handleFileUpload = async (event) => {
@@ -229,23 +251,33 @@ export function CanteenPurchaseOrderManager() {
     }
   };
 
-  const handleConfirmImport = async () => {
+const handleConfirmImport = async () => {
     if (previewItems.length === 0) {
       toast({ title: "没有可导入的数据", variant: "destructive" });
       return;
     }
 
+    if (!selectedSupplierId) {
+      toast({ title: "请选择供应商", variant: "destructive" });
+      return;
+    }
+
     setImporting(true);
-    
+
     try {
+      const itemsWithSupplier = previewItems.map(item => ({
+        ...item,
+        supplier_id: parseInt(selectedSupplierId)
+      }));
+
       const res = await fetch("/api/canteen-purchase-orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: previewItems })
+        body: JSON.stringify({ items: itemsWithSupplier })
       });
-      
+
       const data = await res.json();
-      
+
       if (data.success) {
         const { results } = data;
         toast({ title: `导入完成：成功 ${results.success} 条` });
@@ -258,7 +290,7 @@ export function CanteenPurchaseOrderManager() {
       console.error('操作失败:', error);
       toast({ title: "导入失败", variant: "destructive" });
     }
-    
+
     setImporting(false);
   };
 
@@ -284,11 +316,13 @@ export function CanteenPurchaseOrderManager() {
   const downloadCSV = (batchNo, items) => {
     if (!items || items.length === 0) return;
     
-    const headers = ['批次号', '项目名称', '规格型号', '单位', '数量', '单价', '金额', '税率', '税额', '含税金额'];
+    const headers = ['批次号', '供应商', '合同号', '项目名称', '规格型号', '单位', '数量', '单价', '金额', '税率', '税额', '含税金额'];
     const csvRows = items.map(item => {
       const taxRate = item.tax_rate ? `${(item.tax_rate * 100).toFixed(0)}%` : '0%';
       const row = [
         batchNo,
+        item.supplier_name || '',
+        item.supplier_contract_no || '',
         item.product_name || '',
         item.spec || '',
         item.unit || '',
@@ -360,12 +394,26 @@ export function CanteenPurchaseOrderManager() {
 
   const copyColumn = async (items, columnKey, columnName) => {
     const values = items.map(item => {
+      if (columnKey === 'tax_rate') {
+        return item[columnKey] ? `${(item[columnKey] * 100).toFixed(0)}` : '0';
+      }
       return item[columnKey] || "";
     }).join("\n");
-    
+
     try {
       await navigator.clipboard.writeText(values);
       toast({ title: `${columnName} 已复制` });
+    } catch (error) {
+      console.error('操作失败:', error);
+      toast({ title: "复制失败", variant: "destructive" });
+    }
+  };
+
+  const copyContractNo = async (contractNo, label = '合同号') => {
+    if (!contractNo) return;
+    try {
+      await navigator.clipboard.writeText(contractNo);
+      toast({ title: `${label}已复制` });
     } catch (error) {
       console.error('操作失败:', error);
       toast({ title: "复制失败", variant: "destructive" });
@@ -396,7 +444,7 @@ export function CanteenPurchaseOrderManager() {
         <CardContent className="space-y-4">
           <div className="flex gap-2">
             <Input
-              placeholder="搜索发票号码、品名..."
+              placeholder="搜索发票号码、品名、供应商..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="max-w-sm"
@@ -430,6 +478,33 @@ export function CanteenPurchaseOrderManager() {
                         <p className="text-sm text-muted-foreground mt-1">
                           导入时间: {formatDateTime(items[0]?.created_at)}
                         </p>
+                        <p className="text-sm text-muted-foreground">
+                          供应商: {items[0]?.supplier_name || '未设置'}
+                        </p>
+                        <div className="flex gap-4 text-sm text-muted-foreground">
+                          {items[0]?.supplier_contract_no && (
+                            <span className="flex items-center gap-1">
+                              采购合同号：{items[0].supplier_contract_no}
+                              <button
+                                onClick={() => copyContractNo(items[0].supplier_contract_no, '采购合同号')}
+                                className="cursor-pointer p-0.5 hover:bg-muted rounded text-muted-foreground hover:text-foreground"
+                                title="复制采购合同号"
+                              >
+                                <Copy className="w-3 h-3" />
+                              </button>
+                            </span>
+                          )}
+                          <span className="flex items-center gap-1">
+                            销售合同号：JK-GQ-250041
+                            <button
+                              onClick={() => copyContractNo('JK-GQ-250041', '销售合同号')}
+                              className="cursor-pointer p-0.5 hover:bg-muted rounded text-muted-foreground hover:text-foreground"
+                              title="复制销售合同号"
+                            >
+                              <Copy className="w-3 h-3" />
+                            </button>
+                          </span>
+                        </div>
                         <p className="text-sm text-muted-foreground">
                           数量: {items.reduce((sum, item) => sum + (item.quantity || 0), 0).toFixed(2)} | 
                           不含税金额: {formatAmount(items.reduce((sum, item) => sum.plus(item.total_amount || 0), new Decimal(0)).toNumber())} | 
@@ -494,6 +569,22 @@ export function CanteenPurchaseOrderManager() {
             <DialogTitle>导入食堂采购单</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">选择供应商 *</label>
+              <select
+                value={selectedSupplierId}
+                onChange={(e) => setSelectedSupplierId(e.target.value)}
+                className="w-full max-w-sm px-3 py-2 border border-border rounded-md bg-background text-foreground"
+              >
+                <option value="">请选择供应商</option>
+                {suppliers.map((supplier) => (
+                  <option key={supplier.id} value={supplier.id}>
+                    {supplier.name} {supplier.contract_no ? `(${supplier.contract_no})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="space-y-2">
               <label className="text-sm font-medium">上传 Word 文件</label>
               <div className="flex items-center gap-2">

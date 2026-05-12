@@ -11,24 +11,31 @@ export async function GET(request) {
   const batchNo = url.searchParams.get('batch_no') || '';
 
   try {
-    let query = 'SELECT * FROM canteen_purchase_orders';
+    let query = `
+      SELECT 
+        cpo.*, 
+        cs.name as supplier_name,
+        cs.contract_no as supplier_contract_no
+      FROM canteen_purchase_orders cpo
+      LEFT JOIN canteen_suppliers cs ON cpo.supplier_id = cs.id
+    `;
     const params = [];
 
     if (batchNo) {
-      query += ' WHERE batch_no = ?';
+      query += ' WHERE cpo.batch_no = ?';
       params.push(batchNo);
     } else if (search && search.trim()) {
       const sanitizedSearch = search.replace(/[%_\\]/g, '');
       if (sanitizedSearch) {
-        query += ' WHERE batch_no LIKE ? OR product_name LIKE ? OR canteen_name LIKE ?';
+        query += ' WHERE cpo.batch_no LIKE ? OR cpo.product_name LIKE ? OR cpo.canteen_name LIKE ? OR cs.name LIKE ?';
         const searchPattern = `%${sanitizedSearch}%`;
-        params.push(searchPattern, searchPattern, searchPattern);
+        params.push(searchPattern, searchPattern, searchPattern, searchPattern);
       }
     }
 
-    query += ' ORDER BY created_at DESC';
+    query += ' ORDER BY cpo.created_at DESC';
 
-    const result = params.length > 0 
+    const result = params.length > 0
       ? await db.prepare(query).bind(...params).all()
       : await db.prepare(query).all();
 
@@ -54,7 +61,7 @@ export async function POST(request) {
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      const { batch_no, product_name, spec, unit, quantity, unit_price, total_amount, tax_rate, tax_amount, amount_with_tax, canteen_name } = item;
+      const { batch_no, product_name, spec, unit, quantity, unit_price, total_amount, tax_rate, tax_amount, amount_with_tax, canteen_name, supplier_id } = item;
 
       if (!batch_no || !product_name || !quantity || !unit_price) {
         results.failed++;
@@ -64,7 +71,7 @@ export async function POST(request) {
 
       try {
         await db.prepare(
-          'INSERT INTO canteen_purchase_orders (batch_no, product_name, spec, unit, quantity, unit_price, total_amount, tax_rate, tax_amount, amount_with_tax, canteen_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+          'INSERT INTO canteen_purchase_orders (batch_no, product_name, spec, unit, quantity, unit_price, total_amount, tax_rate, tax_amount, amount_with_tax, canteen_name, supplier_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         ).bind(
           batch_no,
           product_name,
@@ -76,7 +83,8 @@ export async function POST(request) {
           tax_rate || 0,
           tax_amount || 0,
           amount_with_tax || 0,
-          canteen_name || ''
+          canteen_name || '',
+          supplier_id || null
         ).run();
         results.success++;
       } catch (error) {
