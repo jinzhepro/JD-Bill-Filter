@@ -6,7 +6,7 @@ import Decimal from "decimal.js";
  * @param {Object} basicInfo - 基本信息 {companyName, contractNo, applyDate, department, applicant}
  * @param {Object} customerInfo - 客户信息 {customerName, taxId, bankName, bankAccount, address, phone}
  * @param {Array<Object>} lineItems - 开票明细 [{name, spec, unit, quantity, price, taxRate}]
- * @param {string|null} month - 月份标签 (如 "2024-01" 或 null 表示其他月)
+ * @param {string|null} month - 月份标签 (如 "2024-01" 或 null 表示其他月) 或食堂名称
  * @returns {Promise<void>}
  */
 export async function exportInvoice(basicInfo, customerInfo, lineItems, month) {
@@ -150,7 +150,19 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month) {
     row.getCell(1).alignment = { horizontal: "center" };
   });
 
-  const monthLabel = month ? "当月" : "其他月";
+  let monthLabel;
+  let fileName;
+  
+  if (month && /^\d{4}-\d{2}$/.test(month)) {
+    monthLabel = "当月";
+    fileName = `${month}_${customerInfo.customerName || "未命名"}.xlsx`;
+  } else if (month && typeof month === "string") {
+    monthLabel = month;
+    fileName = `${month}_${customerInfo.customerName || "未命名"}.xlsx`;
+  } else {
+    monthLabel = "其他月";
+    fileName = `其他月_${customerInfo.customerName || "未命名"}.xlsx`;
+  }
   
   const monthRow = worksheet.addRow(["", "", "", "", "", "", "", "", "", monthLabel]);
   monthRow.getCell(TOTAL_COLUMNS).font = { bold: true };
@@ -176,7 +188,6 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  const fileName = month ? `${month}_${customerInfo.customerName || "未命名"}.xlsx` : `其他月_${customerInfo.customerName || "未命名"}.xlsx`;
   link.download = fileName;
   link.click();
 
