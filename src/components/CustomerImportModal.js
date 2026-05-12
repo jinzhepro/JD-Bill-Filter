@@ -16,13 +16,9 @@ const parseCustomerText = (text) => {
     "购方名称": "customerName",
     "签约主体": "customerName",
     "客户名称": "customerName",
+    "公司全称": "customerName",
     "税号": "taxId",
-    "识别号": "taxId",
-    "银行": "bankName",
-    "账号": "bankAccount",
-    "地址": "address",
-    "住址": "address",
-    "电话": "phone"
+    "识别号": "taxId"
   };
   
   // 先识别所有订单号（12位数字 + 空格 + 数字）
@@ -129,10 +125,6 @@ export function CustomerImportModal({ open, onOpenChange, onImport }) {
       const fields = [];
       if (parsedResult.customerInfo.customerName) fields.push("客户名称");
       if (parsedResult.customerInfo.taxId) fields.push("税号");
-      if (parsedResult.customerInfo.bankName) fields.push("开户银行");
-      if (parsedResult.customerInfo.bankAccount) fields.push("银行账号");
-      if (parsedResult.customerInfo.address) fields.push("地址");
-      if (parsedResult.customerInfo.phone) fields.push("电话");
       
       toast({ title: `已导入: ${fields.join("、")}${parsedResult.orderNumbers.length > 0 ? `,订单号已复制` : ""}` });
     } else if (parsedResult.orderNumbers.length > 0) {
@@ -166,7 +158,7 @@ export function CustomerImportModal({ open, onOpenChange, onImport }) {
         </DialogHeader>
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">
-            粘贴开票信息，支持识别：抬头/税号/银行/账号/地址/电话/订单号
+            粘贴开票信息，支持识别：客户名称（公司全称）/纳税人识别号/订单号
           </p>
           <Textarea
             value={pasteText}
@@ -183,39 +175,15 @@ export function CustomerImportModal({ open, onOpenChange, onImport }) {
                 <p className="text-sm font-medium">识别到的客户信息</p>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   {customerInfo.customerName && (
-                    <div className="p-2 bg-muted rounded">
+                    <div className="p-2 bg-muted rounded col-span-2">
                       <span className="text-muted-foreground">客户名称：</span>
                       <span className="font-medium">{customerInfo.customerName}</span>
                     </div>
                   )}
                   {customerInfo.taxId && (
-                    <div className="p-2 bg-muted rounded">
+                    <div className="p-2 bg-muted rounded col-span-2">
                       <span className="text-muted-foreground">税号：</span>
                       <span className="font-medium">{customerInfo.taxId}</span>
-                    </div>
-                  )}
-                  {customerInfo.bankName && (
-                    <div className="p-2 bg-muted rounded">
-                      <span className="text-muted-foreground">开户银行：</span>
-                      <span className="font-medium">{customerInfo.bankName}</span>
-                    </div>
-                  )}
-                  {customerInfo.bankAccount && (
-                    <div className="p-2 bg-muted rounded">
-                      <span className="text-muted-foreground">银行账号：</span>
-                      <span className="font-medium">{customerInfo.bankAccount}</span>
-                    </div>
-                  )}
-                  {customerInfo.address && (
-                    <div className="p-2 bg-muted rounded col-span-2">
-                      <span className="text-muted-foreground">地址：</span>
-                      <span className="font-medium">{customerInfo.address}</span>
-                    </div>
-                  )}
-                  {customerInfo.phone && (
-                    <div className="p-2 bg-muted rounded col-span-2">
-                      <span className="text-muted-foreground">电话：</span>
-                      <span className="font-medium">{customerInfo.phone}</span>
                     </div>
                   )}
                 </div>

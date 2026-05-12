@@ -55,9 +55,9 @@ useEffect(() => {
           continue;
         }
 
-        const paymentRecord = order.billDetailDoList.find(detail => detail.feeCode === 30);
+        const paymentRecords = order.billDetailDoList.filter(detail => detail.feeCode === 30);
         
-        if (paymentRecord) {
+        for (const paymentRecord of paymentRecords) {
           const sku = paymentRecord.skuId;
           const quantity = paymentRecord.num || 1;
           const amount = paymentRecord.bal || paymentRecord.settleBal || 0;
