@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileSpreadsheet, ArrowLeftRight, Receipt, Package, Tag, ShoppingCart, LogOut, ChevronDown, ShoppingBag } from "lucide-react";
+import { FileSpreadsheet, ArrowLeftRight, Receipt, Package, Tag, ShoppingCart, LogOut, ChevronDown, UtensilsCrossed } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 
@@ -21,7 +21,7 @@ export function Sidebar() {
       items: [
         {
           name: "结算单处理",
-          href: "/",
+          href: "/jd-business",
           icon: <FileSpreadsheet className="w-5 h-5" />,
         },
         {
@@ -66,16 +66,6 @@ export function Sidebar() {
         },
       ],
     },
-    {
-      title: "其他管理",
-      items: [
-        {
-          name: "食堂采购单",
-          href: "/canteen-purchase",
-          icon: <ShoppingBag className="w-5 h-5" />,
-        },
-      ],
-    },
   ];
 
   // 每个分组的展开状态，默认全部展开
@@ -95,21 +85,21 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="bg-card border-r border-border w-64 min-h-screen flex flex-col shadow-sm">
+    <aside className="bg-card border-r border-border w-64 h-screen flex flex-col shadow-sm overflow-y-auto">
       {/* Logo 区域 */}
-      <div className="h-16 border-b border-border flex items-center px-5">
+      <Link href="/canteen-purchase" className="h-16 border-b border-border flex items-center px-5 cursor-pointer hover:bg-muted/50 transition-colors">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
             <FileSpreadsheet className="w-5 h-5 text-primary-foreground" />
           </div>
           <div>
             <h2 className="text-sm font-bold text-foreground tracking-tight">
-              电商业务结算助手
+              京东万商业务
             </h2>
             <p className="text-xs text-muted-foreground">青云通</p>
           </div>
         </div>
-      </div>
+      </Link>
 
       {/* 菜单项 */}
       <nav className="p-4 flex-1">
@@ -168,6 +158,16 @@ export function Sidebar() {
 
       {/* 底部版权信息 */}
       <div className="p-4 border-t border-border space-y-2">
+        <Link href="/canteen-purchase">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start text-muted-foreground hover:text-foreground"
+          >
+            <UtensilsCrossed className="w-4 h-4 mr-2" />
+            切换业务
+          </Button>
+        </Link>
         <Button
           variant="ghost"
           size="sm"

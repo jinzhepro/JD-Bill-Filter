@@ -1,15 +1,13 @@
 "use client";
-import { SimpleLayout } from "@/components/SimpleLayout";
+import { CanteenLayout } from "@/components/CanteenLayout";
 import { CanteenPurchaseOrderManager } from "@/components/CanteenPurchaseOrderManager";
 
 export default function CanteenPurchasePage() {
   return (
-    <SimpleLayout>
+    <CanteenLayout>
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold">食堂采购单</h1>
-        <p className="text-muted-foreground">管理食堂采购数据，支持上传 Word 文件导入表格数据</p>
         <CanteenPurchaseOrderManager />
       </div>
-    </SimpleLayout>
+    </CanteenLayout>
   );
 }
