@@ -44,8 +44,10 @@ npx wrangler d1 migrations apply jd --local   # 本地数据库迁移
 | `purchase_orders` | 采购单批次数据 |
 | `invoice_history` | 发票导出历史 |
 | `invoice_history_items` | 发票明细项 |
-| `canteens` | 食堂信息（预置10个食堂） |
-| `canteen_purchase_orders` | 食堂采购单数据（含amount_with_tax含税金额字段） |
+| `canteen_purchase_orders` | 食堂采购单数据 |
+| `canteen_suppliers` | 食堂供应商信息 |
+| `canteen_invoice_history` | 食堂发票导出历史 |
+| `canteen_invoice_history_items` | 食堂发票明细项 |
 
 ## 页面路由
 
@@ -58,8 +60,10 @@ npx wrangler d1 migrations apply jd --local   # 本地数据库迁移
 | `/invoice` | 发票开具（导入JSON/导出Excel） |
 | `/invoice-history` | 发票历史 |
 | `/purchase` | 采购单管理 |
-| `/canteen` | 食堂管理 |
 | `/canteen-purchase` | 食堂采购单管理 |
+| `/canteen-suppliers` | 食堂供应商管理 |
+| `/canteen-invoice` | 食堂发票开具 |
+| `/jd-business` | 京东业务 |
 | `/login` | 登录页 |
 
 **发票开具页面** (`/invoice`):
@@ -223,9 +227,9 @@ export async function GET(request) {
 | `/api/products/*` | 商品映射 CRUD |
 | `/api/purchase-orders/*` | 采购单 CRUD |
 | `/api/invoice-history/*` | 发票历史 CRUD |
-| `/api/supply-orders/*` | 供货单相关 |
-| `/api/canteens/*` | 食堂 CRUD |
 | `/api/canteen-purchase-orders/*` | 食堂采购单 CRUD |
+| `/api/canteen-suppliers/*` | 食堂供应商 CRUD |
+| `/api/canteen-invoice-history/*` | 食堂发票历史 CRUD |
 
 ## 其他重要文件
 
@@ -237,8 +241,10 @@ export async function GET(request) {
 - `src/lib/reconciliation.js` - 订单与发票对账匹配
 - `src/lib/constants.js` - 全局常量
 - `src/data/suppliers.js` - 供应商配置
-- `src/components/CanteenManager.js` - 食堂管理组件
+- `src/components/CanteenSupplierManager.js` - 食堂供应商管理组件
 - `src/components/CanteenPurchaseOrderManager.js` - 食堂采购单管理组件
+- `src/components/CanteenInvoiceModal.js` - 食堂发票导出模态框
+- `src/components/CanteenInvoiceHistoryModal.js` - 食堂发票历史模态框
 - `env.d.ts` - Cloudflare 环境类型声明（D1 绑定等）
 
 ## ESLint 配置
