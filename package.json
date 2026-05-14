@@ -22,9 +22,7 @@
     "postcss": "^8.5.6",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "tailwindcss": "^3.4.18",
-    "tesseract.js": "^7.0.0",
-    "xlsx": "^0.18.5"
+    "tailwindcss": "^3.4.18"
   },
   "devDependencies": {
     "@cloudflare/next-on-pages": "^1.13.16",

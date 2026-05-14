@@ -69,7 +69,7 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
   const matchProducts = useCallback(
     (items) => {
       const matchedItems = [];
-      const errors = [];
+      const unmatchedItems = [];
 
       for (const item of items) {
         const productName = item.inputName.toLowerCase();
@@ -98,13 +98,27 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
             taxRate: taxRate,
             matchedProductName: matchedProduct.product_name,
             inputAmount: item.amount,
+            isUnmatched: false,
           });
         } else {
-          errors.push(item.inputName);
+          unmatchedItems.push({
+            name: item.inputName,
+            spec: "",
+            unit: item.unit,
+            quantity: item.quantity,
+            price: item.unitPrice,
+            taxRate: 0.13,
+            matchedProductName: null,
+            inputAmount: item.amount,
+            isUnmatched: true,
+          });
         }
       }
 
-      return { matchedItems, errors };
+      const allItems = [...matchedItems, ...unmatchedItems];
+      const errors = unmatchedItems.map(item => item.name);
+
+      return { matchedItems: allItems, errors };
     },
     [products]
   );
@@ -269,15 +283,19 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
           </Button>
 
           {matchErrors.length > 0 && (
-            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
-              <p className="text-sm text-destructive font-medium">未匹配品名：</p>
-              <p className="text-sm text-destructive">{matchErrors.join("、")}</p>
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+              <p className="text-sm text-orange-700 font-medium">
+                以下品名未匹配到数据库，已添加到列表末尾（橙色背景），请手动编辑发票名称：
+              </p>
+              <p className="text-sm text-orange-600 mt-1">{matchErrors.join("、")}</p>
             </div>
           )}
 
           {previewItems.length > 0 && (
             <div className="space-y-2">
-              <p className="text-sm font-medium">匹配结果</p>
+              <p className="text-sm font-medium">
+                匹配结果（已匹配 {previewItems.filter(i => !i.isUnmatched).length} 条，未匹配 {previewItems.filter(i => i.isUnmatched).length} 条）
+              </p>
               <div className="overflow-x-auto border rounded-lg">
                 <table className="w-full border-collapse text-sm">
                   <thead>
@@ -292,7 +310,7 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
                   </thead>
                   <tbody>
                     {previewItems.map((item, index) => (
-                      <tr key={index}>
+                      <tr key={index} className={item.isUnmatched ? "bg-orange-50" : ""}>
                         <td className="border px-1 py-1">
                           <Input
                             value={item.name}
@@ -301,7 +319,7 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
                               newItems[index] = { ...newItems[index], name: e.target.value };
                               setPreviewItems(newItems);
                             }}
-                            className="h-7 text-sm border-0 shadow-none focus-visible:ring-1"
+                            className={`h-7 text-sm border-0 shadow-none focus-visible:ring-1 ${item.isUnmatched ? "bg-orange-50" : ""}`}
                           />
                         </td>
                         <td className="border px-2 py-1 text-center">{item.spec}</td>

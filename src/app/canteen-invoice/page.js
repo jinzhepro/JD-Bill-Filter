@@ -5,8 +5,9 @@ import { CanteenInvoiceModal } from "@/components/CanteenInvoiceModal";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { FileSpreadsheet, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { FileSpreadsheet, Trash2, ChevronLeft, ChevronRight, Copy, ChevronDown, ChevronUp, Download } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
+import { exportInvoice } from "@/lib/invoiceExporter";
 
 export default function CanteenInvoicePage() {
   const [products, setProducts] = useState([]);
@@ -15,6 +16,7 @@ export default function CanteenInvoicePage() {
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0, pageSize: 20 });
+  const [expandedRecords, setExpandedRecords] = useState({});
   const { toast } = useToast();
 
   const fetchProducts = useCallback(async () => {
@@ -96,6 +98,84 @@ export default function CanteenInvoicePage() {
     });
   };
 
+  const copyColumn = async (items, columnKey, columnName) => {
+    const values = items.map(item => {
+      if (columnKey === 'tax_rate') {
+        return item[columnKey] ? `${(item[columnKey] * 100).toFixed(0)}%` : '0%';
+      }
+      if (columnKey === 'price' || columnKey === 'total') {
+        return item[columnKey] || 0;
+      }
+      return item[columnKey] || "";
+    }).join("\n");
+
+    try {
+      await navigator.clipboard.writeText(values);
+      toast({ title: `${columnName} 已复制` });
+    } catch (error) {
+      console.error('操作失败:', error);
+      toast({ title: "复制失败", variant: "destructive" });
+    }
+  };
+
+  const ThWithCopy = ({ items, columnKey, columnName, className }) => (
+    <th className={`border px-2 py-1 ${className}`}>
+      <div className="flex items-center gap-1 justify-center">
+        <span>{columnName}</span>
+        <button
+          onClick={() => copyColumn(items, columnKey, columnName)}
+          className="cursor-pointer p-0.5 hover:bg-muted rounded text-muted-foreground hover:text-foreground"
+          title={`复制${columnName}列`}
+        >
+          <Copy className="w-3 h-3" />
+        </button>
+      </div>
+    </th>
+  );
+
+  const toggleExpand = (id) => {
+    setExpandedRecords(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  const handleReExport = async (record) => {
+    try {
+      const basicInfo = {
+        companyName: "青岛青云通公共服务有限公司",
+        contractNo: "JK-GQ-250041-32",
+        applyDate: new Date().toISOString().split("T")[0],
+        department: "青云通",
+        applicant: "刘雅超",
+      };
+
+      const customerInfo = {
+        customerName: record.customer_name,
+        taxId: record.tax_id,
+        bankName: record.bank_name,
+        bankAccount: record.bank_account,
+        address: record.address,
+        phone: record.phone,
+      };
+
+      const items = record.items.map(item => ({
+        name: item.name,
+        spec: item.spec,
+        unit: item.unit,
+        quantity: item.quantity,
+        price: item.price,
+        taxRate: item.tax_rate,
+      }));
+
+      await exportInvoice(basicInfo, customerInfo, items, record.canteen_name);
+      toast({ title: "发票重新导出成功" });
+    } catch (error) {
+      console.error('导出失败:', error);
+      toast({ title: "导出失败", variant: "destructive" });
+    }
+  };
+
   return (
     <CanteenLayout>
       <div className="space-y-6">
@@ -134,56 +214,63 @@ export default function CanteenInvoicePage() {
               <div className="space-y-4">
                 {history.map((record) => (
                   <div key={record.id} className="border rounded-lg p-4">
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <p className="font-medium">{record.canteen_name || "未指定食堂"}</p>
-                        <p className="text-sm text-muted-foreground">
-                          客户：{record.customer_name}
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => toggleExpand(record.id)}>
+                          {expandedRecords[record.id] ? (
+                            <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                          )}
+                          <p className="font-medium">{record.canteen_name || "未指定食堂"}</p>
+                        </div>
+                        <p className="text-sm text-muted-foreground ml-6">
+                          客户：{record.customer_name} | 导出时间：{formatDateTime(record.created_at)}
                         </p>
-                        <p className="text-sm text-muted-foreground">
-                          导出时间：{formatDateTime(record.created_at)}
+                        <p className="text-sm font-medium ml-6">
+                          合计：{formatAmount(record.total_amount)} ({record.items.length}条)
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium">
-                          合计：{formatAmount(record.total_amount)}
-                        </p>
+                        <Button variant="ghost" size="sm" onClick={() => handleReExport(record)} title="再次导出">
+                          <Download className="w-4 h-4" />
+                        </Button>
                         <Button variant="ghost" size="sm" onClick={() => handleDelete(record.id)}>
                           <Trash2 className="w-4 h-4 text-destructive" />
                         </Button>
                       </div>
                     </div>
 
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse text-sm">
-                        <thead>
-                          <tr className="bg-muted">
-                            <th className="border px-2 py-1 text-left">商品名称</th>
-                            <th className="border px-2 py-1 text-center">规格</th>
-                            <th className="border px-2 py-1 text-center">单位</th>
-                            <th className="border px-2 py-1 text-right">数量</th>
-                            <th className="border px-2 py-1 text-right">单价</th>
-                            <th className="border px-2 py-1 text-right">税率</th>
-                            <th className="border px-2 py-1 text-right">金额</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {record.items.map((item, idx) => (
-                            <tr key={idx}>
-                              <td className="border px-2 py-1">{item.name}</td>
-                              <td className="border px-2 py-1 text-center">{item.spec || ""}</td>
-                              <td className="border px-2 py-1 text-center">{item.unit || ""}</td>
-                              <td className="border px-2 py-1 text-right">{item.quantity}</td>
-                              <td className="border px-2 py-1 text-right">{formatAmount(item.price)}</td>
-                              <td className="border px-2 py-1 text-right">
-                                {(item.tax_rate * 100).toFixed(0)}%
-                              </td>
-                              <td className="border px-2 py-1 text-right">{formatAmount(item.total)}</td>
+                    {expandedRecords[record.id] && (
+                      <div className="overflow-x-auto mt-3">
+                        <table className="w-full border-collapse text-sm">
+                          <thead>
+                            <tr className="bg-muted">
+                              <ThWithCopy items={record.items} columnKey="name" columnName="商品名称" className="text-left" />
+                              <ThWithCopy items={record.items} columnKey="unit" columnName="单位" className="text-center" />
+                              <ThWithCopy items={record.items} columnKey="quantity" columnName="数量" className="text-right" />
+                              <ThWithCopy items={record.items} columnKey="price" columnName="单价" className="text-right" />
+                              <ThWithCopy items={record.items} columnKey="tax_rate" columnName="税率" className="text-right" />
+                              <ThWithCopy items={record.items} columnKey="total" columnName="金额" className="text-right" />
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                          </thead>
+                          <tbody>
+                            {record.items.map((item, idx) => (
+                              <tr key={idx}>
+                                <td className="border px-2 py-1">{item.name}</td>
+                                <td className="border px-2 py-1 text-center">{item.unit || ""}</td>
+                                <td className="border px-2 py-1 text-right">{item.quantity}</td>
+                                <td className="border px-2 py-1 text-right">{formatAmount(item.price)}</td>
+                                <td className="border px-2 py-1 text-right">
+                                  {(item.tax_rate * 100).toFixed(0)}%
+                                </td>
+                                <td className="border px-2 py-1 text-right">{formatAmount(item.total)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 ))}
 
