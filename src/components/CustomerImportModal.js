@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Decimal from "decimal.js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,7 +10,7 @@ import { Copy } from "lucide-react";
 
 const parseCustomerText = (text) => {
   const lines = text.split(/[\n\r]+/).map(l => l.trim()).filter(Boolean);
-  const result = { customerInfo: {}, orderNumbers: [] };
+  const result = { customerInfo: {}, orderNumbers: [], orderAmounts: [], totalAmount: "0.00" };
   
   const keywordMap = {
     "抬头": "customerName",
@@ -21,13 +22,18 @@ const parseCustomerText = (text) => {
     "识别号": "taxId"
   };
   
-  // 先识别所有订单号（12位数字 + 空格 + 数字）
+  // 先识别所有订单号和金额（12位数字 + 空格/制表符 + 金额）
+  let totalAmount = new Decimal(0);
   for (const line of lines) {
-    const orderMatches = line.matchAll(/(\d{12})\s+\d+(\.\d+)?/g);
+    const orderMatches = line.matchAll(/(\d{12})[\s\t]+(\d+(?:\.\d+)?)/g);
     for (const match of orderMatches) {
       result.orderNumbers.push(match[1]);
+      const amount = new Decimal(match[2]);
+      result.orderAmounts.push({ orderNumber: match[1], amount: match[2] });
+      totalAmount = totalAmount.plus(amount);
     }
   }
+  result.totalAmount = totalAmount.toFixed(2);
   
   // 再识别客户信息
   for (const line of lines) {
@@ -196,11 +202,24 @@ export function CustomerImportModal({ open, onOpenChange, onImport }) {
                   <p className="text-sm font-medium">识别到的订单号 ({orderNumbers.length}个)</p>
                   <Button variant="outline" size="sm" onClick={handleCopyOrderNumbers}>
                     <Copy className="w-4 h-4 mr-1" />
-                    复制
+                    复制订单号
                   </Button>
                 </div>
-                <div className="p-2 bg-muted rounded text-xs font-mono max-h-48 overflow-auto whitespace-pre-wrap break-all">
-                  {orderNumbers.join(",")}
+                <div className="p-2 bg-muted rounded text-xs font-mono max-h-48 overflow-auto">
+                  <table className="w-full">
+                    <tbody>
+                      {parsedResult.orderAmounts.map((item, index) => (
+                        <tr key={index} className="border-b border-border last:border-0">
+                          <td className="py-1 px-2">{item.orderNumber}</td>
+                          <td className="py-1 px-2 text-right">{item.amount}</td>
+                        </tr>
+                      ))}
+                      <tr className="font-bold border-t-2 border-border">
+                        <td className="py-1 px-2">合计 ({orderNumbers.length}个订单)</td>
+                        <td className="py-1 px-2 text-right text-red-600">¥{parsedResult.totalAmount}</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
