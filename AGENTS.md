@@ -1,252 +1,126 @@
-# AGENTS.md - AI Agent 开发指南
-
-## 项目概述
+# AGENTS.md
 
 **电商业务结算助手** - 京东对账单处理系统（中文界面）
-
-**技术栈**: Next.js 15.5.2 (App Router), React 19.2.0, JavaScript (无 TypeScript), Tailwind CSS 3.4.18, shadcn/ui (New York 风格), Decimal.js, ExcelJS, Tesseract.js (OCR), Cloudflare Pages + D1
-
-**Node 版本**: Volta 管理 (24.14.1)
-
-**路径别名**: `@/*` → `./src/*`（jsconfig.json）
 
 ## 命令
 
 ```bash
-npm run build    # 生产构建
-npm run lint     # ESLint 9 flat config
-
-# Cloudflare Pages + D1
-npm run pages:build  # 构建 Pages 输出（必须先运行）
-npm run pages:dev    # 本地 Pages 开发（端口8788，自动先 build）
-npm run pages:deploy # 部署到 Cloudflare Pages（自动先 build）
-npx wrangler d1 migrations apply jd --remote  # 远程数据库迁移
-npx wrangler d1 migrations apply jd --local   # 本地数据库迁移
+npm run build           # next build
+npm run lint            # ESLint 9 flat config
+npm run pages:dev       # 本地开发（端口8788，自动先 pages:build）
+npm run pages:deploy    # 部署到 Cloudflare Pages（自动先 pages:build）
+npx wrangler d1 migrations apply jd --local   # 本地 D1 迁移
+npx wrangler d1 migrations apply jd --remote  # 远程 D1 迁移
 ```
 
-**无测试框架** - 仅手动测试。
-**无 dev/start** - 本地开发使用 `npm run pages:dev`（端口 8788）。
+**无 `npm run dev`/`npm start`** — 始终使用 `pages:dev`。**无测试框架**。
 
-## 部署架构
+## 架构
 
-**Cloudflare Pages + D1 数据库**
+**Next.js 15 (App Router) + Cloudflare Pages + D1** · JavaScript (无 TS) · shadcn/ui New York · Tailwind CSS 3 · Decimal.js · Volta Node 24.14.1
 
-- 所有 API routes 必须添加 `export const runtime = 'edge';`（在第一行）
-- 数据库绑定: `DB` (wrangler.toml)
-- 迁移文件: `migrations/*.sql`，按序号顺序执行
+- 路径别名: `@/*` → `./src/*`（jsconfig.json）
+- UI 组件: `@/components/ui/*`（shadcn 注册表）
+- 数据库绑定: `env.DB`（D1, wrangler.toml）
+- 迁移: `migrations/*.sql`，按序号执行
 
-**数据库表**:
+## API Route 规则
 
-| 表名 | 用途 |
-|------|------|
-| `product_mappings` | 商品 SKU 映射 |
-| `brand_mappings` | 品牌发票名称映射 |
-| `purchase_orders` | 采购单批次数据 |
-| `invoice_history` | 发票导出历史 |
-| `invoice_history_items` | 发票明细项 |
-| `canteen_purchase_orders` | 食堂采购单数据 |
-| `canteen_suppliers` | 食堂供应商信息 |
-| `canteen_invoice_history` | 食堂发票导出历史 |
-| `canteen_invoice_history_items` | 食堂发票明细项 |
-
-## 页面路由
-
-| 路径 | 功能 |
-|------|------|
-| `/` | 首页（结算单处理） |
-| `/suppliers` | 供应商转换 |
-| `/products` | 商品管理 |
-| `/brands` | 品牌管理 |
-| `/invoice` | 发票开具（导入JSON/导出Excel） |
-| `/invoice-history` | 发票历史 |
-| `/purchase` | 采购单管理 |
-| `/canteen-purchase` | 食堂采购单管理 |
-| `/canteen-suppliers` | 食堂供应商管理 |
-| `/canteen-invoice` | 食堂发票开具 |
-| `/jd-business` | 京东业务 |
-| `/login` | 登录页 |
-
-**发票开具页面** (`/invoice`):
-- 顶部"导入开票信息"按钮：识别客户信息+订单号
-- 开票内容：仅通过导入添加（已移除编辑功能）
-- 按钮布局：清空明细 / 导入 / 导出发票
-
-## 认证保护
-
-简单密码保护，默认密码: `qingyun2026`（通过 cookie 认证，30天有效期）
-
-修改密码: 设置环境变量 `AUTH_PASSWORD`，或修改 `src/app/api/login/route.js`。
-
-## Context 状态管理
-
-| Context | 文件 | 用途 |
-|---------|------|------|
-| SettlementContext | `src/context/SettlementContext.js` | 结算单核心状态 |
-| InvoiceContext | `src/context/InvoiceContext.js` | 发票开具状态 |
-| SupplierContext | `src/context/SupplierContext.js` | 供应商状态 |
-| AuthContext | `src/context/AuthContext.js` | 认证状态 |
-
-**Hooks**: `src/hooks/use-toast.js` (shadcn toast), `src/hooks/useProductMatching.js`
-
-**禁止直接修改 state** - 始终使用 Context actions:
+每个 API route 文件**第一行必须是** `export const runtime = 'edge';`。所有 DB 操作使用 `getRequestContext().env.DB`：
 
 ```javascript
-import { useSettlement } from "@/context/SettlementContext";
-
-const { processedData, setProcessedData } = useSettlement();
-// ✅ setProcessedData(newData)
-// ❌ processedData.push(newItem)
-
-// InvoiceContext 批量添加条目
-const { addLineItems } = useInvoice();
-// ✅ addLineItems(items)  // 批量添加
-// ❌ items.forEach(item => addLineItem(item))  // 逐条添加
-```
-
-## 关键规则
-
-### 金额计算
-
-**必须使用 Decimal.js** - 禁止使用浮点数运算:
-
-```javascript
-import Decimal from "decimal.js";
-import { cleanAmount } from "@/lib/utils";
-
-const amount = new Decimal(cleanAmount(value));
-```
-
-### 商品编号处理
-
-商品编号 **必须是字符串**。Excel 会自动转换为数字或添加公式前缀 `="..."`。
-
-使用 `cleanProductCode()` 清理:
-
-```javascript
-import { cleanProductCode } from "@/lib/utils";
-
-const productCode = cleanProductCode(row["商品编号"]);
-```
-
-### API Routes
-
-```javascript
-export const runtime = 'edge';  // 必须放在文件第一行
-
+export const runtime = 'edge';
 import { getRequestContext } from '@cloudflare/next-on-pages';
-
 export async function GET(request) {
   const { env } = getRequestContext();
   const db = env.DB;
-  // ...
 }
 ```
 
-### 组件
-
-所有客户端组件必须以 `"use client"` 开头。
-
-## 核心工具函数 (`src/lib/utils.js`)
-
-**基础工具**:
-- `cn(...inputs)` - 合并 Tailwind 类名 (clsx + tailwind-merge)
-- `cleanAmount(value)` - 清理货币字符串 (¥, ￥, $, 逗号, 空格)
-- `cleanAmountString(value)` - 清理金额字符串，返回 Decimal 安全字符串（避免 parseFloat 精度丢失）
-- `cleanProductCode(value)` - 处理 Excel 公式前缀 `="..."`，返回字符串
-- `formatAmount(value, forcePositive)` - 格式化金额显示（字符串）
-- `formatAmountJSX(value, forcePositive)` - 格式化金额显示（React 组件）
-- `calculateColumnTotals(data, columns)` - 计算列总和
-
-**发票相关**:
-- `getCurrentMonth()` - 获取当前月份字符串 (YYYY-MM)
-- `formatTimestamp(timestamp)` - 转换时间戳为日期字符串 (YYYY-MM-DD)
-- `calculateRowAmount(item)` - 计算发票行金额（不含税、税额、合计）
-- `groupItemsByMonth(items)` - 按月份分组发票条目（当前月 vs 其他月）
-
-## 文件处理
-
-- 支持格式：`.xlsx`, `.xls`, `.csv` (最大 50MB)
-- CSV 编码：先尝试 UTF-8，失败后尝试 GBK
-- Excel 导出：商品编号列设置为文本格式 (`numFmt: '@'`)
-- 结算单处理：只处理"货款"记录，合并相同 SKU，分摊售后赔付费
-
-## 发票导入导出
-
-**发票导入** (`src/components/InvoiceImportModal.js`):
-- **支持两种格式**：
-  - JSON 格式：解析结算单 JSON，提取货款记录 (`feeCode === 30`)，使用 `finishTime` 作为发票日期
-  - 制表符分隔格式：日期 + SKU + 数量 + 金额（老数据格式）
-- 从商品映射表匹配 SKU 获取发票名称
-
-**客户信息导入** (`src/components/CustomerImportModal.js`):
-- 支持识别：抬头/税号/银行/账号/地址/电话/订单号
-- 订单号识别模式：12位数字 + 空格 + 数字（不依赖"订单号："文字）
-- 自动复制订单号到剪贴板（逗号分隔）
-
-**发票导出**:
-- 按月份分组导出（当前月单独文件，其他月合并）
-- 自动保存到发票历史记录
-- Context 使用 `addLineItems` 批量添加条目（而非逐条添加）
-
-## 结算单处理逻辑 (`src/lib/settlementProcessor.js`)
-
-处理流程：
-1. 收集"直营服务费"和"交易服务费"数据（按 SKU 分组）
-2. 合并"货款"记录（相同 SKU 累加金额和数量）
-3. 计算售后卖家赔付费总额，从某个 SKU 扣除
-4. 生成最终结果，附加服务费数据
-
-**重要**：添加新的服务费类型时，需同步修改：
-- `src/lib/constants.js` - 添加常量
-- `src/lib/settlementProcessor.js` - 添加收集函数、更新合并/结果逻辑
-- `src/lib/utils.js` - 更新 `calculateColumnTotals` 默认列
-- `src/components/SettlementResultDisplay.js` - 更新 `amountFields`
-- `src/components/DataDisplay.js` - 更新合计计算和展示
-
-## 样式规范
-
-使用 shadcn/ui 语义化 CSS 变量:
-
-```javascript
-// ✅ bg-card text-foreground border-border
-// ❌ bg-white text-gray-800 border-gray-200
-```
-
-## 添加新内容
-
-- **新供应商**: 在 `src/data/suppliers.js` 的 `SUPPLIERS` 数组添加配置
-- **新数据库字段**: 创建迁移文件 `migrations/00XX_xxx.sql`，然后运行 `npx wrangler d1 migrations apply jd --local` 和 `--remote`
-
-## API Routes
-
-| 路径 | 用途 |
-|------|------|
+| Route 前缀 | 用途 |
+|---|---|
 | `/api/login` | 登录/登出 (POST/DELETE) |
-| `/api/check-auth` | 检查认证状态 |
-| `/api/brand-mappings/*` | 品牌映射 CRUD |
-| `/api/products/*` | 商品映射 CRUD |
+| `/api/check-auth` | 认证检查 |
+| `/api/products/*` | 商品 SKU 映射 CRUD |
+| `/api/brand-mappings/*` | 品牌发票名称 CRUD |
 | `/api/purchase-orders/*` | 采购单 CRUD |
 | `/api/invoice-history/*` | 发票历史 CRUD |
 | `/api/canteen-purchase-orders/*` | 食堂采购单 CRUD |
 | `/api/canteen-suppliers/*` | 食堂供应商 CRUD |
 | `/api/canteen-invoice-history/*` | 食堂发票历史 CRUD |
 
-## 其他重要文件
+## 关键规则
 
-- `src/lib/settlementProcessor.js` - 结算单核心处理逻辑
-- `src/lib/settlementHelpers.js` - 结算辅助函数
-- `src/lib/invoiceExporter.js` - 发票导出逻辑
-- `src/lib/excelHandler.js` - Excel 文件处理
-- `src/lib/fileValidation.js` - 文件验证
-- `src/lib/reconciliation.js` - 订单与发票对账匹配
-- `src/lib/constants.js` - 全局常量
-- `src/data/suppliers.js` - 供应商配置
-- `src/components/CanteenSupplierManager.js` - 食堂供应商管理组件
-- `src/components/CanteenPurchaseOrderManager.js` - 食堂采购单管理组件
-- `src/components/CanteenInvoiceModal.js` - 食堂发票导出模态框
-- `src/components/CanteenInvoiceHistoryModal.js` - 食堂发票历史模态框
-- `env.d.ts` - Cloudflare 环境类型声明（D1 绑定等）
+### 金额计算
 
-## ESLint 配置
+**必须使用 Decimal.js**，禁止浮点数：
 
-ESLint 9 flat config (`eslint.config.mjs`)，忽略 `.next/`, `.wrangler/`, `.vercel/`, `migrations/` 等目录。`no-unused-vars` 为 warn 级别，`react/prop-types` 已关闭。
+```javascript
+import Decimal from "decimal.js";
+import { cleanAmountString } from "@/lib/utils";
+const amount = new Decimal(cleanAmountString(value));
+```
+
+### 商品编号处理
+
+商品编号必须是**字符串**。Excel 可能添加公式前缀 `="..."`。使用 `cleanProductCode()`：
+
+```javascript
+import { cleanProductCode } from "@/lib/utils";
+const code = cleanProductCode(row["商品编号"]);
+```
+
+### Context 状态管理
+
+用 actions 替换整个状态，不要直接修改：
+
+```javascript
+const { processedData, setProcessedData } = useSettlement();
+setProcessedData(newData);  // ✅
+processedData.push(item);   // ❌
+
+// InvoiceContext: 批量添加用 addLineItems()
+const { addLineItems } = useInvoice();
+addLineItems(items);  // ✅
+items.forEach(i => addLineItem(i));  // ❌
+```
+
+### 客户端组件
+
+所有交互式组件文件必须以 `"use client"` 开头。
+
+### 样式
+
+使用 shadcn/ui 语义化 CSS 变量（`bg-card text-foreground`），不用原始颜色。
+
+## 认证
+
+Cookie 密码保护，默认密码 `qingyun2026`（30天有效期）。修改：设 `AUTH_PASSWORD` 环境变量或改 `src/app/api/login/route.js`。
+
+## 文件处理
+
+- 支持 `.xlsx/.xls/.csv`（最大 50MB）
+- CSV 编码：先 UTF-8，失败后 GBK
+- Excel 导出：商品编号列用文本格式 (`numFmt: '@'`)
+
+## 关键文件
+
+| 文件 | 用途 |
+|---|---|
+| `src/lib/settlementProcessor.js` | 结算单核心处理逻辑（合并 SKU、分摊赔付费） |
+| `src/lib/invoiceExporter.js` | 发票导出逻辑 |
+| `src/lib/excelHandler.js` | Excel 文件读写 |
+| `src/lib/constants.js` | 全局常量（费用名称、列名、默认公司信息） |
+| `src/lib/utils.js` | 工具函数（cn, cleanAmount, cleanProductCode, formatAmount 等） |
+| `src/data/suppliers.js` | 供应商配置（SUPPLIERS 数组） |
+| `src/context/SettlementContext.js` | 结算单状态 |
+| `src/context/InvoiceContext.js` | 发票状态 |
+| `src/context/SupplierContext.js` | 供应商状态 |
+| `src/context/AuthContext.js` | 认证状态 |
+| `env.d.ts` | Cloudflare D1 类型声明 |
+
+## 添加新内容
+
+- **新供应商**: 在 `src/data/suppliers.js` 的 `SUPPLIERS` 数组添加
+- **新数据库字段**: 创建 `migrations/00XX_desc.sql`，运行 `wrangler d1 migrations apply jd --local && --remote`
+- **新服务费类型**: 同步修改 `constants.js` → `settlementProcessor.js` → `utils.js` 的 `calculateColumnTotals` → `SettlementResultDisplay.js` 的 `amountFields` → `DataDisplay.js`
