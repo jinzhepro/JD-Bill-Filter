@@ -230,9 +230,8 @@ export function CustomerImportModal({ open, onOpenChange, onImport }) {
           <Button variant="outline" onClick={handleClose}>
             取消
           </Button>
-          {!parsedResult ? (
-            <Button onClick={handleParse}>识别</Button>
-          ) : (
+          <Button onClick={handleParse}>识别</Button>
+          {parsedResult && (
             <Button onClick={handleImport}>确认导入</Button>
           )}
         </DialogFooter>
