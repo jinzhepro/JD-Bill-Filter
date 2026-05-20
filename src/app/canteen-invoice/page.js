@@ -103,7 +103,7 @@ export default function CanteenInvoicePage() {
   const copyColumn = async (items, columnKey, columnName) => {
     const values = items.map(item => {
       if (columnKey === 'tax_rate') {
-        return item[columnKey] ? `${(item[columnKey] * 100).toFixed(0)}%` : '0%';
+        return item[columnKey] ? `${(item[columnKey] * 100).toFixed(0)}` : '0';
       }
       if (columnKey === 'price' || columnKey === 'total') {
         return item[columnKey] || 0;
