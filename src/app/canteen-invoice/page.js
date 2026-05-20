@@ -2,6 +2,7 @@
 
 import { CanteenLayout } from "@/components/CanteenLayout";
 import { CanteenInvoiceModal } from "@/components/CanteenInvoiceModal";
+import { HuanyuInvoiceModal } from "@/components/HuanyuInvoiceModal";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +13,7 @@ import { exportInvoice } from "@/lib/invoiceExporter";
 export default function CanteenInvoicePage() {
   const [products, setProducts] = useState([]);
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
+  const [huanyuModalOpen, setHuanyuModalOpen] = useState(false);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -186,9 +188,14 @@ export default function CanteenInvoicePage() {
                 <FileSpreadsheet className="w-5 h-5" />
                 开发票
               </div>
-              <Button onClick={() => setInvoiceModalOpen(true)}>
-                开始开票
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={() => setHuanyuModalOpen(true)} variant="outline">
+                  寰宇开票
+                </Button>
+                <Button onClick={() => setInvoiceModalOpen(true)}>
+                  开始开票
+                </Button>
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -308,6 +315,15 @@ export default function CanteenInvoicePage() {
           open={invoiceModalOpen}
           onOpenChange={(open) => {
             setInvoiceModalOpen(open);
+            if (!open) fetchHistory();
+          }}
+          products={products}
+        />
+
+        <HuanyuInvoiceModal
+          open={huanyuModalOpen}
+          onOpenChange={(open) => {
+            setHuanyuModalOpen(open);
             if (!open) fetchHistory();
           }}
           products={products}

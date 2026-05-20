@@ -9,7 +9,7 @@ import Decimal from "decimal.js";
  * @param {string|null} month - 月份标签 (如 "2024-01" 或 null 表示其他月) 或食堂名称
  * @returns {Promise<void>}
  */
-export async function exportInvoice(basicInfo, customerInfo, lineItems, month) {
+export async function exportInvoice(basicInfo, customerInfo, lineItems, month, hideMonthLabel = false) {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("发票");
 
@@ -90,14 +90,19 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month) {
     cell.border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
   });
 
-  const lineItemsData = lineItems.map((item) => ({
-    name: item.name || "",
-    spec: item.spec || "",
-    unit: item.unit || "",
-    quantity: new Decimal(item.quantity || 0),
-    price: new Decimal(item.price || 0),
-    taxRate: new Decimal(item.taxRate || 0.13),
-  }));
+  const lineItemsData = lineItems.map((item) => {
+    const qty = parseFloat(item.quantity) || 0;
+    const prc = parseFloat(item.price) || 0;
+    const rate = parseFloat(item.taxRate) || 0.13;
+    return {
+      name: item.name || "",
+      spec: item.spec || "",
+      unit: item.unit || "",
+      quantity: new Decimal(qty),
+      price: new Decimal(prc),
+      taxRate: new Decimal(rate),
+    };
+  });
 
   lineItemsData.forEach((item) => {
     const amount = item.quantity.times(item.price).div(new Decimal(1).plus(item.taxRate));
@@ -164,11 +169,16 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month) {
     fileName = `其他月_${customerInfo.customerName || "未命名"}.xlsx`;
   }
   
-  const monthRow = worksheet.addRow(["", "", "", "", "", "", "", "", "", monthLabel]);
-  monthRow.getCell(TOTAL_COLUMNS).font = { bold: true };
-  monthRow.getCell(TOTAL_COLUMNS).alignment = { horizontal: "right", vertical: "middle" };
-
-  const lastRowNumber = monthRow.number;
+  let lastRowNumber;
+  
+  if (!hideMonthLabel) {
+    const monthRow = worksheet.addRow(["", "", "", "", "", "", "", "", "", monthLabel]);
+    monthRow.getCell(TOTAL_COLUMNS).font = { bold: true };
+    monthRow.getCell(TOTAL_COLUMNS).alignment = { horizontal: "right", vertical: "middle" };
+    lastRowNumber = monthRow.number;
+  } else {
+    lastRowNumber = worksheet.rowCount;
+  }
 
   worksheet.eachRow((row) => {
     row.height = 25;
