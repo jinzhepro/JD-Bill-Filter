@@ -256,6 +256,15 @@ const now = new Date();
     const exportLabel = canteenName ? `${canteenName}${monthNum}月` : `${monthNum}月`;
 
     try {
+      const remainingItems = previewItems.map(item => ({
+        name: item.name,
+        spec: "",
+        unit: item.unit,
+        quantity: item.quantity,
+        price: item.price,
+        taxRate: item.taxRate,
+      }));
+
       for (const customerName of selectedCustomers) {
         const customerAmountStr = customerAmounts[customerName];
         if (!customerAmountStr || customerAmountStr.trim() === "") continue;
@@ -273,34 +282,36 @@ const now = new Date();
         let remaining = customerAmount;
         const adjustedItems = [];
 
-        for (const item of previewItems) {
-          if (remaining <= 0) break;
-
+        while (remaining > 0 && remainingItems.length > 0) {
+          const item = remainingItems[0];
           const itemFullAmount = item.quantity * item.price;
 
-          if (itemFullAmount <= remaining) {
+          if (itemFullAmount <= remaining + 0.001) {
             adjustedItems.push({
               name: item.name,
-              spec: item.spec,
+              spec: "",
               unit: item.unit,
               quantity: item.quantity,
               price: item.price,
               taxRate: item.taxRate,
             });
             remaining -= itemFullAmount;
+            remainingItems.shift();
           } else {
-            const neededQuantity = parseFloat((remaining / item.price).toFixed(2));
             adjustedItems.push({
               name: item.name,
-              spec: item.spec,
+              spec: "",
               unit: item.unit,
-              quantity: neededQuantity,
-              price: item.price,
+              quantity: item.quantity,
+              price: remaining / item.quantity,
               taxRate: item.taxRate,
             });
             remaining = 0;
+            remainingItems.shift();
           }
         }
+
+        if (adjustedItems.length === 0) continue;
 
         const totalAmount = parseFloat(customerAmount.toFixed(2));
 
@@ -340,6 +351,7 @@ const now = new Date();
             customerInfo,
             items: itemsForHistory,
             totalAmount: parseFloat(totalAmount.toFixed(2)),
+            contractNo: basicInfo.contractNo,
           }),
         });
       }

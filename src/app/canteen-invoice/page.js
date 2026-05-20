@@ -146,7 +146,7 @@ export default function CanteenInvoicePage() {
     try {
       const basicInfo = {
         companyName: "青岛青云通公共服务有限公司",
-        contractNo: "JK-GQ-250041-32",
+        contractNo: record.contract_no || "JK-GQ-250041-32",
         applyDate: new Date().toISOString().split("T")[0],
         department: "青云通",
         applicant: "刘雅超",

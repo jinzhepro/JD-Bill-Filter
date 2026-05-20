@@ -51,14 +51,14 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
-    const { canteenName, customerInfo, items, totalAmount } = body;
+    const { canteenName, customerInfo, items, totalAmount, contractNo } = body;
 
     if (!customerInfo || !items || items.length === 0) {
       return Response.json({ success: false, error: '缺少必要数据' }, { status: 400 });
     }
 
     const historyResult = await db.prepare(
-      'INSERT INTO canteen_invoice_history (export_date, canteen_name, customer_name, tax_id, bank_name, bank_account, address, phone, total_amount, items_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      'INSERT INTO canteen_invoice_history (export_date, canteen_name, customer_name, tax_id, bank_name, bank_account, address, phone, total_amount, items_count, contract_no) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     ).bind(
       new Date().toISOString().split('T')[0],
       canteenName || null,
@@ -69,7 +69,8 @@ export async function POST(request) {
       customerInfo.address || null,
       customerInfo.phone || null,
       totalAmount,
-      items.length
+      items.length,
+      contractNo || null
     ).run();
 
     const historyId = historyResult.meta.last_row_id;

@@ -17,7 +17,7 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month, h
 
   worksheet.columns = [
     { width: 18 },
-    { width: 25 },
+    { width: 35 },
     { width: 12 },
     { width: 8 },
     { width: 10 },
