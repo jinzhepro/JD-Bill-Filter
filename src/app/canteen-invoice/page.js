@@ -237,6 +237,21 @@ export default function CanteenInvoicePage() {
                         <p className="text-sm font-medium ml-6">
                           合计：{formatAmount(record.total_amount)} ({record.items.length}条)
                         </p>
+                        {record.contract_no && (
+                          <p className="text-sm text-muted-foreground ml-6 flex items-center gap-1">
+                            合同号：{record.contract_no}
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(record.contract_no);
+                                toast({ title: "合同号已复制" });
+                              }}
+                              className="cursor-pointer p-0.5 hover:bg-muted rounded text-muted-foreground hover:text-foreground"
+                              title="复制合同号"
+                            >
+                              <Copy className="w-3 h-3" />
+                            </button>
+                          </p>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         <Button variant="ghost" size="sm" onClick={() => handleReExport(record)} title="再次导出">

@@ -65,6 +65,7 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
     HUANYU_CUSTOMERS.forEach(c => amounts[c] = "");
     return amounts;
   });
+  const [allocationPreview, setAllocationPreview] = useState([]);
   const { toast } = useToast();
 
   const parsePastedData = useCallback((text) => {
@@ -155,6 +156,61 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
     [products]
   );
 
+  const generateAllocationPreview = useCallback((items) => {
+    const preview = [];
+    const remainingItems = items.map(item => ({
+      name: item.name,
+      quantity: item.quantity,
+      price: item.price,
+      remainingAmount: item.quantity * item.price,
+    }));
+
+    for (const customerName of selectedCustomers) {
+      const amountStr = customerAmounts[customerName];
+      if (!amountStr || amountStr.trim() === "") continue;
+
+      const targetAmount = parseFloat(amountStr.replace(/[^\d.]/g, ""));
+      let remaining = targetAmount;
+      const customerItems = [];
+
+      while (remaining > 0.001 && remainingItems.length > 0) {
+        const item = remainingItems[0];
+
+        if (item.remainingAmount <= remaining + 0.001) {
+          customerItems.push({
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            amount: item.remainingAmount,
+          });
+          remaining -= item.remainingAmount;
+          remainingItems.shift();
+        } else {
+          const neededQuantity = parseFloat((remaining / item.price).toFixed(4));
+          customerItems.push({
+            name: item.name,
+            quantity: neededQuantity,
+            price: item.price,
+            amount: remaining,
+          });
+          item.quantity = parseFloat((item.quantity - neededQuantity).toFixed(4));
+          item.remainingAmount = item.quantity * item.price;
+          remaining = 0;
+        }
+      }
+
+      preview.push({
+        customerName,
+        targetAmount,
+        actualAmount: targetAmount - remaining,
+        items: customerItems,
+        shortfall: remaining > 0.001 ? remaining : 0,
+      });
+    }
+
+    setAllocationPreview(preview);
+  }, [selectedCustomers, customerAmounts]);
+
   const handleParse = useCallback(() => {
     const items = parsePastedData(pasteData);
     if (items.length === 0) {
@@ -174,6 +230,8 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
       toast({
         title: `成功匹配 ${matchedItems.length} 条数据`,
       });
+
+      generateAllocationPreview(matchedItems);
     }
 
     if (errors.length > 0) {
@@ -183,14 +241,18 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
         variant: "destructive",
       });
     }
-  }, [pasteData, parsePastedData, matchProducts, toast]);
+  }, [pasteData, parsePastedData, matchProducts, toast, generateAllocationPreview]);
 
   const toggleCustomer = (customer) => {
-    setSelectedCustomers(prev => 
-      prev.includes(customer)
+    setSelectedCustomers(prev => {
+      const newSelected = prev.includes(customer)
         ? prev.filter(c => c !== customer)
-        : [...prev, customer]
-    );
+        : [...prev, customer];
+      if (previewItems.length > 0) {
+        setTimeout(() => generateAllocationPreview(previewItems), 0);
+      }
+      return newSelected;
+    });
   };
 
   const updateCustomerAmount = (customer, amount) => {
@@ -198,6 +260,9 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
       ...prev,
       [customer]: amount,
     }));
+    if (previewItems.length > 0) {
+      setTimeout(() => generateAllocationPreview(previewItems), 0);
+    }
   };
 
   const getOriginalTotalAmount = useCallback(() => {
@@ -256,13 +321,15 @@ const now = new Date();
     const exportLabel = canteenName ? `${canteenName}${monthNum}月` : `${monthNum}月`;
 
     try {
+      const allocationPreview = [];
+
       const remainingItems = previewItems.map(item => ({
         name: item.name,
-        spec: "",
-        unit: item.unit,
         quantity: item.quantity,
         price: item.price,
         taxRate: item.taxRate,
+        unit: item.unit,
+        remainingAmount: item.quantity * item.price,
       }));
 
       for (const customerName of selectedCustomers) {
@@ -282,11 +349,10 @@ const now = new Date();
         let remaining = customerAmount;
         const adjustedItems = [];
 
-        while (remaining > 0 && remainingItems.length > 0) {
+        while (remaining > 0.001 && remainingItems.length > 0) {
           const item = remainingItems[0];
-          const itemFullAmount = item.quantity * item.price;
 
-          if (itemFullAmount <= remaining + 0.001) {
+          if (item.remainingAmount <= remaining + 0.001) {
             adjustedItems.push({
               name: item.name,
               spec: "",
@@ -295,19 +361,21 @@ const now = new Date();
               price: item.price,
               taxRate: item.taxRate,
             });
-            remaining -= itemFullAmount;
+            remaining -= item.remainingAmount;
             remainingItems.shift();
           } else {
+            const neededQuantity = parseFloat((remaining / item.price).toFixed(4));
             adjustedItems.push({
               name: item.name,
               spec: "",
               unit: item.unit,
-              quantity: item.quantity,
-              price: remaining / item.quantity,
+              quantity: neededQuantity,
+              price: item.price,
               taxRate: item.taxRate,
             });
+            item.quantity = parseFloat((item.quantity - neededQuantity).toFixed(4));
+            item.remainingAmount = item.quantity * item.price;
             remaining = 0;
-            remainingItems.shift();
           }
         }
 
@@ -367,6 +435,7 @@ const now = new Date();
       const amounts = {};
       HUANYU_CUSTOMERS.forEach(c => amounts[c] = "");
       setCustomerAmounts(amounts);
+      setAllocationPreview([]);
     } catch (error) {
       console.error("导出发票失败:", error);
       toast({ title: "导出发票失败", variant: "destructive" });
@@ -384,6 +453,7 @@ const now = new Date();
     const amounts = {};
     HUANYU_CUSTOMERS.forEach(c => amounts[c] = "");
     setCustomerAmounts(amounts);
+    setAllocationPreview([]);
   }, [onOpenChange]);
 
   const formatAmount = (amount) => {
@@ -479,6 +549,32 @@ const now = new Date();
           <Button onClick={handleParse} className="w-full">
             解析并匹配
           </Button>
+
+          {allocationPreview.length > 0 && (
+            <div className="space-y-3 border rounded-lg p-3 bg-blue-50">
+              <p className="text-sm font-medium text-blue-700">分配预览</p>
+              {allocationPreview.map((alloc, idx) => (
+                <div key={idx} className="border rounded p-2 bg-white">
+                  <p className="text-sm font-medium">{alloc.customerName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    目标金额：{formatAmount(alloc.targetAmount)} | 实际分配：{formatAmount(alloc.actualAmount)}
+                  </p>
+                  {alloc.shortfall > 0 && (
+                    <p className="text-xs text-red-600">缺少：{formatAmount(alloc.shortfall)}</p>
+                  )}
+                  <div className="mt-1 text-xs">
+                    {alloc.items.slice(0, 3).map((item, i) => (
+                      <span key={i} className="text-muted-foreground">
+                        {item.name}({formatAmount(item.amount)})
+                        {i < alloc.items.slice(0, 3).length - 1 ? "、" : ""}
+                      </span>
+                    ))}
+                    {alloc.items.length > 3 && <span className="text-muted-foreground">等{alloc.items.length}项</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {matchErrors.length > 0 && (
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
