@@ -179,21 +179,21 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
         if (item.remainingAmount <= remaining + 0.001) {
           customerItems.push({
             name: item.name,
-            quantity: item.quantity,
+            quantity: parseFloat(item.quantity.toFixed(2)),
             price: item.price,
             amount: item.remainingAmount,
           });
           remaining -= item.remainingAmount;
           remainingItems.shift();
         } else {
-          const neededQuantity = parseFloat((remaining / item.price).toFixed(4));
+          const neededQuantity = parseFloat((remaining / item.price).toFixed(2));
           customerItems.push({
             name: item.name,
             quantity: neededQuantity,
             price: item.price,
             amount: remaining,
           });
-          item.quantity = parseFloat((item.quantity - neededQuantity).toFixed(4));
+          item.quantity = parseFloat((item.quantity - neededQuantity).toFixed(2));
           item.remainingAmount = item.quantity * item.price;
           remaining = 0;
         }
@@ -357,14 +357,14 @@ const now = new Date();
               name: item.name,
               spec: "",
               unit: item.unit,
-              quantity: item.quantity,
+              quantity: parseFloat(item.quantity.toFixed(2)),
               price: item.price,
               taxRate: item.taxRate,
             });
             remaining -= item.remainingAmount;
             remainingItems.shift();
           } else {
-            const neededQuantity = parseFloat((remaining / item.price).toFixed(4));
+            const neededQuantity = parseFloat((remaining / item.price).toFixed(2));
             adjustedItems.push({
               name: item.name,
               spec: "",
@@ -373,7 +373,7 @@ const now = new Date();
               price: item.price,
               taxRate: item.taxRate,
             });
-            item.quantity = parseFloat((item.quantity - neededQuantity).toFixed(4));
+            item.quantity = parseFloat((item.quantity - neededQuantity).toFixed(2));
             item.remainingAmount = item.quantity * item.price;
             remaining = 0;
           }
@@ -384,14 +384,15 @@ const now = new Date();
         const totalAmount = parseFloat(customerAmount.toFixed(2));
 
         const itemsForHistory = adjustedItems.map((item) => {
-          const amountVal = item.quantity * item.price / (1 + item.taxRate);
+          const qty = parseFloat(item.quantity.toFixed(2));
+          const amountVal = qty * item.price / (1 + item.taxRate);
           const taxVal = amountVal * item.taxRate;
           const totalVal = amountVal + taxVal;
           return {
             name: item.name,
             spec: item.spec,
             unit: item.unit,
-            quantity: item.quantity,
+            quantity: qty,
             price: item.price,
             taxRate: item.taxRate,
             amount: parseFloat(amountVal.toFixed(2)),
