@@ -90,10 +90,10 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month, h
     cell.border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
   });
 
-  const lineItemsData = lineItems.map((item) => {
+const lineItemsData = lineItems.map((item) => {
     const qty = parseFloat(item.quantity) || 0;
     const prc = parseFloat(item.price) || 0;
-    const rate = parseFloat(item.taxRate) || 0.13;
+    const rate = parseFloat(item.taxRate) || 0;
     return {
       name: item.name || "",
       spec: item.spec || "",
@@ -101,13 +101,21 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month, h
       quantity: new Decimal(qty),
       price: new Decimal(prc),
       taxRate: new Decimal(rate),
+      amount: item.amount,
     };
   });
 
   lineItemsData.forEach((item) => {
-    const amount = item.quantity.times(item.price).div(new Decimal(1).plus(item.taxRate));
-    const tax = amount.times(item.taxRate);
-    const total = amount.plus(tax);
+    let total, amount, tax;
+    if (item.amount !== undefined) {
+      total = new Decimal(item.amount);
+      amount = total.div(new Decimal(1).plus(item.taxRate));
+      tax = total.minus(amount);
+    } else {
+      amount = item.quantity.times(item.price).div(new Decimal(1).plus(item.taxRate));
+      tax = amount.times(item.taxRate);
+      total = amount.plus(tax);
+    }
 
     const row = worksheet.addRow(["", item.name, item.spec, item.unit, item.quantity.toFixed(2), item.price.toFixed(2), amount.toFixed(2), `${item.taxRate.times(100).toFixed(0)}%`, tax.toFixed(2), total.toFixed(2)]);
     row.eachCell((cell, colNumber) => {
@@ -119,15 +127,19 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month, h
   });
 
   const totalQuantity = lineItemsData.reduce((sum, item) => sum.plus(item.quantity), new Decimal(0));
+  const grandTotal = lineItemsData.reduce((sum, item) => {
+    if (item.amount !== undefined) {
+      return sum.plus(new Decimal(item.amount));
+    }
+    return sum.plus(item.quantity.times(item.price));
+  }, new Decimal(0));
   const totalAmount = lineItemsData.reduce((sum, item) => {
-    const amount = item.quantity.times(item.price).div(new Decimal(1).plus(item.taxRate));
-    return sum.plus(amount);
+    if (item.amount !== undefined) {
+      return sum.plus(new Decimal(item.amount).div(new Decimal(1).plus(item.taxRate)));
+    }
+    return sum.plus(item.quantity.times(item.price).div(new Decimal(1).plus(item.taxRate)));
   }, new Decimal(0));
-  const totalTax = lineItemsData.reduce((sum, item) => {
-    const amount = item.quantity.times(item.price).div(new Decimal(1).plus(item.taxRate));
-    return sum.plus(amount.times(item.taxRate));
-  }, new Decimal(0));
-  const grandTotal = totalAmount.plus(totalTax);
+  const totalTax = grandTotal.minus(totalAmount);
 
   const totalRow = worksheet.addRow(["", "合计", "", "", totalQuantity.toFixed(2), "", totalAmount.toFixed(2), "", totalTax.toFixed(2), grandTotal.toFixed(2)]);
   worksheet.mergeCells(totalRow.number, 2, totalRow.number, 4);
