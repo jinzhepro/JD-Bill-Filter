@@ -59,18 +59,21 @@ export async function POST(request) {
 
     const results = { success: 0, failed: 0, errors: [] };
 
+    // 分离有效和无效的 items
+    const validItems = [];
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      const { batch_no, product_name, spec, unit, quantity, unit_price, total_amount, tax_rate, tax_amount, amount_with_tax, canteen_name, supplier_id } = item;
-
-      if (!batch_no || !product_name || !quantity || !unit_price) {
+      if (!item.batch_no || !item.product_name || !item.quantity || !item.unit_price) {
         results.failed++;
         results.errors.push({ row: i + 1, error: '批次号、产品名称、数量、单价必填' });
-        continue;
+      } else {
+        validItems.push(item);
       }
+    }
 
-      try {
-        await db.prepare(
+    if (validItems.length > 0) {
+      const insertBatches = validItems.map(({ batch_no, product_name, spec, unit, quantity, unit_price, total_amount, tax_rate, tax_amount, amount_with_tax, canteen_name, supplier_id }) =>
+        db.prepare(
           'INSERT INTO canteen_purchase_orders (batch_no, product_name, spec, unit, quantity, unit_price, total_amount, tax_rate, tax_amount, amount_with_tax, canteen_name, supplier_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         ).bind(
           batch_no,
@@ -85,11 +88,14 @@ export async function POST(request) {
           amount_with_tax || 0,
           canteen_name || '',
           supplier_id || null
-        ).run();
-        results.success++;
+        )
+      );
+      try {
+        await db.batch(insertBatches);
+        results.success += validItems.length;
       } catch (error) {
-        results.failed++;
-        results.errors.push({ row: i + 1, product_name, error: error.message });
+        results.failed += validItems.length;
+        results.errors.push({ error: error.message });
       }
     }
 

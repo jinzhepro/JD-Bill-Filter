@@ -24,19 +24,22 @@ export async function GET(request) {
 
     const history = historyResult.results.map(row => ({ ...row, items: [] }));
 
-    for (const h of history) {
-      const itemsResult = await db.prepare(
-        'SELECT sku, name, spec, quantity, price, name_sku FROM invoice_history_items WHERE history_id = ?'
-      ).bind(h.id).all();
-      
-      h.items = itemsResult.results.map(item => ({
-        sku: item.sku,
-        name: item.name,
-        spec: item.spec,
-        quantity: item.quantity,
-        price: item.price,
-        nameSku: item.name_sku
-      }));
+    if (history.length > 0) {
+      const batch = history.map(h =>
+        db.prepare('SELECT sku, name, spec, quantity, price, name_sku FROM invoice_history_items WHERE history_id = ?').bind(h.id)
+      );
+      const itemsResults = await db.batch(batch);
+
+      history.forEach((h, i) => {
+        h.items = itemsResults[i].results.map(item => ({
+          sku: item.sku,
+          name: item.name,
+          spec: item.spec,
+          quantity: item.quantity,
+          price: item.price,
+          nameSku: item.name_sku
+        }));
+      });
     }
 
     return Response.json({ success: true, data: history });
@@ -74,19 +77,25 @@ export async function POST(request) {
 
     const historyId = historyResult.meta.last_row_id;
 
-    for (const item of items) {
-      let nameSku = null;
-      if (item.sku) {
-        const productResult = await db.prepare(
-          'SELECT product_name FROM product_mappings WHERE sku = ?'
-        ).bind(item.sku).first();
-        
-        if (productResult) {
-          nameSku = `${productResult.product_name.replace(/\s+/g, '')}_${item.sku}`;
+    // 批量查询所有 SKU 对应的 product_name
+    const skuToNameSku = {};
+    const skuItems = items.filter(item => item.sku);
+    if (skuItems.length > 0) {
+      const productBatches = skuItems.map(item =>
+        db.prepare('SELECT product_name FROM product_mappings WHERE sku = ?').bind(item.sku)
+      );
+      const productResults = await db.batch(productBatches);
+      skuItems.forEach((item, i) => {
+        const row = productResults[i].results[0];
+        if (row) {
+          skuToNameSku[item.sku] = `${row.product_name.replace(/\s+/g, '')}_${item.sku}`;
         }
-      }
+      });
+    }
 
-      await db.prepare(
+    // 批量插入所有 items
+    const insertBatches = items.map(item =>
+      db.prepare(
         'INSERT INTO invoice_history_items (history_id, sku, name, spec, unit, quantity, price, tax_rate, amount, tax, total, name_sku) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
       ).bind(
         historyId,
@@ -100,9 +109,10 @@ export async function POST(request) {
         item.amount || 0,
         item.tax || 0,
         item.total || 0,
-        nameSku
-      ).run();
-    }
+        item.sku ? (skuToNameSku[item.sku] || null) : null
+      )
+    );
+    await db.batch(insertBatches);
 
     return Response.json({ success: true, id: historyId });
   } catch (error) {

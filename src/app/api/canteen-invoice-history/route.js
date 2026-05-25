@@ -22,12 +22,15 @@ export async function GET(request) {
 
     const history = historyResult.results.map(row => ({ ...row, items: [] }));
 
-    for (const h of history) {
-      const itemsResult = await db.prepare(
-        'SELECT name, spec, unit, quantity, price, tax_rate, amount, tax, total FROM canteen_invoice_history_items WHERE history_id = ?'
-      ).bind(h.id).all();
-      
-      h.items = itemsResult.results;
+    if (history.length > 0) {
+      const batch = history.map(h =>
+        db.prepare('SELECT name, spec, unit, quantity, price, tax_rate, amount, tax, total FROM canteen_invoice_history_items WHERE history_id = ?').bind(h.id)
+      );
+      const itemsResults = await db.batch(batch);
+
+      history.forEach((h, i) => {
+        h.items = itemsResults[i].results;
+      });
     }
 
     return Response.json({
@@ -75,8 +78,8 @@ export async function POST(request) {
 
     const historyId = historyResult.meta.last_row_id;
 
-    for (const item of items) {
-      await db.prepare(
+    const insertBatches = items.map(item =>
+      db.prepare(
         'INSERT INTO canteen_invoice_history_items (history_id, name, spec, unit, quantity, price, tax_rate, amount, tax, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
       ).bind(
         historyId,
@@ -89,8 +92,9 @@ export async function POST(request) {
         item.amount || 0,
         item.tax || 0,
         item.total || 0
-      ).run();
-    }
+      )
+    );
+    await db.batch(insertBatches);
 
     return Response.json({ success: true, id: historyId });
   } catch (error) {

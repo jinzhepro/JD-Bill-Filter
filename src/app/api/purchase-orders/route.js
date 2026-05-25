@@ -52,18 +52,21 @@ export async function POST(request) {
 
     const results = { success: 0, failed: 0, errors: [] };
 
+    // 分离有效和无效的 items
+    const validItems = [];
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      const { batch_no, sku, product_name, tax_rate, quantity, unit_price, total_amount } = item;
-
-      if (!batch_no || !sku || !quantity || !unit_price) {
+      if (!item.batch_no || !item.sku || !item.quantity || !item.unit_price) {
         results.failed++;
         results.errors.push({ row: i + 1, error: '批次号、SKU、数量、单价必填' });
-        continue;
+      } else {
+        validItems.push(item);
       }
+    }
 
-      try {
-        await db.prepare(
+    if (validItems.length > 0) {
+      const insertBatches = validItems.map(({ batch_no, sku, product_name, tax_rate, quantity, unit_price, total_amount }) =>
+        db.prepare(
           'INSERT INTO purchase_orders (batch_no, sku, product_name, tax_rate, quantity, unit_price, total_amount) VALUES (?, ?, ?, ?, ?, ?, ?)'
         ).bind(
           batch_no,
@@ -73,11 +76,14 @@ export async function POST(request) {
           quantity,
           unit_price,
           total_amount || 0
-        ).run();
-        results.success++;
+        )
+      );
+      try {
+        await db.batch(insertBatches);
+        results.success += validItems.length;
       } catch (error) {
-        results.failed++;
-        results.errors.push({ row: i + 1, sku, error: error.message });
+        results.failed += validItems.length;
+        results.errors.push({ error: error.message });
       }
     }
 
