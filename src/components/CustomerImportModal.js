@@ -12,84 +12,29 @@ const parseCustomerText = (text) => {
   const lines = text.split(/[\n\r]+/).map(l => l.trim()).filter(Boolean);
   const result = { customerInfo: {}, orderNumbers: [], orderAmounts: [], totalAmount: "0.00" };
   
-  const keywordMap = {
-    "抬头": "customerName",
-    "购方名称": "customerName",
-    "签约主体": "customerName",
-    "客户名称": "customerName",
-    "公司全称": "customerName",
-    "税号": "taxId",
-    "识别号": "taxId"
-  };
-  
-  // 先识别所有订单号和金额（12位数字 + 空格/制表符 + 金额）
   let totalAmount = new Decimal(0);
   for (const line of lines) {
     const orderMatches = line.matchAll(/(\d{12})[\s\t]+(\d+(?:\.\d+)?)/g);
     for (const match of orderMatches) {
       result.orderNumbers.push(match[1]);
-      const amount = new Decimal(match[2]);
       result.orderAmounts.push({ orderNumber: match[1], amount: match[2] });
-      totalAmount = totalAmount.plus(amount);
+      totalAmount = totalAmount.plus(match[2]);
     }
   }
   result.totalAmount = totalAmount.toFixed(2);
   
-  // 再识别客户信息
-  for (const line of lines) {
-    let key = "";
-    let value = "";
-    
-    if (line.includes("：")) {
-      const parts = line.split("：");
-      key = parts[0];
-      value = parts.slice(1).join("：").trim();
-    } else if (line.includes(":")) {
-      const colonIndex = line.indexOf(":");
-      key = line.substring(0, colonIndex);
-      value = line.substring(colonIndex + 1).trim();
-    } else {
-      const spaceIndex = line.indexOf(" ");
-      if (spaceIndex > 0) {
-        const possibleKey = line.substring(0, spaceIndex);
-        const possibleValue = line.substring(spaceIndex + 1).trim();
-        
-        for (const keyword of Object.keys(keywordMap)) {
-          if (possibleKey.includes(keyword)) {
-            key = possibleKey;
-            value = possibleValue;
-            break;
-          }
+  for (let i = 0; i < lines.length; i++) {
+    const taxIdMatch = lines[i].match(/[A-Z0-9]{18}/i);
+    if (taxIdMatch) {
+      result.customerInfo.taxId = taxIdMatch[0].toUpperCase();
+      if (i > 0) {
+        const parts = lines[i - 1].split(/[；;：:,，\s]+/).filter(Boolean);
+        const longestPart = parts.reduce((a, b) => a.length >= b.length ? a : b, "");
+        if (longestPart && !/^\d+$/.test(longestPart.replace(/\s/g, ""))) {
+          result.customerInfo.customerName = longestPart;
         }
       }
-    }
-    
-    if (key && value) {
-      const keyLower = key.toLowerCase();
-      
-      for (const [keyword, field] of Object.entries(keywordMap)) {
-        if (keyLower.includes(keyword)) {
-          const cleanedValue = value.replace(/[，,;；。.\s]+$/, '').trim();
-          result.customerInfo[field] = cleanedValue;
-          break;
-        }
-      }
-    }
-  }
-  
-  if (Object.keys(result.customerInfo).length === 0) {
-    const nonEmptyLines = lines.filter(l => l.length > 0);
-    if (nonEmptyLines.length >= 1) {
-      const firstLine = nonEmptyLines[0];
-      if (!/^\d+$/.test(firstLine.replace(/\s/g, ""))) {
-        result.customerInfo.customerName = firstLine;
-      }
-    }
-    if (nonEmptyLines.length >= 2) {
-      const secondLine = nonEmptyLines[1];
-      if (/^[A-Z0-9]{15,25}$/i.test(secondLine.replace(/\s/g, ""))) {
-        result.customerInfo.taxId = secondLine.replace(/\s/g, "");
-      }
+      break;
     }
   }
   
