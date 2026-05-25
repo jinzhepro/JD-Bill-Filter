@@ -26,7 +26,7 @@ export async function GET(request) {
 
     for (const h of history) {
       const itemsResult = await db.prepare(
-        'SELECT sku, name, spec, quantity, price FROM invoice_history_items WHERE history_id = ?'
+        'SELECT sku, name, spec, quantity, price, name_sku FROM invoice_history_items WHERE history_id = ?'
       ).bind(h.id).all();
       
       h.items = itemsResult.results.map(item => ({
@@ -34,7 +34,8 @@ export async function GET(request) {
         name: item.name,
         spec: item.spec,
         quantity: item.quantity,
-        price: item.price
+        price: item.price,
+        nameSku: item.name_sku
       }));
     }
 
@@ -74,8 +75,19 @@ export async function POST(request) {
     const historyId = historyResult.meta.last_row_id;
 
     for (const item of items) {
+      let nameSku = null;
+      if (item.sku) {
+        const productResult = await db.prepare(
+          'SELECT product_name FROM product_mappings WHERE sku = ?'
+        ).bind(item.sku).first();
+        
+        if (productResult) {
+          nameSku = `${productResult.product_name.replace(/\s+/g, '')}_${item.sku}`;
+        }
+      }
+
       await db.prepare(
-        'INSERT INTO invoice_history_items (history_id, sku, name, spec, unit, quantity, price, tax_rate, amount, tax, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO invoice_history_items (history_id, sku, name, spec, unit, quantity, price, tax_rate, amount, tax, total, name_sku) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
       ).bind(
         historyId,
         item.sku || null,
@@ -87,7 +99,8 @@ export async function POST(request) {
         item.taxRate || 0.13,
         item.amount || 0,
         item.tax || 0,
-        item.total || 0
+        item.total || 0,
+        nameSku
       ).run();
     }
 

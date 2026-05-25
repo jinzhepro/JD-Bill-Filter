@@ -5,8 +5,23 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, FileDown, Trash2, RefreshCw } from "lucide-react";
+import { Eye, FileDown, Trash2, RefreshCw, Copy } from "lucide-react";
 import { exportInvoice } from "@/lib/invoiceExporter";
+
+const ThWithCopy = ({ items, columnKey, columnName, onCopy }) => (
+  <th className="border border-border px-3 py-2 text-left">
+    <div className="flex items-center gap-1">
+      <span>{columnName}</span>
+      <button
+        onClick={() => onCopy(items, columnKey, columnName)}
+        className="cursor-pointer p-0.5 hover:bg-muted rounded text-muted-foreground hover:text-foreground"
+        title={`复制${columnName}列`}
+      >
+        <Copy className="w-3 h-3" />
+      </button>
+    </div>
+  </th>
+);
 
 export function InvoiceHistoryManager() {
   const [currentMonthHistory, setCurrentMonthHistory] = useState([]);
@@ -139,6 +154,26 @@ export function InvoiceHistoryManager() {
     return new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'CNY' }).format(amount || 0);
   };
 
+  const copyColumn = async (items, columnKey, columnName) => {
+    const values = items.map(item => {
+      if (columnKey === 'price') {
+        return item.price || 0;
+      } else if (columnKey === 'quantity') {
+        return item.quantity || 0;
+      } else {
+        return item[columnKey] || '';
+      }
+    }).join('\n');
+    
+    try {
+      await navigator.clipboard.writeText(values);
+      toast({ title: `${columnName} 已复制` });
+    } catch (error) {
+      console.error('操作失败:', error);
+      toast({ title: '复制失败', variant: 'destructive' });
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-end mb-4">
@@ -218,7 +253,7 @@ export function InvoiceHistoryManager() {
       </Card>
 
       <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>发票详情</DialogTitle>
           </DialogHeader>
@@ -257,17 +292,17 @@ export function InvoiceHistoryManager() {
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="bg-muted">
-                        <th className="border border-border px-3 py-2 text-left">SKU</th>
-                        <th className="border border-border px-3 py-2 text-left">商品名称</th>
-                        <th className="border border-border px-3 py-2 text-left">规格</th>
-                        <th className="border border-border px-3 py-2 text-right">数量</th>
-                        <th className="border border-border px-3 py-2 text-right">单价</th>
+                        <ThWithCopy items={selectedHistory.items} columnKey="nameSku" columnName="商品名称" onCopy={copyColumn} />
+                        <ThWithCopy items={selectedHistory.items} columnKey="name" columnName="发票名称" onCopy={copyColumn} />
+                        <ThWithCopy items={selectedHistory.items} columnKey="spec" columnName="规格" onCopy={copyColumn} />
+                        <ThWithCopy items={selectedHistory.items} columnKey="quantity" columnName="数量" onCopy={copyColumn} />
+                        <ThWithCopy items={selectedHistory.items} columnKey="price" columnName="单价" onCopy={copyColumn} />
                       </tr>
                     </thead>
                     <tbody>
                       {selectedHistory.items && selectedHistory.items.map((item, index) => (
                         <tr key={index}>
-                          <td className="border border-border px-3 py-2">{item.sku || "-"}</td>
+                          <td className="border border-border px-3 py-2">{item.nameSku || "-"}</td>
                           <td className="border border-border px-3 py-2">{item.name}</td>
                           <td className="border border-border px-3 py-2">{item.spec || "-"}</td>
                           <td className="border border-border px-3 py-2 text-right">{item.quantity}</td>
