@@ -83,7 +83,7 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month, h
     row.getCell(2).alignment = { horizontal: "left" };
   });
 
-  const lineHeaderRow = worksheet.addRow(["开票内容", "商品名称", "规格", "单位", "数量", "单价(含税)", "金额(不含税)", "税率", "税额", "合计金额"]);
+  const lineHeaderRow = worksheet.addRow(["开票内容", "商品名称", "规格", "单位", "数量", "金额(含税)", "金额(不含税)", "税率", "税额", "合计金额"]);
   lineHeaderRow.eachCell((cell) => {
     cell.font = { bold: true };
     cell.alignment = { horizontal: "center" };
@@ -117,7 +117,7 @@ const lineItemsData = lineItems.map((item) => {
       total = amount.plus(tax);
     }
 
-    const row = worksheet.addRow(["", item.name, item.spec, item.unit, item.quantity.toFixed(2), item.price.toFixed(2), amount.toFixed(2), `${item.taxRate.times(100).toFixed(0)}%`, tax.toFixed(2), total.toFixed(2)]);
+    const row = worksheet.addRow(["", item.name, item.spec, item.unit, item.quantity.toFixed(2), total.toFixed(2), amount.toFixed(2), `${item.taxRate.times(100).toFixed(0)}%`, tax.toFixed(2), total.toFixed(2)]);
     row.eachCell((cell, colNumber) => {
       cell.border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
       if (colNumber >= 5 && colNumber <= 10) {
@@ -141,7 +141,7 @@ const lineItemsData = lineItems.map((item) => {
   }, new Decimal(0));
   const totalTax = grandTotal.minus(totalAmount);
 
-  const totalRow = worksheet.addRow(["", "合计", "", "", totalQuantity.toFixed(2), "", totalAmount.toFixed(2), "", totalTax.toFixed(2), grandTotal.toFixed(2)]);
+  const totalRow = worksheet.addRow(["", "合计", "", "", totalQuantity.toFixed(2), grandTotal.toFixed(2), totalAmount.toFixed(2), "", totalTax.toFixed(2), grandTotal.toFixed(2)]);
   worksheet.mergeCells(totalRow.number, 2, totalRow.number, 4);
   totalRow.eachCell((cell) => {
     cell.font = { bold: true };

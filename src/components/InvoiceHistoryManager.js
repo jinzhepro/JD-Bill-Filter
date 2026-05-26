@@ -157,7 +157,7 @@ export function InvoiceHistoryManager() {
   const copyColumn = async (items, columnKey, columnName) => {
     const values = items.map(item => {
       if (columnKey === 'price') {
-        return item.price || 0;
+        return ((item.quantity || 0) * (item.price || 0)).toFixed(2);
       } else if (columnKey === 'quantity') {
         return item.quantity || 0;
       } else {
@@ -296,7 +296,7 @@ export function InvoiceHistoryManager() {
                         <ThWithCopy items={selectedHistory.items} columnKey="name" columnName="发票名称" onCopy={copyColumn} />
                         <ThWithCopy items={selectedHistory.items} columnKey="spec" columnName="规格" onCopy={copyColumn} />
                         <ThWithCopy items={selectedHistory.items} columnKey="quantity" columnName="数量" onCopy={copyColumn} />
-                        <ThWithCopy items={selectedHistory.items} columnKey="price" columnName="单价" onCopy={copyColumn} />
+                        <ThWithCopy items={selectedHistory.items} columnKey="price" columnName="金额(含税)" onCopy={copyColumn} />
                       </tr>
                     </thead>
                     <tbody>
@@ -306,7 +306,7 @@ export function InvoiceHistoryManager() {
                           <td className="border border-border px-3 py-2">{item.name}</td>
                           <td className="border border-border px-3 py-2">{item.spec || "-"}</td>
                           <td className="border border-border px-3 py-2 text-right">{item.quantity}</td>
-                          <td className="border border-border px-3 py-2 text-right">{formatAmount(item.price)}</td>
+                          <td className="border border-border px-3 py-2 text-right">{formatAmount(item.quantity * item.price)}</td>
                         </tr>
                       ))}
                     </tbody>

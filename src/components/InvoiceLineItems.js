@@ -65,7 +65,7 @@ export function InvoiceLineItems() {
                 <th className="border border-border px-2 py-2 text-center">规格</th>
                 <th className="border border-border px-2 py-2 text-center">单位</th>
                 <th className="border border-border px-2 py-2 text-center">数量</th>
-                <th className="border border-border px-2 py-2 text-center">单价(含税)</th>
+                <th className="border border-border px-2 py-2 text-center">金额(含税)</th>
                 <th className="border border-border px-2 py-2 text-center">金额(不含税)</th>
                 <th className="border border-border px-2 py-2 text-center">税率</th>
                 <th className="border border-border px-2 py-2 text-center">税额</th>
@@ -86,7 +86,7 @@ export function InvoiceLineItems() {
                     <td className="border border-border px-2 py-2">{item.spec}</td>
                     <td className="border border-border px-2 py-2 text-center">{item.unit}</td>
                     <td className="border border-border px-2 py-2 text-right">{item.quantity}</td>
-                    <td className="border border-border px-2 py-2 text-right">{item.price.toFixed(2)}</td>
+                    <td className="border border-border px-2 py-2 text-right">{row.total}</td>
                     <td className="border border-border px-2 py-2 text-right">{row.amount}</td>
                     <td className="border border-border px-2 py-2 text-right">{(item.taxRate * 100).toFixed(0)}%</td>
                     <td className="border border-border px-2 py-2 text-right">{row.tax}</td>
