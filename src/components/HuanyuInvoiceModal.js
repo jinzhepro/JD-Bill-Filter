@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Search, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { exportInvoice } from "@/lib/invoiceExporter";
 
@@ -59,6 +60,11 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
   const [matchErrors, setMatchErrors] = useState([]);
   const [canteenName, setCanteenName] = useState("");
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchTargetIndex, setSearchTargetIndex] = useState(null);
   const [selectedCustomers, setSelectedCustomers] = useState(HUANYU_CUSTOMERS);
   const [customerAmounts, setCustomerAmounts] = useState(() => {
     const amounts = {};
@@ -551,6 +557,55 @@ const useAmt = Math.min(remainAmt, goods.totalAmt);
     }
   }, [previewItems, selectedCustomers, customerAmounts, canteenName, selectedMonth, toast, onOpenChange, getOriginalTotalAmount, getCustomerTotalAmount]);
 
+  const handleSearchProduct = useCallback(async (name, index) => {
+    setSearchQuery(name);
+    setSearchTargetIndex(index);
+    setSearching(true);
+    setSearchModalOpen(true);
+    try {
+      const params = new URLSearchParams({ search: name });
+      const res = await fetch(`/api/canteen-purchase-orders?${params}`);
+      const data = await res.json();
+      setSearchResults(data.success ? data.data : []);
+    } catch (error) {
+      console.error('查询失败:', error);
+      setSearchResults([]);
+    }
+    setSearching(false);
+  }, []);
+
+  const handleReSearch = useCallback(async () => {
+    if (!searchQuery.trim()) return;
+    setSearching(true);
+    try {
+      const params = new URLSearchParams({ search: searchQuery.trim() });
+      const res = await fetch(`/api/canteen-purchase-orders?${params}`);
+      const data = await res.json();
+      setSearchResults(data.success ? data.data : []);
+    } catch (error) {
+      console.error('查询失败:', error);
+      setSearchResults([]);
+    }
+    setSearching(false);
+  }, [searchQuery]);
+
+  const handleSelectSearchResult = useCallback((productName) => {
+    if (searchTargetIndex !== null) {
+      const newItems = [...previewItems];
+      const [item] = newItems.splice(searchTargetIndex, 1);
+      newItems.push({ ...item, name: productName, isUnmatched: false });
+      setPreviewItems(newItems);
+      setMatchErrors(prev => {
+        const idx = prev.indexOf(item.name);
+        if (idx === -1) return prev;
+        const next = [...prev];
+        next.splice(idx, 1);
+        return next;
+      });
+    }
+    setSearchModalOpen(false);
+  }, [searchTargetIndex, previewItems]);
+
   const handleClose = useCallback(() => {
     onOpenChange(false);
     setPasteData("");
@@ -573,6 +628,7 @@ const useAmt = Math.min(remainAmt, goods.totalAmt);
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -730,6 +786,15 @@ const useAmt = Math.min(remainAmt, goods.totalAmt);
                               }}
                               className={`h-7 text-sm border-0 shadow-none focus-visible:ring-1 ${item.isUnmatched ? "bg-red-50 text-red-600 border-red-200" : ""}`}
                             />
+                            {item.isUnmatched && (
+                              <button
+                                onClick={() => handleSearchProduct(item.name, index)}
+                                className="shrink-0 p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground cursor-pointer"
+                                title="查询食堂采购单"
+                              >
+                                <Search className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         </td>
                         <td className="border px-2 py-1 text-center">{item.spec}</td>
@@ -772,5 +837,74 @@ const useAmt = Math.min(remainAmt, goods.totalAmt);
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+      <Dialog open={searchModalOpen} onOpenChange={setSearchModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[70vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>查询食堂采购单</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="输入品名搜索..."
+                className="flex-1 h-8"
+                onKeyDown={(e) => { if (e.key === 'Enter') handleReSearch(); }}
+              />
+              <Button onClick={handleReSearch} disabled={searching} size="sm" className="h-8">
+                <Search className="w-3.5 h-3.5 mr-1" />
+                搜索
+              </Button>
+            </div>
+            {searching ? (
+              <p className="text-muted-foreground text-center py-4">查询中...</p>
+            ) : searchResults.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">未找到匹配结果</p>
+            ) : (
+              <div className="overflow-x-auto border rounded-lg">
+                <table className="w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="bg-muted">
+                      <th className="border px-2 py-1 text-left">品名</th>
+                      <th className="border px-2 py-1 text-center">规格</th>
+                      <th className="border px-2 py-1 text-center">单位</th>
+                      <th className="border px-2 py-1 text-center">供应商</th>
+                      <th className="border px-2 py-1 text-center">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {searchResults.map((result, idx) => (
+                      <tr key={idx} className="hover:bg-muted/50">
+                        <td className="border px-2 py-1">{result.product_name}</td>
+                        <td className="border px-2 py-1 text-center">{result.spec || ''}</td>
+                        <td className="border px-2 py-1 text-center">{result.unit || ''}</td>
+                        <td className="border px-2 py-1 text-center">{result.supplier_name || ''}</td>
+                        <td className="border px-2 py-1 text-center">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSelectSearchResult(result.product_name)}
+                            className="h-7 text-xs"
+                          >
+                            <ExternalLink className="w-3 h-3 mr-1" />
+                            选择
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSearchModalOpen(false)}>
+              关闭
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
