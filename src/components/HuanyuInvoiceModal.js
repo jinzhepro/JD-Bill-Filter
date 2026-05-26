@@ -99,6 +99,14 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
     return items;
   }, []);
 
+  function isSubsequence(input, sequence) {
+    let si = 0;
+    for (let i = 0; i < sequence.length && si < input.length; i++) {
+      if (input[si] === sequence[i]) si++;
+    }
+    return si === input.length;
+  }
+
   const getMatchScore = useCallback((product, inputName) => {
     const dbName = product.product_name.toLowerCase();
     const lastStarIndex = dbName.lastIndexOf('*');
@@ -111,6 +119,7 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
     if (productTail.endsWith(inputName)) return 70;
     if (inputName.includes(productTail)) return 60;
     if (productTail.includes(inputName)) return 50;
+    if (isSubsequence(inputName, productTail)) return 55;
     if (dbName.includes(inputName)) return 10;
     return 0;
   }, []);

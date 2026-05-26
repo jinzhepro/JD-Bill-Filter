@@ -66,20 +66,29 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
     return items;
   }, []);
 
+  // 检查 input 的所有字符是否按序出现在 sequence 中（子序列匹配，处理缩写）
+  function isSubsequence(input, sequence) {
+    let si = 0;
+    for (let i = 0; i < sequence.length && si < input.length; i++) {
+      if (input[si] === sequence[i]) si++;
+    }
+    return si === input.length;
+  }
+
   const getMatchScore = useCallback((product, inputName) => {
     const dbName = product.product_name.toLowerCase();
-    // 取最后一个 * 之后的部分（实际产品描述，去掉品类前缀）
     const lastStarIndex = dbName.lastIndexOf('*');
     const productTail = lastStarIndex >= 0 ? dbName.substring(lastStarIndex + 1) : dbName;
 
-    if (productTail === inputName) return 100;                 // *品类*名称 精确匹配尾部
-    if (dbName === inputName) return 90;                        // 全名称精确匹配
-    if (dbName.replace(/^\*/, '') === inputName) return 90;    // 去掉开头*后精确匹配
-    if (productTail.startsWith(inputName)) return 80;           // 尾部前缀匹配
-    if (productTail.endsWith(inputName)) return 70;             // 尾部后缀匹配
-    if (inputName.includes(productTail)) return 60;              // 输入包含尾部（如"大姜"→"姜"）
-    if (productTail.includes(inputName)) return 50;             // 尾部包含输入（如"番茄鸡蛋面"→"鸡蛋"）
-    if (dbName.includes(inputName)) return 10;                  // 全名称包含匹配（最低优先级）
+    if (productTail === inputName) return 100;
+    if (dbName === inputName) return 90;
+    if (dbName.replace(/^\*/, '') === inputName) return 90;
+    if (productTail.startsWith(inputName)) return 80;
+    if (productTail.endsWith(inputName)) return 70;
+    if (inputName.includes(productTail)) return 60;
+    if (productTail.includes(inputName)) return 50;
+    if (isSubsequence(inputName, productTail)) return 55;       // 子序列匹配（如"光明酸奶"→"光明原味风味发酵乳酸奶"）
+    if (dbName.includes(inputName)) return 10;
     return 0;
   }, []);
 
