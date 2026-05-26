@@ -26,6 +26,7 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
   const [matchErrors, setMatchErrors] = useState([]);
   const [canteenName, setCanteenName] = useState("");
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
+  const [contractNo, setContractNo] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -209,7 +210,7 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
 
     const basicInfo = {
       companyName: "青岛青云通公共服务有限公司",
-      contractNo: "JK-GQ-250041-32",
+      contractNo: `JK-GQ-250041-${contractNo || "32"}`,
       applyDate,
       department: "青云通",
       applicant: "刘雅超",
@@ -251,6 +252,7 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
           customerInfo,
           items: itemsForHistory,
           totalAmount,
+          contractNo: `JK-GQ-250041-${contractNo || "32"}`,
         }),
       });
 
@@ -260,12 +262,13 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
       setPreviewItems([]);
       setMatchErrors([]);
       setCanteenName("");
+      setContractNo("");
       setSelectedMonth(getCurrentMonth());
     } catch (error) {
       console.error("导出发票失败:", error);
       toast({ title: "导出发票失败", variant: "destructive" });
     }
-  }, [previewItems, customerInfo, canteenName, selectedMonth, toast, onOpenChange]);
+  }, [previewItems, customerInfo, canteenName, contractNo, selectedMonth, toast, onOpenChange]);
 
   const handleClose = useCallback(() => {
     onOpenChange(false);
@@ -273,6 +276,7 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
     setPreviewItems([]);
     setMatchErrors([]);
     setCanteenName("");
+    setContractNo("");
     setSelectedMonth(getCurrentMonth());
   }, [onOpenChange]);
 
@@ -409,7 +413,7 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1">
               <label className="text-sm font-medium">食堂名称</label>
               <Input
@@ -425,6 +429,15 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
               />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">合同号</label>
+              <Input
+                value={contractNo}
+                onChange={(e) => setContractNo(e.target.value)}
+                placeholder="32"
+              />
+              <p className="text-xs text-muted-foreground">JK-GQ-250041-{contractNo || "32"}</p>
             </div>
           </div>
 
@@ -611,7 +624,7 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
           <Button variant="outline" onClick={handleClose}>
             取消
           </Button>
-          <Button onClick={handleExport} disabled={previewItems.length === 0}>
+          <Button onClick={handleExport} disabled={previewItems.length === 0} className="px-8">
             导出发票
           </Button>
         </DialogFooter>
