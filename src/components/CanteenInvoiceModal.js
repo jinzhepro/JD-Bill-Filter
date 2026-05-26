@@ -31,6 +31,7 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
   const [searching, setSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchTargetIndex, setSearchTargetIndex] = useState(null);
+  const [selectedResultIds, setSelectedResultIds] = useState(new Set());
   const [customerInfo] = useState({
     customerName: "青岛开投餐饮酒店管理有限公司",
     taxId: "91370211MABQPQYQ7A",
@@ -123,6 +124,7 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
           if (taxRate > 1) {
             taxRate = taxRate / 100;
           }
+          const remainQty = matchedProduct.group_remaining != null ? matchedProduct.group_remaining : (matchedProduct.remaining_quantity != null ? matchedProduct.remaining_quantity : matchedProduct.quantity);
           matchedItems.push({
             name: matchedProduct.product_name,
             originalInput: item.inputName,
@@ -134,6 +136,9 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
             matchedProductName: matchedProduct.product_name,
             inputAmount: item.amount,
             isUnmatched: false,
+            remainingQty: remainQty,
+            purchaseQty: matchedProduct.quantity,
+            overInvoicing: item.quantity > remainQty,
           });
         } else {
           unmatchedItems.push({
@@ -147,6 +152,9 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
             matchedProductName: null,
             inputAmount: item.amount,
             isUnmatched: true,
+            remainingQty: 0,
+            purchaseQty: 0,
+            overInvoicing: false,
           });
         }
       }
@@ -272,6 +280,7 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
     setSearchTargetIndex(index);
     setSearching(true);
     setSearchModalOpen(true);
+    setSelectedResultIds(new Set());
     try {
       const params = new URLSearchParams({ search: name });
       const res = await fetch(`/api/canteen-purchase-orders?${params}`);
@@ -299,14 +308,70 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
     setSearching(false);
   }, [searchQuery]);
 
-  const handleSelectSearchResult = useCallback((productName) => {
-    if (searchTargetIndex !== null) {
+  const toggleSelectResult = useCallback((idx) => {
+    setSelectedResultIds(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx); else next.add(idx);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback(() => {
+    setSelectedResultIds(prev => {
+      if (prev.size === searchResults.length) return new Set();
+      return new Set(searchResults.map((_, i) => i));
+    });
+  }, [searchResults]);
+
+  const handleAddSelected = useCallback(() => {
+    if (searchTargetIndex === null || selectedResultIds.size === 0) return;
+    const newItems = [...previewItems];
+    const originItem = newItems[searchTargetIndex];
+    for (const idx of selectedResultIds) {
+      const result = searchResults[idx];
+      if (!result) continue;
+      const remainQty = result.group_remaining != null ? result.group_remaining : (result.remaining_quantity != null ? result.remaining_quantity : result.quantity);
+      newItems.push({
+        name: result.product_name,
+        originalInput: originItem.originalInput,
+        spec: result.spec || '',
+        unit: result.unit || originItem.unit,
+        quantity: 0,
+        price: result.unit_price || originItem.price,
+        taxRate: result.tax_rate != null ? (result.tax_rate > 1 ? result.tax_rate / 100 : result.tax_rate) : originItem.taxRate,
+        matchedProductName: result.product_name,
+        inputAmount: 0,
+        isUnmatched: false,
+        remainingQty: remainQty,
+        purchaseQty: result.quantity,
+        overInvoicing: false,
+      });
+    }
+    setPreviewItems(newItems);
+    setSelectedResultIds(new Set());
+  }, [searchTargetIndex, selectedResultIds, searchResults, previewItems]);
+
+  const handleSelectSearchResult = useCallback((selectedProduct) => {
+    if (searchTargetIndex !== null && selectedProduct) {
       const newItems = [...previewItems];
-      const [item] = newItems.splice(searchTargetIndex, 1);
-      newItems.push({ ...item, name: productName, isUnmatched: false });
+      const item = { ...newItems[searchTargetIndex] };
+      const oldName = item.name;
+      const remainQty = selectedProduct.group_remaining != null
+        ? selectedProduct.group_remaining
+        : (selectedProduct.remaining_quantity != null ? selectedProduct.remaining_quantity : selectedProduct.quantity);
+      item.name = selectedProduct.product_name;
+      item.spec = selectedProduct.spec || '';
+      item.unit = selectedProduct.unit || item.unit;
+      item.price = selectedProduct.unit_price || item.price;
+      item.taxRate = selectedProduct.tax_rate != null ? (selectedProduct.tax_rate > 1 ? selectedProduct.tax_rate / 100 : selectedProduct.tax_rate) : item.taxRate;
+      item.remainingQty = remainQty;
+      item.purchaseQty = selectedProduct.quantity;
+      item.overInvoicing = item.quantity > remainQty;
+      item.isUnmatched = false;
+      newItems[searchTargetIndex] = item;
       setPreviewItems(newItems);
       setMatchErrors(prev => {
-        const idx = prev.indexOf(item.name);
+        const idx = prev.indexOf(oldName);
         if (idx === -1) return prev;
         const next = [...prev];
         next.splice(idx, 1);
@@ -314,6 +379,7 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
       });
     }
     setSearchModalOpen(false);
+    setSelectedResultIds(new Set());
   }, [searchTargetIndex, previewItems]);
 
   const formatAmount = (amount) => {
@@ -390,7 +456,8 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
                       <th className="border px-2 py-1 text-left">粘贴数据 → 匹配数据</th>
                       <th className="border px-2 py-1 text-center">规格</th>
                       <th className="border px-2 py-1 text-center">单位</th>
-                      <th className="border px-2 py-1 text-right">数量</th>
+                      <th className="border px-2 py-1 text-right">开票数量</th>
+                      <th className="border px-2 py-1 text-right">剩余数量</th>
                       <th className="border px-2 py-1 text-right">单价</th>
                       <th className="border px-2 py-1 text-right">税率</th>
                     </tr>
@@ -415,11 +482,19 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
                               }}
                               className={`h-7 text-sm border-0 shadow-none focus-visible:ring-1 ${item.isUnmatched ? "bg-red-50 text-red-600 border-red-200" : ""}`}
                             />
-                            {item.isUnmatched && (
+                            {item.isUnmatched || item.overInvoicing ? (
                               <button
                                 onClick={() => handleSearchProduct(item.name, index)}
                                 className="shrink-0 p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground cursor-pointer"
                                 title="查询食堂采购单"
+                              >
+                                <Search className="w-3.5 h-3.5" />
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleSearchProduct(item.name, index)}
+                                className="shrink-0 p-1 hover:bg-muted rounded text-muted-foreground/50 hover:text-foreground cursor-pointer opacity-50 hover:opacity-100"
+                                title="点击查询其他采购单"
                               >
                                 <Search className="w-3.5 h-3.5" />
                               </button>
@@ -428,7 +503,13 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
                         </td>
                         <td className="border px-2 py-1 text-center">{item.spec}</td>
                         <td className="border px-2 py-1 text-center">{item.unit}</td>
-                        <td className="border px-2 py-1 text-right">{item.quantity}</td>
+                        <td className={`border px-2 py-1 text-right ${item.overInvoicing ? "text-destructive font-bold" : ""}`}>
+                          {item.quantity}
+                          {item.overInvoicing && <span className="ml-1 text-xs">⚠</span>}
+                        </td>
+                        <td className="border px-2 py-1 text-right">
+                          {item.isUnmatched ? "-" : item.remainingQty}
+                        </td>
                         <td className="border px-2 py-1 text-right">
                           {formatAmount(item.price)}
                         </td>
@@ -441,7 +522,7 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
                 </table>
               </div>
 
-              <div className="flex gap-4 text-sm text-muted-foreground">
+              <div className="flex gap-4 text-sm text-muted-foreground items-center">
                 <span>共 {previewItems.length} 条</span>
                 <span>
                   合计金额：{formatAmount(
@@ -451,6 +532,11 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
                     )
                   )}
                 </span>
+                {previewItems.filter(i => i.overInvoicing).length > 0 && (
+                  <span className="text-destructive font-medium">
+                    ⚠ {previewItems.filter(i => i.overInvoicing).length} 条开票数量超过剩余数量
+                  </span>
+                )}
               </div>
             </div>
           )}
@@ -492,28 +578,53 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
               <p className="text-muted-foreground text-center py-4">未找到匹配结果</p>
             ) : (
               <div className="overflow-x-auto border rounded-lg">
-                <table className="w-full border-collapse text-sm">
+                  <table className="w-full border-collapse text-sm">
                   <thead>
                     <tr className="bg-muted">
+                      <th className="border px-2 py-1 text-center w-8">
+                        <input
+                          type="checkbox"
+                          checked={selectedResultIds.size === searchResults.length && searchResults.length > 0}
+                          onChange={toggleSelectAll}
+                          className="cursor-pointer"
+                        />
+                      </th>
                       <th className="border px-2 py-1 text-left">品名</th>
                       <th className="border px-2 py-1 text-center">规格</th>
                       <th className="border px-2 py-1 text-center">单位</th>
                       <th className="border px-2 py-1 text-center">供应商</th>
+                      <th className="border px-2 py-1 text-right">采购数量</th>
+                      <th className="border px-2 py-1 text-right">剩余数量</th>
                       <th className="border px-2 py-1 text-center">操作</th>
                     </tr>
                   </thead>
                   <tbody>
                     {searchResults.map((result, idx) => (
-                      <tr key={idx} className="hover:bg-muted/50">
+                      <tr key={idx} className={`hover:bg-muted/50 ${selectedResultIds.has(idx) ? 'bg-primary/5' : ''}`}>
+                        <td className="border px-2 py-1 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedResultIds.has(idx)}
+                            onChange={() => toggleSelectResult(idx)}
+                            className="cursor-pointer"
+                          />
+                        </td>
                         <td className="border px-2 py-1">{result.product_name}</td>
                         <td className="border px-2 py-1 text-center">{result.spec || ''}</td>
                         <td className="border px-2 py-1 text-center">{result.unit || ''}</td>
                         <td className="border px-2 py-1 text-center">{result.supplier_name || ''}</td>
+                        <td className="border px-2 py-1 text-right">{result.quantity}</td>
+                        <td className={`border px-2 py-1 text-right ${(result.remaining_quantity ?? result.quantity) <= 0 ? 'text-destructive' : ''}`}>
+                          {result.remaining_quantity != null ? result.remaining_quantity : result.quantity}
+                        </td>
                         <td className="border px-2 py-1 text-center">
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleSelectSearchResult(result.product_name)}
+                            onClick={() => {
+                              handleSelectSearchResult(result);
+                              setSelectedResultIds(new Set());
+                            }}
                             className="h-7 text-xs"
                           >
                             <ExternalLink className="w-3 h-3 mr-1" />
@@ -527,8 +638,15 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
               </div>
             )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSearchModalOpen(false)}>
+          <DialogFooter className="flex justify-between items-center">
+            <div className="flex gap-2">
+              {selectedResultIds.size > 0 && (
+                <Button onClick={handleAddSelected} size="sm">
+                  添加选中 ({selectedResultIds.size})
+                </Button>
+              )}
+            </div>
+            <Button variant="outline" onClick={() => { setSearchModalOpen(false); setSelectedResultIds(new Set()); }}>
               关闭
             </Button>
           </DialogFooter>

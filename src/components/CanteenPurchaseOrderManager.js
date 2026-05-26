@@ -316,7 +316,7 @@ const handleConfirmImport = async () => {
   const downloadCSV = (batchNo, items) => {
     if (!items || items.length === 0) return;
     
-    const headers = ['批次号', '供应商', '合同号', '项目名称', '规格型号', '单位', '数量', '单价', '金额', '税率', '税额', '含税金额'];
+    const headers = ['批次号', '供应商', '合同号', '项目名称', '规格型号', '单位', '剩余数量', '已开票数量', '单价', '金额', '税率', '税额', '含税金额'];
     const csvRows = items.map(item => {
       const taxRate = item.tax_rate ? `${(item.tax_rate * 100).toFixed(0)}%` : '0%';
       const row = [
@@ -326,7 +326,8 @@ const handleConfirmImport = async () => {
         item.product_name || '',
         item.spec || '',
         item.unit || '',
-        item.quantity || 0,
+        item.remaining_quantity != null ? item.remaining_quantity : (item.quantity || 0),
+        item.invoiced_quantity || 0,
         item.unit_price || 0,
         item.total_amount || 0,
         taxRate,
@@ -396,6 +397,9 @@ const handleConfirmImport = async () => {
     const values = items.map(item => {
       if (columnKey === 'tax_rate') {
         return item[columnKey] ? `${(item[columnKey] * 100).toFixed(0)}` : '0';
+      }
+      if (columnKey === 'quantity') {
+        return item.remaining_quantity != null ? String(item.remaining_quantity) : String(item.quantity || 0);
       }
       return item[columnKey] || "";
     }).join("\n");
@@ -506,7 +510,8 @@ const handleConfirmImport = async () => {
                           </span>
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          数量: {items.reduce((sum, item) => sum + (item.quantity || 0), 0).toFixed(2)} | 
+                          采购数量: {items.reduce((sum, item) => sum + (item.quantity || 0), 0).toFixed(2)} | 
+                           剩余数量: {items.reduce((sum, item) => sum + (item.remaining_quantity || 0), 0).toFixed(2)} | 
                           不含税金额: {formatAmount(items.reduce((sum, item) => sum.plus(item.total_amount || 0), new Decimal(0)).toNumber())} | 
                           税额: {formatAmount(items.reduce((sum, item) => sum.plus(item.tax_amount || 0), new Decimal(0)).toNumber())} | 
                           合计: {formatAmount(items.reduce((sum, item) => sum.plus(item.total_amount || 0).plus(item.tax_amount || 0), new Decimal(0)).toNumber())}
@@ -531,7 +536,7 @@ const handleConfirmImport = async () => {
                                 <ThWithCopy items={items} columnKey="product_name" columnName="项目名称" className="text-left" />
                                 <ThWithCopy items={items} columnKey="spec" columnName="规格型号" className="text-center" />
                                 <ThWithCopy items={items} columnKey="unit" columnName="单位" className="text-center" />
-                                <ThWithCopy items={items} columnKey="quantity" columnName="数量" className="text-right" />
+                                <ThWithCopy items={items} columnKey="quantity" columnName="剩余数量" className="text-right" />
                                 <ThWithCopy items={items} columnKey="unit_price" columnName="单价" className="text-right" />
                                 <ThWithCopy items={items} columnKey="total_amount" columnName="金额" className="text-right" />
                                 <ThWithCopy items={items} columnKey="tax_rate" columnName="税率" className="text-right" />
@@ -546,7 +551,10 @@ const handleConfirmImport = async () => {
                                     <td className="border border-border px-3 py-2">{item.product_name}</td>
                                    <td className="border border-border px-3 py-2 text-center">{item.spec || ''}</td>
                                    <td className="border border-border px-3 py-2 text-center">{item.unit}</td>
-                                   <td className="border border-border px-3 py-2 text-right">{item.quantity}</td>
+                                    <td className="border border-border px-3 py-2 text-right">
+                                      {item.remaining_quantity}
+                                      {item.invoiced_quantity > 0 && <span className="text-xs text-muted-foreground ml-1">(已开{item.invoiced_quantity})</span>}
+                                    </td>
                                    <td className="border border-border px-3 py-2 text-right">{formatAmount(item.unit_price)}</td>
                                    <td className="border border-border px-3 py-2 text-right">{formatAmount(item.total_amount)}</td>
                                    <td className="border border-border px-3 py-2 text-right">{(item.tax_rate * 100).toFixed(0)}%</td>

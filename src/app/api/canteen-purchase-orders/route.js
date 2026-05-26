@@ -33,13 +33,51 @@ export async function GET(request) {
       }
     }
 
-    query += ' ORDER BY cpo.created_at DESC';
+    query += ' ORDER BY cpo.id ASC';
 
     const result = params.length > 0
       ? await db.prepare(query).bind(...params).all()
       : await db.prepare(query).all();
 
-    return Response.json({ success: true, data: result.results });
+    const orders = result.results;
+
+    const invResult = await db.prepare(
+      'SELECT name, SUM(quantity) as invoiced_qty FROM canteen_invoice_history_items GROUP BY name'
+    ).all();
+    const invoicedMap = {};
+    for (const row of invResult.results) {
+      invoicedMap[row.name] = row.invoiced_qty;
+    }
+
+    const groups = {};
+    for (const order of orders) {
+      const name = order.product_name;
+      if (!groups[name]) groups[name] = [];
+      groups[name].push(order);
+    }
+
+    const data = [];
+    for (const [, items] of Object.entries(groups)) {
+      items.sort((a, b) => a.id - b.id);
+      let toDeduct = invoicedMap[items[0].product_name] || 0;
+      let groupRemaining = items.reduce((sum, it) => sum + it.quantity, 0) - toDeduct;
+      if (groupRemaining < 0) groupRemaining = 0;
+
+      for (const item of items) {
+        const deduct = Math.min(item.quantity, toDeduct);
+        data.push({
+          ...item,
+          invoiced_quantity: deduct,
+          remaining_quantity: Math.max(0, item.quantity - deduct),
+          group_remaining: groupRemaining,
+        });
+        toDeduct -= deduct;
+      }
+    }
+
+    data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    return Response.json({ success: true, data });
   } catch (error) {
     return Response.json({ success: false, error: error.message }, { status: 500 });
   }
