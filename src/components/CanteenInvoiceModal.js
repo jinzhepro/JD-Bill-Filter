@@ -66,6 +66,23 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
     return items;
   }, []);
 
+  const getMatchScore = useCallback((product, inputName) => {
+    const dbName = product.product_name.toLowerCase();
+    // 取最后一个 * 之后的部分（实际产品描述，去掉品类前缀）
+    const lastStarIndex = dbName.lastIndexOf('*');
+    const productTail = lastStarIndex >= 0 ? dbName.substring(lastStarIndex + 1) : dbName;
+
+    if (productTail === inputName) return 100;                 // *品类*名称 精确匹配尾部
+    if (dbName === inputName) return 90;                        // 全名称精确匹配
+    if (dbName.replace(/^\*/, '') === inputName) return 90;    // 去掉开头*后精确匹配
+    if (productTail.startsWith(inputName)) return 80;           // 尾部前缀匹配
+    if (productTail.endsWith(inputName)) return 70;             // 尾部后缀匹配
+    if (inputName.includes(productTail)) return 60;              // 输入包含尾部（如"大姜"→"姜"）
+    if (productTail.includes(inputName)) return 50;             // 尾部包含输入（如"番茄鸡蛋面"→"鸡蛋"）
+    if (dbName.includes(inputName)) return 10;                  // 全名称包含匹配（最低优先级）
+    return 0;
+  }, []);
+
   const matchProducts = useCallback(
     (items) => {
       const matchedItems = [];
@@ -74,15 +91,16 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
       for (const item of items) {
         const productName = item.inputName.toLowerCase();
         
-        const matchedProduct = products.find((p) => {
-          const dbName = p.product_name.toLowerCase();
-          const dbNameWithoutStar = dbName.replace(/^\*/, "");
-          return (
-            dbNameWithoutStar === productName ||
-            dbName.includes(productName) ||
-            productName.includes(dbNameWithoutStar)
-          );
-        });
+        let bestMatch = null;
+        let bestScore = 0;
+        for (const p of products) {
+          const score = getMatchScore(p, productName);
+          if (score > bestScore) {
+            bestScore = score;
+            bestMatch = p;
+          }
+        }
+        const matchedProduct = bestMatch;
 
         if (matchedProduct) {
           let taxRate = matchedProduct.tax_rate || 0;

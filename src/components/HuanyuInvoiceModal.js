@@ -99,6 +99,22 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
     return items;
   }, []);
 
+  const getMatchScore = useCallback((product, inputName) => {
+    const dbName = product.product_name.toLowerCase();
+    const lastStarIndex = dbName.lastIndexOf('*');
+    const productTail = lastStarIndex >= 0 ? dbName.substring(lastStarIndex + 1) : dbName;
+
+    if (productTail === inputName) return 100;
+    if (dbName === inputName) return 90;
+    if (dbName.replace(/^\*/, '') === inputName) return 90;
+    if (productTail.startsWith(inputName)) return 80;
+    if (productTail.endsWith(inputName)) return 70;
+    if (inputName.includes(productTail)) return 60;
+    if (productTail.includes(inputName)) return 50;
+    if (dbName.includes(inputName)) return 10;
+    return 0;
+  }, []);
+
   const matchProducts = useCallback(
     (items) => {
       const matchedItems = [];
@@ -107,15 +123,16 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
       for (const item of items) {
         const productName = item.inputName.toLowerCase();
         
-        const matchedProduct = products.find((p) => {
-          const dbName = p.product_name.toLowerCase();
-          const dbNameWithoutStar = dbName.replace(/^\*/, "");
-          return (
-            dbNameWithoutStar === productName ||
-            dbName.includes(productName) ||
-            productName.includes(dbNameWithoutStar)
-          );
-        });
+        let bestMatch = null;
+        let bestScore = 0;
+        for (const p of products) {
+          const score = getMatchScore(p, productName);
+          if (score > bestScore) {
+            bestScore = score;
+            bestMatch = p;
+          }
+        }
+        const matchedProduct = bestMatch;
 
         if (matchedProduct) {
           let taxRate = matchedProduct.tax_rate || 0;
