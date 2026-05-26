@@ -56,8 +56,9 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
       const name = parts[0]?.trim();
       const unit = parts[1]?.trim();
       const quantity = parseFloat(parts[2]?.replace(/[^\d.]/g, "")) || 0;
-      const unitPrice = parseFloat(parts[3]?.replace(/[^\d.]/g, "")) || 0;
       const amount = parseFloat(parts[4]?.replace(/[^\d.]/g, "")) || 0;
+      // 严格按照粘贴的金额 ÷ 数量计算单价，忽略粘贴的单价列
+      const unitPrice = amount > 0 && quantity > 0 ? amount / quantity : (parseFloat(parts[3]?.replace(/[^\d.]/g, "")) || 0);
 
       if (!name || quantity <= 0) continue;
 
@@ -327,16 +328,18 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
     if (searchTargetIndex === null || selectedResultIds.size === 0) return;
     const newItems = [...previewItems];
     const originItem = newItems[searchTargetIndex];
+    const oldName = originItem.name;
+    const newRows = [];
     for (const idx of selectedResultIds) {
       const result = searchResults[idx];
       if (!result) continue;
-      const remainQty = result.group_remaining != null ? result.group_remaining : (result.remaining_quantity != null ? result.remaining_quantity : result.quantity);
-      newItems.push({
+      const remainQty = result.remaining_quantity != null ? result.remaining_quantity : result.quantity;
+      newRows.push({
         name: result.product_name,
         originalInput: originItem.originalInput,
         spec: result.spec || '',
         unit: result.unit || originItem.unit,
-        quantity: 0,
+        quantity: remainQty,
         price: result.unit_price || originItem.price,
         taxRate: result.tax_rate != null ? (result.tax_rate > 1 ? result.tax_rate / 100 : result.tax_rate) : originItem.taxRate,
         matchedProductName: result.product_name,
@@ -347,7 +350,15 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
         overInvoicing: false,
       });
     }
+    newItems.splice(searchTargetIndex, 1, ...newRows);
     setPreviewItems(newItems);
+    setMatchErrors(prev => {
+      const idx = prev.indexOf(oldName);
+      if (idx === -1) return prev;
+      const next = [...prev];
+      next.splice(idx, 1);
+      return next;
+    });
     setSelectedResultIds(new Set());
   }, [searchTargetIndex, selectedResultIds, searchResults, previewItems]);
 
@@ -356,17 +367,17 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
       const newItems = [...previewItems];
       const item = { ...newItems[searchTargetIndex] };
       const oldName = item.name;
-      const remainQty = selectedProduct.group_remaining != null
-        ? selectedProduct.group_remaining
-        : (selectedProduct.remaining_quantity != null ? selectedProduct.remaining_quantity : selectedProduct.quantity);
+      const remainQty = selectedProduct.remaining_quantity != null ? selectedProduct.remaining_quantity : selectedProduct.quantity;
       item.name = selectedProduct.product_name;
       item.spec = selectedProduct.spec || '';
       item.unit = selectedProduct.unit || item.unit;
       item.price = selectedProduct.unit_price || item.price;
       item.taxRate = selectedProduct.tax_rate != null ? (selectedProduct.tax_rate > 1 ? selectedProduct.tax_rate / 100 : selectedProduct.tax_rate) : item.taxRate;
+      item.quantity = remainQty;
+      item.inputAmount = 0;
       item.remainingQty = remainQty;
       item.purchaseQty = selectedProduct.quantity;
-      item.overInvoicing = item.quantity > remainQty;
+      item.overInvoicing = false;
       item.isUnmatched = false;
       newItems[searchTargetIndex] = item;
       setPreviewItems(newItems);
@@ -454,11 +465,11 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
                     <tr className="bg-muted">
                       <th className="border px-2 py-1 text-center w-10">序号</th>
                       <th className="border px-2 py-1 text-left">粘贴数据 → 匹配数据</th>
-                      <th className="border px-2 py-1 text-center">规格</th>
                       <th className="border px-2 py-1 text-center">单位</th>
                       <th className="border px-2 py-1 text-right">开票数量</th>
                       <th className="border px-2 py-1 text-right">剩余数量</th>
                       <th className="border px-2 py-1 text-right">单价</th>
+                      <th className="border px-2 py-1 text-right">金额</th>
                       <th className="border px-2 py-1 text-right">税率</th>
                     </tr>
                   </thead>
@@ -501,17 +512,71 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
                             )}
                           </div>
                         </td>
-                        <td className="border px-2 py-1 text-center">{item.spec}</td>
                         <td className="border px-2 py-1 text-center">{item.unit}</td>
                         <td className={`border px-2 py-1 text-right ${item.overInvoicing ? "text-destructive font-bold" : ""}`}>
-                          {item.quantity}
+                          <Input
+                            type="number"
+                            step="1"
+                            min="0"
+                            value={item.quantity}
+                            onChange={(e) => {
+                              const newItems = [...previewItems];
+                              const qty = parseFloat(e.target.value) || 0;
+                              newItems[index] = {
+                                ...newItems[index],
+                                quantity: qty,
+                                inputAmount: qty * (newItems[index].price || 0),
+                                overInvoicing: qty > (item.remainingQty || 0),
+                              };
+                              setPreviewItems(newItems);
+                            }}
+                            className={`h-7 text-sm text-right border-0 shadow-none focus-visible:ring-1 w-16 ${
+                              item.overInvoicing ? "text-destructive font-bold" : ""
+                            }`}
+                          />
                           {item.overInvoicing && <span className="ml-1 text-xs">⚠</span>}
                         </td>
                         <td className="border px-2 py-1 text-right">
                           {item.isUnmatched ? "-" : item.remainingQty}
                         </td>
                         <td className="border px-2 py-1 text-right">
-                          {formatAmount(item.price)}
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={item.price}
+                            onChange={(e) => {
+                              const newItems = [...previewItems];
+                              const newPrice = parseFloat(e.target.value) || 0;
+                              newItems[index] = {
+                                ...newItems[index],
+                                price: newPrice,
+                                inputAmount: newPrice * (newItems[index].quantity || 0),
+                              };
+                              setPreviewItems(newItems);
+                            }}
+                            className="h-7 text-sm text-right border-0 shadow-none focus-visible:ring-1 w-20 ml-auto"
+                          />
+                        </td>
+                        <td className="border px-2 py-1 text-right font-mono">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={item.inputAmount || 0}
+                            onChange={(e) => {
+                              const newItems = [...previewItems];
+                              const newAmount = parseFloat(e.target.value) || 0;
+                              const qty = newItems[index].quantity || 1;
+                              newItems[index] = {
+                                ...newItems[index],
+                                inputAmount: newAmount,
+                                price: newAmount / qty,
+                              };
+                              setPreviewItems(newItems);
+                            }}
+                            className="h-7 text-sm text-right border-0 shadow-none focus-visible:ring-1 w-20 ml-auto font-mono"
+                          />
                         </td>
                         <td className="border px-2 py-1 text-right">
                           {(item.taxRate * 100).toFixed(0)}%
