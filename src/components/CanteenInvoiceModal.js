@@ -87,7 +87,8 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
     if (productTail.endsWith(inputName)) return 70;
     if (inputName.includes(productTail)) return 60;
     if (productTail.includes(inputName)) return 50;
-    if (isSubsequence(inputName, productTail)) return 55;       // 子序列匹配（如"光明酸奶"→"光明原味风味发酵乳酸奶"）
+    if (isSubsequence(inputName, productTail)) return 55;       // 输入是尾部的子序列（如"光明酸奶"→"光明原味风味发酵乳酸奶"）
+    if (isSubsequence(productTail, inputName)) return 45;       // 尾部是输入的子序列（如"去皮五花肉"是"去皮下五花肉"的子序列）
     if (dbName.includes(inputName)) return 10;
     return 0;
   }, []);

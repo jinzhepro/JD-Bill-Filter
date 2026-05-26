@@ -120,6 +120,7 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
     if (inputName.includes(productTail)) return 60;
     if (productTail.includes(inputName)) return 50;
     if (isSubsequence(inputName, productTail)) return 55;
+    if (isSubsequence(productTail, inputName)) return 45;
     if (dbName.includes(inputName)) return 10;
     return 0;
   }, []);
