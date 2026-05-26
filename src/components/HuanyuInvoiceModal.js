@@ -127,8 +127,8 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
 
   const matchProducts = useCallback(
     (items) => {
-      const matchedItems = [];
       const unmatchedItems = [];
+      const matchedItems = [];
 
       for (const item of items) {
         const productName = item.inputName.toLowerCase();
@@ -151,6 +151,7 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
           }
           matchedItems.push({
             name: matchedProduct.product_name,
+            originalInput: item.inputName,
             spec: matchedProduct.spec || "",
             unit: item.unit,
             quantity: item.quantity,
@@ -163,6 +164,7 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
         } else {
           unmatchedItems.push({
             name: item.inputName,
+            originalInput: item.inputName,
             spec: "",
             unit: item.unit,
             quantity: item.quantity,
@@ -175,7 +177,7 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
         }
       }
 
-      const allItems = [...matchedItems, ...unmatchedItems];
+      const allItems = [...unmatchedItems, ...matchedItems];
       const errors = unmatchedItems.map(item => item.name);
 
       return { matchedItems: allItems, errors };
@@ -684,11 +686,11 @@ const useAmt = Math.min(remainAmt, goods.totalAmt);
           )}
 
           {matchErrors.length > 0 && (
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-              <p className="text-sm text-orange-700 font-medium">
-                以下品名未匹配到数据库，已添加到列表末尾（橙色背景），请手动编辑发票名称：
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-sm text-red-700 font-medium">
+                以下品名未匹配到数据库（已标红），请手动编辑发票名称：
               </p>
-              <p className="text-sm text-orange-600 mt-1">{matchErrors.join("、")}</p>
+              <p className="text-sm text-red-600 mt-1">{matchErrors.join("、")}</p>
             </div>
           )}
 
@@ -701,7 +703,7 @@ const useAmt = Math.min(remainAmt, goods.totalAmt);
                 <table className="w-full border-collapse text-sm">
                   <thead>
                     <tr className="bg-muted">
-                      <th className="border px-2 py-1 text-left">发票名称</th>
+                      <th className="border px-2 py-1 text-left">粘贴数据 → 匹配数据</th>
                       <th className="border px-2 py-1 text-center">规格</th>
                       <th className="border px-2 py-1 text-center">单位</th>
                       <th className="border px-2 py-1 text-right">数量</th>
@@ -711,17 +713,24 @@ const useAmt = Math.min(remainAmt, goods.totalAmt);
                   </thead>
                   <tbody>
                     {previewItems.map((item, index) => (
-                      <tr key={index} className={item.isUnmatched ? "bg-orange-50" : ""}>
+                      <tr key={index} className={item.isUnmatched ? "bg-red-50" : ""}>
                         <td className="border px-1 py-1">
-                          <Input
-                            value={item.name}
-                            onChange={(e) => {
-                              const newItems = [...previewItems];
-                              newItems[index] = { ...newItems[index], name: e.target.value };
-                              setPreviewItems(newItems);
-                            }}
-                            className={`h-7 text-sm border-0 shadow-none focus-visible:ring-1 ${item.isUnmatched ? "bg-orange-50" : ""}`}
-                          />
+                          <div className="flex items-center gap-1">
+                            {!item.isUnmatched && (
+                              <span className="text-muted-foreground text-xs whitespace-nowrap shrink-0">
+                                {item.originalInput} →
+                              </span>
+                            )}
+                            <Input
+                              value={item.name}
+                              onChange={(e) => {
+                                const newItems = [...previewItems];
+                                newItems[index] = { ...newItems[index], name: e.target.value };
+                                setPreviewItems(newItems);
+                              }}
+                              className={`h-7 text-sm border-0 shadow-none focus-visible:ring-1 ${item.isUnmatched ? "bg-red-50 text-red-600 border-red-200" : ""}`}
+                            />
+                          </div>
                         </td>
                         <td className="border px-2 py-1 text-center">{item.spec}</td>
                         <td className="border px-2 py-1 text-center">{item.unit}</td>
