@@ -268,6 +268,7 @@ export default function CanteenInvoicePage() {
                         <table className="w-full border-collapse text-sm">
                           <thead>
                             <tr className="bg-muted">
+                              <th className="border px-2 py-1 text-center w-10">序号</th>
                               <ThWithCopy items={record.items} columnKey="name" columnName="商品名称" className="text-left" />
                               <ThWithCopy items={record.items} columnKey="unit" columnName="单位" className="text-center" />
                               <ThWithCopy items={record.items} columnKey="quantity" columnName="数量" className="text-right" />
@@ -279,6 +280,7 @@ export default function CanteenInvoicePage() {
                           <tbody>
                             {record.items.map((item, idx) => (
                               <tr key={idx}>
+                                <td className="border px-2 py-1 text-center text-muted-foreground text-xs">{idx + 1}</td>
                                 <td className="border px-2 py-1">{item.name}</td>
                                 <td className="border px-2 py-1 text-center">{item.unit || ""}</td>
                                 <td className="border px-2 py-1 text-right">{item.quantity}</td>

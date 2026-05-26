@@ -527,6 +527,7 @@ const handleConfirmImport = async () => {
 <table className="w-full border-collapse">
 <thead>
 <tr className="bg-muted">
+                                <th className="border border-border px-3 py-2 text-center w-12">序号</th>
                                 <ThWithCopy items={items} columnKey="product_name" columnName="项目名称" className="text-left" />
                                 <ThWithCopy items={items} columnKey="spec" columnName="规格型号" className="text-center" />
                                 <ThWithCopy items={items} columnKey="unit" columnName="单位" className="text-center" />
@@ -539,9 +540,10 @@ const handleConfirmImport = async () => {
                               </tr>
                            </thead>
                            <tbody>
-                             {items.map((item) => (
-<tr key={item.id}>
-                                   <td className="border border-border px-3 py-2">{item.product_name}</td>
+                              {items.map((item, index) => (
+                                  <tr key={item.id}>
+                                    <td className="border border-border px-3 py-2 text-center text-muted-foreground">{index + 1}</td>
+                                    <td className="border border-border px-3 py-2">{item.product_name}</td>
                                    <td className="border border-border px-3 py-2 text-center">{item.spec || ''}</td>
                                    <td className="border border-border px-3 py-2 text-center">{item.unit}</td>
                                    <td className="border border-border px-3 py-2 text-right">{item.quantity}</td>

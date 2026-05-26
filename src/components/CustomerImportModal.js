@@ -151,19 +151,28 @@ export function CustomerImportModal({ open, onOpenChange, onImport }) {
                   </Button>
                 </div>
                 <div className="p-2 bg-muted rounded text-xs font-mono max-h-48 overflow-auto">
-                  <table className="w-full">
-                    <tbody>
-                      {parsedResult.orderAmounts.map((item, index) => (
-                        <tr key={index} className="border-b border-border last:border-0">
-                          <td className="py-1 px-2">{item.orderNumber}</td>
-                          <td className="py-1 px-2 text-right">{item.amount}</td>
-                        </tr>
-                      ))}
-                      <tr className="font-bold border-t-2 border-border">
-                        <td className="py-1 px-2">合计 ({orderNumbers.length}个订单)</td>
-                        <td className="py-1 px-2 text-right text-red-600">¥{parsedResult.totalAmount}</td>
-                      </tr>
-                    </tbody>
+                   <table className="w-full">
+                     <thead>
+                       <tr>
+                         <th className="py-1 px-2 text-center w-8 text-xs text-muted-foreground">#</th>
+                         <th className="py-1 px-2 text-xs text-muted-foreground">订单号</th>
+                         <th className="py-1 px-2 text-xs text-muted-foreground text-right">金额</th>
+                       </tr>
+                     </thead>
+                     <tbody>
+                       {parsedResult.orderAmounts.map((item, index) => (
+                         <tr key={index} className="border-b border-border last:border-0">
+                           <td className="py-1 px-2 text-center text-xs text-muted-foreground">{index + 1}</td>
+                           <td className="py-1 px-2">{item.orderNumber}</td>
+                           <td className="py-1 px-2 text-right">{item.amount}</td>
+                         </tr>
+                       ))}
+                       <tr className="font-bold border-t-2 border-border">
+                         <td></td>
+                         <td className="py-1 px-2">合计 ({orderNumbers.length}个订单)</td>
+                         <td className="py-1 px-2 text-right text-red-600">¥{parsedResult.totalAmount}</td>
+                       </tr>
+                     </tbody>
                   </table>
                 </div>
               </div>

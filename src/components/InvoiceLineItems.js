@@ -61,6 +61,7 @@ export function InvoiceLineItems() {
             <thead>
               <tr className="bg-muted">
                 <th className="border border-border px-2 py-2 text-center w-8"></th>
+                <th className="border border-border px-2 py-2 text-center w-10">序号</th>
                 <th className="border border-border px-2 py-2 text-center">商品名称</th>
                 <th className="border border-border px-2 py-2 text-center">规格</th>
                 <th className="border border-border px-2 py-2 text-center">单位</th>
@@ -73,7 +74,7 @@ export function InvoiceLineItems() {
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => {
+              {items.map((item, index) => {
                 const row = calculateRowAmount(item);
                 return (
                   <tr key={item.originalIndex}>
@@ -82,6 +83,7 @@ export function InvoiceLineItems() {
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </Button>
                     </td>
+                    <td className="border border-border px-2 py-2 text-center text-muted-foreground">{index + 1}</td>
                     <td className="border border-border px-2 py-2">{item.name}</td>
                     <td className="border border-border px-2 py-2">{item.spec}</td>
                     <td className="border border-border px-2 py-2 text-center">{item.unit}</td>

@@ -146,6 +146,7 @@ export function CanteenSupplierManager() {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-muted">
+                  <th className="border border-border px-3 py-2 text-center w-12">序号</th>
                   <th className="border border-border px-3 py-2 text-left">供应商名称</th>
                   <th className="border border-border px-3 py-2 text-left">合同号</th>
                   <th className="border border-border px-3 py-2 text-center w-20">操作</th>
@@ -154,19 +155,20 @@ export function CanteenSupplierManager() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={3} className="border border-border px-3 py-4 text-center text-muted-foreground">
+                    <td colSpan={4} className="border border-border px-3 py-4 text-center text-muted-foreground">
                       加载中...
                     </td>
                   </tr>
                 ) : suppliers.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="border border-border px-3 py-4 text-center text-muted-foreground">
+                    <td colSpan={4} className="border border-border px-3 py-4 text-center text-muted-foreground">
                       暂无数据
                     </td>
                   </tr>
                 ) : (
-                  suppliers.map((supplier) => (
+                  suppliers.map((supplier, index) => (
                     <tr key={supplier.id}>
+                      <td className="border border-border px-3 py-2 text-center text-muted-foreground">{index + 1}</td>
                       <td className="border border-border px-3 py-2">{supplier.name}</td>
                       <td className="border border-border px-3 py-2">{supplier.contract_no || ''}</td>
                       <td className="border border-border px-3 py-2 text-center">

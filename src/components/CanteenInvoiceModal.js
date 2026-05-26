@@ -386,6 +386,7 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
                 <table className="w-full border-collapse text-sm">
                   <thead>
                     <tr className="bg-muted">
+                      <th className="border px-2 py-1 text-center w-10">序号</th>
                       <th className="border px-2 py-1 text-left">粘贴数据 → 匹配数据</th>
                       <th className="border px-2 py-1 text-center">规格</th>
                       <th className="border px-2 py-1 text-center">单位</th>
@@ -397,6 +398,7 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
                   <tbody>
                     {previewItems.map((item, index) => (
                       <tr key={index} className={item.isUnmatched ? "bg-red-50" : ""}>
+                        <td className="border px-2 py-1 text-center text-muted-foreground text-xs">{index + 1}</td>
                         <td className="border px-1 py-1">
                           <div className="flex items-center gap-1">
                             {!item.isUnmatched && (

@@ -29,7 +29,7 @@ export default function DataDisplay({
   onDownload,
   showCopyColumn = false,
   downloadButtonText = "下载 Excel 结果",
-  showRowNumber = false,
+  showRowNumber = true,
   amountFields = null,
   calculatedTotals = null,
   children = null,

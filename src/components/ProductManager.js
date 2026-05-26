@@ -352,6 +352,7 @@ const handleDelete = async (id) => {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-muted">
+                  <th className="border border-border px-3 py-2 text-center w-12">序号</th>
                   <th className="border border-border px-3 py-2 text-left">SKU</th>
                   <th className="border border-border px-3 py-2 text-left">商品名称</th>
                   <th className="border border-border px-3 py-2 text-left">仓库</th>
@@ -363,19 +364,20 @@ const handleDelete = async (id) => {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="border border-border px-3 py-4 text-center text-muted-foreground">
+                    <td colSpan={7} className="border border-border px-3 py-4 text-center text-muted-foreground">
                       加载中...
                     </td>
                   </tr>
                 ) : products.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="border border-border px-3 py-4 text-center text-muted-foreground">
+                    <td colSpan={7} className="border border-border px-3 py-4 text-center text-muted-foreground">
                       暂无数据
                     </td>
                   </tr>
                 ) : (
-                  products.map((product) => (
+                  products.map((product, index) => (
                     <tr key={product.id}>
+                      <td className="border border-border px-3 py-2 text-center text-muted-foreground">{index + 1}</td>
                       <td className="border border-border px-3 py-2">{product.sku}</td>
                       <td className="border border-border px-3 py-2">{product.product_name}</td>
                       <td className="border border-border px-3 py-2">{product.warehouse || "-"}</td>

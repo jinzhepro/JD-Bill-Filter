@@ -147,6 +147,7 @@ export function BrandManager() {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-muted">
+                  <th className="border border-border px-3 py-2 text-center w-12">序号</th>
                   <th className="border border-border px-3 py-2 text-left">品牌关键词</th>
                   <th className="border border-border px-3 py-2 text-left">发票名称</th>
                   <th className="border border-border px-3 py-2 text-center w-20">操作</th>
@@ -155,19 +156,20 @@ export function BrandManager() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={3} className="border border-border px-3 py-4 text-center text-muted-foreground">
+                    <td colSpan={4} className="border border-border px-3 py-4 text-center text-muted-foreground">
                       加载中...
                     </td>
                   </tr>
                 ) : brands.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="border border-border px-3 py-4 text-center text-muted-foreground">
+                    <td colSpan={4} className="border border-border px-3 py-4 text-center text-muted-foreground">
                       暂无数据
                     </td>
                   </tr>
                 ) : (
-                  brands.map((brand) => (
+                  brands.map((brand, index) => (
                     <tr key={brand.id}>
+                      <td className="border border-border px-3 py-2 text-center text-muted-foreground">{index + 1}</td>
                       <td className="border border-border px-3 py-2">{brand.brand_keywords}</td>
                       <td className="border border-border px-3 py-2">{brand.invoice_name}</td>
                       <td className="border border-border px-3 py-2 text-center">

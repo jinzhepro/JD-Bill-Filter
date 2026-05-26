@@ -292,6 +292,7 @@ export function InvoiceHistoryManager() {
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="bg-muted">
+                        <th className="border border-border px-3 py-2 text-center w-12">序号</th>
                         <ThWithCopy items={selectedHistory.items} columnKey="nameSku" columnName="商品名称" onCopy={copyColumn} />
                         <ThWithCopy items={selectedHistory.items} columnKey="name" columnName="发票名称" onCopy={copyColumn} />
                         <ThWithCopy items={selectedHistory.items} columnKey="spec" columnName="规格" onCopy={copyColumn} />
@@ -302,6 +303,7 @@ export function InvoiceHistoryManager() {
                     <tbody>
                       {selectedHistory.items && selectedHistory.items.map((item, index) => (
                         <tr key={index}>
+                          <td className="border border-border px-3 py-2 text-center text-muted-foreground">{index + 1}</td>
                           <td className="border border-border px-3 py-2">{item.nameSku || "-"}</td>
                           <td className="border border-border px-3 py-2">{item.name}</td>
                           <td className="border border-border px-3 py-2">{item.spec || "-"}</td>

@@ -344,6 +344,7 @@ const fetchOrders = useCallback(async () => {
                       <table className="w-full border-collapse">
                         <thead>
                           <tr className="bg-muted">
+                            <th className="border border-border px-3 py-2 text-center w-12">序号</th>
                             <ThWithCopy items={items} columnKey="sku" columnName="SKU" className="text-left" />
                             <ThWithCopy items={items} columnKey="product_name" columnName="商品名称" className="text-left" />
                             <ThWithCopy items={items} columnKey="tax_rate" columnName="税率" className="text-right" />
@@ -353,8 +354,9 @@ const fetchOrders = useCallback(async () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {items.map((item) => (
+                          {items.map((item, index) => (
                             <tr key={item.id}>
+                              <td className="border border-border px-3 py-2 text-center text-muted-foreground">{index + 1}</td>
                               <td className="border border-border px-3 py-2">{item.sku}</td>
                               <td className="border border-border px-3 py-2">{item.product_name}</td>
                               <td className="border border-border px-3 py-2 text-right">{item.tax_rate * 100}%</td>
