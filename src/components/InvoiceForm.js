@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useInvoice } from "@/context/InvoiceContext";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,10 +14,25 @@ import { getCurrentMonth, calculateRowAmount, groupItemsByMonth } from "@/lib/ut
 import Decimal from "decimal.js";
 
 export function InvoiceForm() {
-  const { basicInfo, customerInfo, lineItems, invoiceDate, invoiceType, setBasicInfo, setCustomerInfo, clearLineItems, addLineItems, setInvoiceDate } = useInvoice();
+  const { basicInfo, customerInfo, lineItems, invoiceDate, invoiceType, expectedAmount, setBasicInfo, setCustomerInfo, clearLineItems, addLineItems, setInvoiceDate } = useInvoice();
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
+
+  const lineItemsTotal = useMemo(() => {
+    if (lineItems.length === 0) return null;
+    return lineItems.reduce((sum, item) => {
+      const qty = parseFloat(item.quantity) || 0;
+      const prc = parseFloat(item.price) || 0;
+      return sum.plus(new Decimal(qty).times(new Decimal(prc)));
+    }, new Decimal(0));
+  }, [lineItems]);
+
+  const amountMatch = useMemo(() => {
+    if (!expectedAmount || lineItemsTotal === null) return null;
+    const expected = new Decimal(expectedAmount);
+    return lineItemsTotal.equals(expected);
+  }, [expectedAmount, lineItemsTotal]);
 
   const handleBasicChange = (field, value) => {
     setBasicInfo({ [field]: value });
@@ -209,10 +224,17 @@ export function InvoiceForm() {
 
       <Card>
         <CardHeader>
-          <CardTitle>开票内容</CardTitle>
-          {invoiceDate && (
-            <p className="text-sm text-muted-foreground mt-1">发票日期: {invoiceDate}</p>
-          )}
+          <CardTitle className="flex items-center gap-3">
+            开票内容
+            {expectedAmount && (
+              <span className={`text-base font-mono ${amountMatch === true ? "text-green-600" : "text-red-600"}`}>
+                需要开票金额：¥{expectedAmount}
+              </span>
+            )}
+            {invoiceDate && (
+              <span className="text-sm text-muted-foreground font-normal ml-auto">发票日期: {invoiceDate}</span>
+            )}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex justify-end items-center gap-2">

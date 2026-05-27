@@ -54,7 +54,7 @@ const parseCustomerText = (text) => {
   return result;
 };
 
-export function CustomerImportModal({ open, onOpenChange, onImport, onInvoiceTypeChange }) {
+export function CustomerImportModal({ open, onOpenChange, onImport, onInvoiceTypeChange, onTotalAmountChange }) {
   const [pasteText, setPasteText] = useState("");
   const [parsedResult, setParsedResult] = useState(null);
   const { toast } = useToast();
@@ -93,6 +93,10 @@ export function CustomerImportModal({ open, onOpenChange, onImport, onInvoiceTyp
       
       if (onInvoiceTypeChange) {
         onInvoiceTypeChange(parsedResult.invoiceType);
+      }
+      
+      if (onTotalAmountChange) {
+        onTotalAmountChange(parsedResult.totalAmount);
       }
       
       toast({ title: `已导入: ${fields.join("、")}${parsedResult.orderNumbers.length > 0 && parsedResult.orderNumbers.length <= 20 ? `,订单号已复制` : ""}` });
