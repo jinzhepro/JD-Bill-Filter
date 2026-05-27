@@ -78,7 +78,7 @@ export function CustomerImportModal({ open, onOpenChange, onImport, onInvoiceTyp
   const handleImport = () => {
     if (!parsedResult) return;
     
-    if (parsedResult.orderNumbers.length > 0) {
+    if (parsedResult.orderNumbers.length > 0 && parsedResult.orderNumbers.length <= 20) {
       const text = parsedResult.orderNumbers.join(",");
       navigator.clipboard.writeText(text);
     }
@@ -95,8 +95,8 @@ export function CustomerImportModal({ open, onOpenChange, onImport, onInvoiceTyp
         onInvoiceTypeChange(parsedResult.invoiceType);
       }
       
-      toast({ title: `已导入: ${fields.join("、")}${parsedResult.orderNumbers.length > 0 ? `,订单号已复制` : ""}` });
-    } else if (parsedResult.orderNumbers.length > 0) {
+      toast({ title: `已导入: ${fields.join("、")}${parsedResult.orderNumbers.length > 0 && parsedResult.orderNumbers.length <= 20 ? `,订单号已复制` : ""}` });
+    } else if (parsedResult.orderNumbers.length > 0 && parsedResult.orderNumbers.length <= 20) {
       toast({ title: `订单号已复制 (${parsedResult.orderNumbers.length}个)` });
     }
     
@@ -140,25 +140,16 @@ export function CustomerImportModal({ open, onOpenChange, onImport, onInvoiceTyp
         {parsedResult && (
           <div className="space-y-4 border-t pt-4">
             {Object.keys(customerInfo).length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <p className="text-sm font-medium">识别到的客户信息</p>
-                <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   {customerInfo.customerName && (
-                    <div className="p-2 bg-muted rounded col-span-2">
-                      <span className="text-muted-foreground">客户名称：</span>
-                      <span className="font-medium">{customerInfo.customerName}</span>
-                    </div>
+                    <span><span className="text-muted-foreground">客户名称：</span><span className="font-medium text-foreground">{customerInfo.customerName}</span></span>
                   )}
                   {customerInfo.taxId && (
-                    <div className="p-2 bg-muted rounded col-span-2">
-                      <span className="text-muted-foreground">税号：</span>
-                      <span className="font-medium">{customerInfo.taxId}</span>
-                    </div>
+                    <span><span className="text-muted-foreground">税号：</span><span className="font-medium text-foreground">{customerInfo.taxId}</span></span>
                   )}
-                  <div className="p-2 bg-muted rounded col-span-2">
-                    <span className="text-muted-foreground">发票类型：</span>
-                    <span className="font-medium">{parsedResult.invoiceType}</span>
-                  </div>
+                  <span><span className="text-muted-foreground">发票类型：</span><span className="font-medium text-foreground">{parsedResult.invoiceType}</span></span>
                 </div>
               </div>
             )}
