@@ -65,6 +65,7 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
   const [searching, setSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchTargetIndex, setSearchTargetIndex] = useState(null);
+  const [selectedResultIds, setSelectedResultIds] = useState(new Set());
   const [selectedCustomers, setSelectedCustomers] = useState(HUANYU_CUSTOMERS);
   const [customerAmounts, setCustomerAmounts] = useState(() => {
     const amounts = {};
@@ -155,6 +156,11 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
           if (taxRate > 1) {
             taxRate = taxRate / 100;
           }
+          const remainQty = matchedProduct.group_remaining != null
+            ? matchedProduct.group_remaining
+            : (matchedProduct.remaining_quantity != null
+              ? matchedProduct.remaining_quantity
+              : matchedProduct.quantity);
           matchedItems.push({
             name: matchedProduct.product_name,
             originalInput: item.inputName,
@@ -166,6 +172,8 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
             matchedProductName: matchedProduct.product_name,
             inputAmount: item.amount,
             isUnmatched: false,
+            remainingQty: remainQty,
+            overInvoicing: item.quantity > remainQty,
           });
         } else {
           unmatchedItems.push({
@@ -179,8 +187,25 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
             matchedProductName: null,
             inputAmount: item.amount,
             isUnmatched: true,
+            remainingQty: 0,
+            overInvoicing: false,
           });
         }
+      }
+
+      // 按物料名分组排序，相同物料相邻显示
+      matchedItems.sort((a, b) => a.name.localeCompare(b.name));
+
+      // 相同物料逐行递减剩余数量
+      const remainingByProduct = {};
+      for (const item of matchedItems) {
+        const key = item.name;
+        if (remainingByProduct[key] === undefined) {
+          remainingByProduct[key] = item.remainingQty;
+        }
+        item.remainingQty = remainingByProduct[key];
+        remainingByProduct[key] = Math.max(0, remainingByProduct[key] - item.quantity);
+        item.overInvoicing = item.quantity > item.remainingQty;
       }
 
       const allItems = [...unmatchedItems, ...matchedItems];
@@ -562,6 +587,7 @@ const useAmt = Math.min(remainAmt, goods.totalAmt);
     setSearchTargetIndex(index);
     setSearching(true);
     setSearchModalOpen(true);
+    setSelectedResultIds(new Set());
     try {
       const params = new URLSearchParams({ search: name });
       const res = await fetch(`/api/canteen-purchase-orders?${params}`);
@@ -589,14 +615,80 @@ const useAmt = Math.min(remainAmt, goods.totalAmt);
     setSearching(false);
   }, [searchQuery]);
 
-  const handleSelectSearchResult = useCallback((productName) => {
-    if (searchTargetIndex !== null) {
+  const toggleSelectResult = useCallback((idx) => {
+    setSelectedResultIds(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx); else next.add(idx);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback(() => {
+    setSelectedResultIds(prev => {
+      if (prev.size === searchResults.length) return new Set();
+      return new Set(searchResults.map((_, i) => i));
+    });
+  }, [searchResults]);
+
+  const handleAddSelected = useCallback(() => {
+    if (searchTargetIndex === null || selectedResultIds.size === 0) return;
+    const newItems = [...previewItems];
+    const originItem = newItems[searchTargetIndex];
+    const oldName = originItem.name;
+      const newRows = [];
+    for (const idx of selectedResultIds) {
+      const result = searchResults[idx];
+      if (!result) continue;
+      const remainQty = result.group_remaining != null
+        ? result.group_remaining
+        : (result.remaining_quantity != null
+          ? result.remaining_quantity
+          : result.quantity);
+      newRows.push({
+        name: result.product_name,
+        originalInput: originItem.originalInput,
+        spec: result.spec || '',
+        unit: result.unit || originItem.unit,
+        quantity: result.quantity,
+        price: result.unit_price || originItem.price,
+        taxRate: result.tax_rate != null ? (result.tax_rate > 1 ? result.tax_rate / 100 : result.tax_rate) : originItem.taxRate,
+        matchedProductName: result.product_name,
+        inputAmount: 0,
+        isUnmatched: false,
+        remainingQty: remainQty,
+        overInvoicing: result.quantity > remainQty,
+      });
+    }
+    newItems.splice(searchTargetIndex, 1, ...newRows);
+    setPreviewItems(newItems);
+    setMatchErrors(prev => {
+      const idx = prev.indexOf(oldName);
+      if (idx === -1) return prev;
+      const next = [...prev];
+      next.splice(idx, 1);
+      return next;
+    });
+    setSelectedResultIds(new Set());
+    setSearchModalOpen(false);
+  }, [searchTargetIndex, selectedResultIds, searchResults, previewItems]);
+
+  const handleSelectSearchResult = useCallback((selectedProduct) => {
+    if (searchTargetIndex !== null && selectedProduct) {
       const newItems = [...previewItems];
-      const [item] = newItems.splice(searchTargetIndex, 1);
-      newItems.push({ ...item, name: productName, isUnmatched: false });
+      const item = { ...newItems[searchTargetIndex] };
+      const oldName = item.name;
+      const remainQty = selectedProduct.group_remaining != null
+        ? selectedProduct.group_remaining
+        : (selectedProduct.remaining_quantity != null
+          ? selectedProduct.remaining_quantity
+          : selectedProduct.quantity);
+      item.name = selectedProduct.product_name;
+      item.isUnmatched = false;
+      item.remainingQty = remainQty;
+      newItems[searchTargetIndex] = item;
       setPreviewItems(newItems);
       setMatchErrors(prev => {
-        const idx = prev.indexOf(item.name);
+        const idx = prev.indexOf(oldName);
         if (idx === -1) return prev;
         const next = [...prev];
         next.splice(idx, 1);
@@ -604,6 +696,7 @@ const useAmt = Math.min(remainAmt, goods.totalAmt);
       });
     }
     setSearchModalOpen(false);
+    setSelectedResultIds(new Set());
   }, [searchTargetIndex, previewItems]);
 
   const handleClose = useCallback(() => {
@@ -618,6 +711,7 @@ const useAmt = Math.min(remainAmt, goods.totalAmt);
     HUANYU_CUSTOMERS.forEach(c => amounts[c] = "");
     setCustomerAmounts(amounts);
     setAllocationPreview([]);
+    setSelectedResultIds(new Set());
   }, [onOpenChange]);
 
   const formatAmount = (amount) => {
@@ -761,10 +855,11 @@ const useAmt = Math.min(remainAmt, goods.totalAmt);
                     <tr className="bg-muted">
                       <th className="border px-2 py-1 text-center w-10">序号</th>
                       <th className="border px-2 py-1 text-left">粘贴数据 → 匹配数据</th>
-                      <th className="border px-2 py-1 text-center">规格</th>
                       <th className="border px-2 py-1 text-center">单位</th>
-                      <th className="border px-2 py-1 text-right">数量</th>
+                      <th className="border px-2 py-1 text-right">开票数量</th>
+                      <th className="border px-2 py-1 text-right">剩余数量</th>
                       <th className="border px-2 py-1 text-right">单价</th>
+                      <th className="border px-2 py-1 text-right">金额</th>
                       <th className="border px-2 py-1 text-right">税率</th>
                     </tr>
                   </thead>
@@ -788,7 +883,7 @@ const useAmt = Math.min(remainAmt, goods.totalAmt);
                               }}
                               className={`h-7 text-sm border-0 shadow-none focus-visible:ring-1 ${item.isUnmatched ? "bg-red-50 text-red-600 border-red-200" : ""}`}
                             />
-                            {item.isUnmatched && (
+                            {item.isUnmatched || item.overInvoicing ? (
                               <button
                                 onClick={() => handleSearchProduct(item.name, index)}
                                 className="shrink-0 p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground cursor-pointer"
@@ -796,14 +891,99 @@ const useAmt = Math.min(remainAmt, goods.totalAmt);
                               >
                                 <Search className="w-3.5 h-3.5" />
                               </button>
+                            ) : (
+                              <button
+                                onClick={() => handleSearchProduct(item.name, index)}
+                                className="shrink-0 p-1 hover:bg-muted rounded text-muted-foreground/50 hover:text-foreground cursor-pointer opacity-50 hover:opacity-100"
+                                title="点击查询其他采购单"
+                              >
+                                <Search className="w-3.5 h-3.5" />
+                              </button>
                             )}
                           </div>
                         </td>
-                        <td className="border px-2 py-1 text-center">{item.spec}</td>
                         <td className="border px-2 py-1 text-center">{item.unit}</td>
-                        <td className="border px-2 py-1 text-right">{item.quantity}</td>
+                        <td className={`border px-2 py-1 text-right ${item.overInvoicing ? "text-destructive font-bold" : ""}`}>
+                          <Input
+                            type="number"
+                            step="1"
+                            min="0"
+                            value={item.quantity}
+                            onChange={(e) => {
+                              const newItems = [...previewItems];
+                              const qty = parseFloat(e.target.value) || 0;
+                              const currentAmount = newItems[index].inputAmount || 0;
+                              newItems[index] = {
+                                ...newItems[index],
+                                quantity: qty,
+                                price: qty > 0 ? parseFloat((currentAmount / qty).toFixed(2)) : 0,
+                              };
+                              // 重新计算同物料后序行的剩余数量
+                              const productName = newItems[index].name;
+                              let baseRemaining = null;
+                              for (let i = 0; i < newItems.length; i++) {
+                                if (newItems[i].name !== productName || newItems[i].isUnmatched) continue;
+                                if (baseRemaining === null) {
+                                  baseRemaining = newItems[i].remainingQty;
+                                } else {
+                                  const prevQty = newItems[i - 1].quantity || 0;
+                                  baseRemaining = Math.max(0, baseRemaining - prevQty);
+                                }
+                                newItems[i] = {
+                                  ...newItems[i],
+                                  remainingQty: baseRemaining,
+                                  overInvoicing: newItems[i].quantity > baseRemaining,
+                                };
+                              }
+                              setPreviewItems(newItems);
+                            }}
+                            className={`h-7 text-sm text-right border-0 shadow-none focus-visible:ring-1 w-16 ${
+                              item.overInvoicing ? "text-destructive font-bold" : ""
+                            }`}
+                          />
+                          {item.overInvoicing && <span className="ml-1 text-xs">⚠</span>}
+                        </td>
                         <td className="border px-2 py-1 text-right">
-                          {formatAmount(item.price)}
+                          {item.isUnmatched ? "-" : (item.remainingQty ?? "-")}
+                        </td>
+                        <td className="border px-2 py-1 text-right">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={item.price}
+                            onChange={(e) => {
+                              const newItems = [...previewItems];
+                              const newPrice = parseFloat(e.target.value) || 0;
+                              newItems[index] = {
+                                ...newItems[index],
+                                price: newPrice,
+                                inputAmount: parseFloat((newPrice * (newItems[index].quantity || 0)).toFixed(2)),
+                              };
+                              setPreviewItems(newItems);
+                            }}
+                            className="h-7 text-sm text-right border-0 shadow-none focus-visible:ring-1 w-20 ml-auto"
+                          />
+                        </td>
+                        <td className="border px-2 py-1 text-right font-mono">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={item.inputAmount || 0}
+                            onChange={(e) => {
+                              const newItems = [...previewItems];
+                              const newAmount = parseFloat(e.target.value) || 0;
+                              const qty = newItems[index].quantity || 1;
+                              newItems[index] = {
+                                ...newItems[index],
+                                inputAmount: newAmount,
+                                price: parseFloat((newAmount / qty).toFixed(2)),
+                              };
+                              setPreviewItems(newItems);
+                            }}
+                            className="h-7 text-sm text-right border-0 shadow-none focus-visible:ring-1 w-20 ml-auto font-mono"
+                          />
                         </td>
                         <td className="border px-2 py-1 text-right">
                           {(item.taxRate * 100).toFixed(0)}%
@@ -868,25 +1048,46 @@ const useAmt = Math.min(remainAmt, goods.totalAmt);
                 <table className="w-full border-collapse text-sm">
                   <thead>
                     <tr className="bg-muted">
+                      <th className="border px-2 py-1 text-center w-8">
+                        <input
+                          type="checkbox"
+                          checked={selectedResultIds.size === searchResults.length && searchResults.length > 0}
+                          onChange={toggleSelectAll}
+                          className="cursor-pointer"
+                        />
+                      </th>
                       <th className="border px-2 py-1 text-left">品名</th>
                       <th className="border px-2 py-1 text-center">规格</th>
                       <th className="border px-2 py-1 text-center">单位</th>
                       <th className="border px-2 py-1 text-center">供应商</th>
+                      <th className="border px-2 py-1 text-right">采购数量</th>
                       <th className="border px-2 py-1 text-center">操作</th>
                     </tr>
                   </thead>
                   <tbody>
                     {searchResults.map((result, idx) => (
-                      <tr key={idx} className="hover:bg-muted/50">
+                      <tr key={idx} className={`hover:bg-muted/50 ${selectedResultIds.has(idx) ? 'bg-primary/5' : ''}`}>
+                        <td className="border px-2 py-1 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedResultIds.has(idx)}
+                            onChange={() => toggleSelectResult(idx)}
+                            className="cursor-pointer"
+                          />
+                        </td>
                         <td className="border px-2 py-1">{result.product_name}</td>
                         <td className="border px-2 py-1 text-center">{result.spec || ''}</td>
                         <td className="border px-2 py-1 text-center">{result.unit || ''}</td>
                         <td className="border px-2 py-1 text-center">{result.supplier_name || ''}</td>
+                        <td className="border px-2 py-1 text-right">{result.quantity}</td>
                         <td className="border px-2 py-1 text-center">
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleSelectSearchResult(result.product_name)}
+                            onClick={() => {
+                              handleSelectSearchResult(result);
+                              setSelectedResultIds(new Set());
+                            }}
                             className="h-7 text-xs"
                           >
                             <ExternalLink className="w-3 h-3 mr-1" />
@@ -900,8 +1101,15 @@ const useAmt = Math.min(remainAmt, goods.totalAmt);
               </div>
             )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSearchModalOpen(false)}>
+          <DialogFooter className="flex justify-between items-center">
+            <div className="flex gap-2">
+              {selectedResultIds.size > 0 && (
+                <Button onClick={handleAddSelected} size="sm">
+                  添加选中 ({selectedResultIds.size})
+                </Button>
+              )}
+            </div>
+            <Button variant="outline" onClick={() => { setSearchModalOpen(false); setSelectedResultIds(new Set()); }}>
               关闭
             </Button>
           </DialogFooter>

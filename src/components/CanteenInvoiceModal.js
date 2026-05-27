@@ -180,6 +180,21 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
         }
       }
 
+      // 按物料名分组排序，相同物料相邻显示
+      matchedItems.sort((a, b) => a.name.localeCompare(b.name));
+
+      // 相同物料逐行递减剩余数量
+      const remainingByProduct = {};
+      for (const item of matchedItems) {
+        const key = item.name;
+        if (remainingByProduct[key] === undefined) {
+          remainingByProduct[key] = item.remainingQty;
+        }
+        item.remainingQty = remainingByProduct[key];
+        remainingByProduct[key] = Math.max(0, remainingByProduct[key] - item.quantity);
+        item.overInvoicing = item.quantity > item.remainingQty;
+      }
+
       const allItems = [...unmatchedItems, ...matchedItems];
       const errors = unmatchedItems.map(item => item.name);
 
@@ -558,8 +573,24 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
                                 ...newItems[index],
                                 quantity: qty,
                                 price: qty > 0 ? currentAmount / qty : 0,
-                                overInvoicing: qty > (item.remainingQty || 0),
                               };
+                              // 重新计算同物料后序行的剩余数量
+                              const productName = newItems[index].name;
+                              let baseRemaining = null;
+                              for (let i = 0; i < newItems.length; i++) {
+                                if (newItems[i].name !== productName || newItems[i].isUnmatched) continue;
+                                if (baseRemaining === null) {
+                                  baseRemaining = newItems[i].remainingQty;
+                                } else {
+                                  const prevQty = newItems[i - 1].quantity || 0;
+                                  baseRemaining = Math.max(0, baseRemaining - prevQty);
+                                }
+                                newItems[i] = {
+                                  ...newItems[i],
+                                  remainingQty: baseRemaining,
+                                  overInvoicing: newItems[i].quantity > baseRemaining,
+                                };
+                              }
                               setPreviewItems(newItems);
                             }}
                             className={`h-7 text-sm text-right border-0 shadow-none focus-visible:ring-1 w-16 ${
