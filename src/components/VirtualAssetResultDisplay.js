@@ -71,14 +71,18 @@ export default function VirtualAssetResultDisplay({
         const productList = data.data || [];
         setProducts(productList);
 
-        // 查找未匹配的SKU
+        // 查找未匹配SKU或未设置发票名称的商品
         const unmatched = [];
         if (processedData) {
           processedData.forEach((row) => {
             const sku = String(row["商品skuId"] || "").trim();
             if (!sku) return;
             const match = productList.find((p) => p.sku === sku);
-            if (!match) unmatched.push(sku);
+            if (!match) {
+              unmatched.push(`${sku}（未在商品管理中找到）`);
+            } else if (!match.invoice_name) {
+              unmatched.push(`${sku}（未设置发票名称）`);
+            }
           });
         }
         setUnmatchedSkus(unmatched);
@@ -95,18 +99,31 @@ export default function VirtualAssetResultDisplay({
     return () => { cancelled = true; };
   }, [processedData]);
 
-  // 获取商品显示名称
+  // 获取商品名称
   const getProductName = (sku) => {
     if (!products || !sku) return null;
     const match = products.find((p) => p.sku === String(sku).trim());
-    return match ? match.product_name : null;
+    return match ? match.product_name || null : null;
   };
 
-  // 如果匹配到名称则显示，否则回退到虚拟资产名称
-  const getDisplayName = (sku, fallback) => {
-    const name = getProductName(sku);
-    if (name) return name.replace(/\s+/g, "");
-    return fallback || "";
+  // 获取发票名称（仅取 invoice_name 字段，不回退）
+  const getInvoiceName = (sku) => {
+    if (!products || !sku) return null;
+    const match = products.find((p) => p.sku === String(sku).trim());
+    return match && match.invoice_name ? match.invoice_name.replace(/\s+/g, "") : null;
+  };
+
+  // 获取规格
+  const getSpec = (sku) => {
+    if (!products || !sku) return "";
+    const match = products.find((p) => p.sku === String(sku).trim());
+    return match && match.spec ? match.spec : "";
+  };
+
+  // 显示名称：有发票名称则显示，否则显示提示
+  const getDisplayName = (sku) => {
+    const name = getInvoiceName(sku);
+    return name || "（未设置发票名称）";
   };
 
   const handleSort = (key) => {
@@ -153,10 +170,13 @@ export default function VirtualAssetResultDisplay({
     if (!processedData || processedData.length === 0) return;
 
     try {
-      const headers = ["商品skuId", "发票名称", "实际金额"];
+      const headers = ["商品skuId", "商品名称", "数量", "税率", "实际金额"];
       const rows = processedData.map((row) => {
-        const displayName = getDisplayName(row["商品skuId"], row["虚拟资产名称"]);
-        return [row["商品skuId"], displayName, row["实际金额"]]
+        const sku = row["商品skuId"];
+        const rawName = getProductName(sku) || row["虚拟资产名称"];
+        const prodName = `${rawName.replace(/\s+/g, "")}_${sku}`;
+        const taxRate = getTaxRate(sku);
+        return [sku, prodName, 1, `${(taxRate * 100).toFixed(0)}%`, row["实际金额"]]
           .map((v) => `"${String(v).replace(/"/g, '""')}"`)
           .join(",");
       });
@@ -187,6 +207,15 @@ export default function VirtualAssetResultDisplay({
     }
   };
 
+  // 根据SKU对应的发票名称确定税率
+  const getTaxRate = (sku) => {
+    if (!products || !sku) return 0.13;
+    const match = products.find((p) => p.sku === String(sku).trim());
+    const invName = match?.invoice_name || "";
+    if (invName.includes("乳制品") && invName.includes("蒙牛")) return 0.09;
+    return 0.13;
+  };
+
   // 直接导出发票
   const handleExportInvoice = async () => {
     setIsExporting(true);
@@ -194,21 +223,21 @@ export default function VirtualAssetResultDisplay({
     try {
       const lineItems = processedData.map((row) => {
         const sku = String(row["商品skuId"] || "").trim();
-        const invoiceName = getDisplayName(sku, row["虚拟资产名称"]);
-        const nameWithSku = `${invoiceName}_${sku}`;
+        const invoiceName = getDisplayName(sku);
+        const taxRate = getTaxRate(sku);
         const amountInclTax = new Decimal(cleanAmountString(row["实际金额"]));
 
         return {
-          name: nameWithSku,
-          spec: "",
-          unit: "",
+          name: invoiceName,
+          spec: getSpec(sku),
+          unit: "箱",
           quantity: 1,
           price: amountInclTax.toNumber(),
           amount: amountInclTax.toNumber(),
-          taxRate: 0.13,
+          taxRate,
         };
       });
-
+ 
       const now = new Date();
       const applyDate = `${now.getFullYear()}年${String(now.getMonth() + 1).padStart(2, "0")}月${String(now.getDate()).padStart(2, "0")}日`;
 
@@ -297,13 +326,13 @@ export default function VirtualAssetResultDisplay({
             <AlertTriangle className="w-5 h-5 text-warning mt-0.5 flex-shrink-0" />
             <div>
               <h4 className="font-semibold text-warning mb-1">
-                未匹配到商品名称的SKU ({unmatchedSkus.length}个)
+                以下SKU无发票名称 ({unmatchedSkus.length}个)
               </h4>
               <p className="text-sm text-warning/80">
                 {unmatchedSkus.join("、")}
               </p>
               <p className="text-xs text-warning/60 mt-1">
-                未匹配的SKU将使用虚拟资产名称作为开票名称
+                请在商品管理中设置发票名称后重新上传
               </p>
             </div>
           </div>
@@ -421,11 +450,22 @@ export default function VirtualAssetResultDisplay({
                 </th>
                 <th className="px-4 py-3.5 text-left font-semibold text-foreground whitespace-nowrap bg-muted/30">
                   <div className="flex items-center gap-2">
-                    <span>发票名称</span>
+                    <span>商品名称</span>
                     {loadingProducts && (
                       <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
                     )}
                   </div>
+                </th>
+                <th className="px-4 py-3.5 text-left font-semibold text-foreground whitespace-nowrap bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <span>发票名称</span>
+                  </div>
+                </th>
+                <th className="px-4 py-3.5 text-left font-semibold text-foreground whitespace-nowrap bg-muted/30">
+                  <span>数量</span>
+                </th>
+                <th className="px-4 py-3.5 text-left font-semibold text-foreground whitespace-nowrap bg-muted/30">
+                  <span>税率</span>
                 </th>
                 <th className="px-4 py-3.5 text-left font-semibold text-foreground whitespace-nowrap bg-muted/30">
                   <div className="flex items-center gap-2">
@@ -450,10 +490,7 @@ export default function VirtualAssetResultDisplay({
             </thead>
             <tbody>
               {filteredData.map((row, index) => {
-                const displayName = getDisplayName(
-                  row["商品skuId"],
-                  row["虚拟资产名称"]
-                );
+                const displayName = getDisplayName(row["商品skuId"]);
                 return (
                   <tr
                     key={row["商品skuId"]}
@@ -471,10 +508,23 @@ export default function VirtualAssetResultDisplay({
                       {loadingProducts ? (
                         <span className="text-muted-foreground text-xs">加载中...</span>
                       ) : (
-                        <span className={getProductName(row["商品skuId"]) ? "" : "text-muted-foreground"}>
+                        <span>{(getProductName(row["商品skuId"]) || row["虚拟资产名称"]).replace(/\s+/g, "")}_{row["商品skuId"]}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-left border-b border-border/50">
+                      {loadingProducts ? (
+                        <span className="text-muted-foreground text-xs">加载中...</span>
+                      ) : (
+                        <span className={getInvoiceName(row["商品skuId"]) ? "" : "text-muted-foreground"}>
                           {displayName}
                         </span>
                       )}
+                    </td>
+                    <td className="px-4 py-3 text-left border-b border-border/50">
+                      1
+                    </td>
+                    <td className="px-4 py-3 text-left border-b border-border/50 font-mono">
+                      {(getTaxRate(row["商品skuId"]) * 100).toFixed(0)}%
                     </td>
                     <td className="px-4 py-3 text-left border-b border-border/50 font-mono font-medium text-primary">
                       ¥{Number(row["实际金额"]).toFixed(2)}
