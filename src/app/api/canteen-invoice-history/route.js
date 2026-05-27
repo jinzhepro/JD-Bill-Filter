@@ -10,8 +10,16 @@ export async function GET(request) {
   const page = parseInt(url.searchParams.get('page') || '1');
   const pageSize = parseInt(url.searchParams.get('pageSize') || '20');
   const offset = (page - 1) * pageSize;
+  const latestContractNo = url.searchParams.get('latestContractNo');
 
   try {
+    if (latestContractNo === 'true') {
+      const result = await db.prepare(
+        "SELECT contract_no FROM canteen_invoice_history WHERE contract_no LIKE 'JK-GQ-250041-%' ORDER BY created_at DESC LIMIT 1"
+      ).first();
+      return Response.json({ success: true, contractNo: result?.contract_no || null });
+    }
+
     const countResult = await db.prepare(
       'SELECT COUNT(*) as total FROM canteen_invoice_history'
     ).first();

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +27,25 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
   const [canteenName, setCanteenName] = useState("");
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
   const [contractNo, setContractNo] = useState("");
+
+  const fetchLatestContractNo = useCallback(async () => {
+    try {
+      const res = await fetch('/api/canteen-invoice-history?latestContractNo=true');
+      const data = await res.json();
+      if (data.success && data.contractNo) {
+        const match = data.contractNo.match(/(\d+)$/);
+        if (match) {
+          setContractNo(String(parseInt(match[1]) + 1));
+        }
+      }
+    } catch {
+      // 静默失败，使用默认值
+    }
+  }, []);
+
+  useEffect(() => {
+    if (open) fetchLatestContractNo();
+  }, [open, fetchLatestContractNo]);
   const [searchResults, setSearchResults] = useState([]);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -223,12 +242,12 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
       await exportInvoice(basicInfo, customerInfo, previewItems, exportLabel);
 
       const totalAmount = previewItems.reduce(
-        (sum, item) => sum + item.quantity * item.price,
+        (sum, item) => sum + (item.inputAmount || item.quantity * item.price),
         0
       );
 
       const itemsForHistory = previewItems.map((item) => {
-        const amount = item.quantity * item.price / (1 + item.taxRate);
+        const amount = (item.inputAmount || item.quantity * item.price) / (1 + item.taxRate);
         const tax = amount * item.taxRate;
         const total = amount + tax;
         return {
@@ -371,17 +390,16 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
       const newItems = [...previewItems];
       const item = { ...newItems[searchTargetIndex] };
       const oldName = item.name;
-      const remainQty = selectedProduct.remaining_quantity != null ? selectedProduct.remaining_quantity : selectedProduct.quantity;
+      const unitRemainQty = selectedProduct.remaining_quantity != null ? selectedProduct.remaining_quantity : selectedProduct.quantity;
+      const groupRemainQty = selectedProduct.group_remaining != null ? selectedProduct.group_remaining : unitRemainQty;
       item.name = selectedProduct.product_name;
       item.spec = selectedProduct.spec || '';
       item.unit = selectedProduct.unit || item.unit;
-      item.price = selectedProduct.unit_price || item.price;
+      item.price = item.quantity > 0 ? item.inputAmount / item.quantity : (selectedProduct.unit_price || item.price);
       item.taxRate = selectedProduct.tax_rate != null ? (selectedProduct.tax_rate > 1 ? selectedProduct.tax_rate / 100 : selectedProduct.tax_rate) : item.taxRate;
-      item.quantity = remainQty;
-      item.inputAmount = 0;
-      item.remainingQty = remainQty;
+      item.remainingQty = groupRemainQty;
       item.purchaseQty = selectedProduct.quantity;
-      item.overInvoicing = false;
+      item.overInvoicing = item.quantity > groupRemainQty;
       item.isUnmatched = false;
       newItems[searchTargetIndex] = item;
       setPreviewItems(newItems);
@@ -535,10 +553,11 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
                             onChange={(e) => {
                               const newItems = [...previewItems];
                               const qty = parseFloat(e.target.value) || 0;
+                              const currentAmount = newItems[index].inputAmount || 0;
                               newItems[index] = {
                                 ...newItems[index],
                                 quantity: qty,
-                                inputAmount: qty * (newItems[index].price || 0),
+                                price: qty > 0 ? currentAmount / qty : 0,
                                 overInvoicing: qty > (item.remainingQty || 0),
                               };
                               setPreviewItems(newItems);
@@ -603,9 +622,9 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
               <div className="flex gap-4 text-sm text-muted-foreground items-center">
                 <span>共 {previewItems.length} 条</span>
                 <span>
-                  合计金额：{formatAmount(
+                  合计金额：                  {formatAmount(
                     previewItems.reduce(
-                      (sum, item) => sum + item.quantity * item.price,
+                      (sum, item) => sum + (item.inputAmount || item.quantity * item.price),
                       0
                     )
                   )}
