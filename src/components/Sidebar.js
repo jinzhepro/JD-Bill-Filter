@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileSpreadsheet, ArrowLeftRight, Receipt, Package, Tag, ShoppingCart, LogOut, ChevronDown, UtensilsCrossed } from "lucide-react";
+import { FileSpreadsheet, ArrowLeftRight, Receipt, Package, Tag, ShoppingCart, LogOut, ChevronDown, UtensilsCrossed, Wallet } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 
@@ -28,6 +28,11 @@ export function Sidebar() {
           name: "采购单",
           href: "/purchase",
           icon: <ShoppingCart className="w-5 h-5" />,
+        },
+        {
+          name: "虚拟资产汇总",
+          href: "/jd-business/virtual-assets",
+          icon: <Wallet className="w-5 h-5" />,
         },
       ],
     },
