@@ -13,10 +13,14 @@ import { useInvoice } from "@/context/InvoiceContext";
 export default function InvoicePage() {
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
-  const { setCustomerInfo } = useInvoice();
+  const { setCustomerInfo, setInvoiceType } = useInvoice();
 
   const handleImportCustomer = (data) => {
     setCustomerInfo(data);
+  };
+
+  const handleInvoiceTypeChange = (type) => {
+    setInvoiceType(type);
   };
 
   return (
@@ -53,6 +57,7 @@ export default function InvoicePage() {
           open={importModalOpen}
           onOpenChange={setImportModalOpen}
           onImport={handleImportCustomer}
+          onInvoiceTypeChange={handleInvoiceTypeChange}
         />
       </div>
     </SimpleLayout>

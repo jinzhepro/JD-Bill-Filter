@@ -7,9 +7,11 @@ import Decimal from "decimal.js";
  * @param {Object} customerInfo - 客户信息 {customerName, taxId, bankName, bankAccount, address, phone}
  * @param {Array<Object>} lineItems - 开票明细 [{name, spec, unit, quantity, price, taxRate}]
  * @param {string|null} month - 月份标签 (如 "2024-01" 或 null 表示其他月) 或食堂名称
+ * @param {boolean} hideMonthLabel - 是否隐藏月份标签
+ * @param {string} invoiceType - 发票类型 ("专票" 或 "普票")
  * @returns {Promise<void>}
  */
-export async function exportInvoice(basicInfo, customerInfo, lineItems, month, hideMonthLabel = false) {
+export async function exportInvoice(basicInfo, customerInfo, lineItems, month, hideMonthLabel = false, invoiceType = "专票") {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("发票");
 
@@ -67,7 +69,9 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month, h
 
   const customerFields = [
     ["客户名称", customerInfo.customerName],
-    ["发票类型", "增值税专用发票（ √ ）     增值税普通发票（    ）"],
+    ["发票类型", invoiceType === "普票" 
+      ? "增值税专用发票（    ）     增值税普通发票（ √ ）"
+      : "增值税专用发票（ √ ）     增值税普通发票（    ）"],
     ["公司全称", customerInfo.customerName],
     ["纳税人识别号", customerInfo.taxId],
     ["开户银行", customerInfo.bankName],

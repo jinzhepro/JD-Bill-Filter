@@ -26,6 +26,7 @@ const initialState = {
   },
   lineItems: [],
   invoiceDate: "",
+  invoiceType: "专票",
 };
 
 const ActionTypes = {
@@ -38,6 +39,7 @@ const ActionTypes = {
   RESET: "RESET",
   CLEAR_LINE_ITEMS: "CLEAR_LINE_ITEMS",
   SET_INVOICE_DATE: "SET_INVOICE_DATE",
+  SET_INVOICE_TYPE: "SET_INVOICE_TYPE",
 };
 
 function invoiceReducer(state, action) {
@@ -68,6 +70,8 @@ function invoiceReducer(state, action) {
       return { ...state, lineItems: [] };
     case ActionTypes.SET_INVOICE_DATE:
       return { ...state, invoiceDate: action.payload };
+    case ActionTypes.SET_INVOICE_TYPE:
+      return { ...state, invoiceType: action.payload };
     default:
       return state;
   }
@@ -88,6 +92,7 @@ export function InvoiceProvider({ children }) {
     reset: () => dispatch({ type: ActionTypes.RESET }),
     clearLineItems: () => dispatch({ type: ActionTypes.CLEAR_LINE_ITEMS }),
     setInvoiceDate: (date) => dispatch({ type: ActionTypes.SET_INVOICE_DATE, payload: date }),
+    setInvoiceType: (type) => dispatch({ type: ActionTypes.SET_INVOICE_TYPE, payload: type }),
   }), []);
 
   const value = useMemo(() => ({ ...state, ...actions }), [state, actions]);

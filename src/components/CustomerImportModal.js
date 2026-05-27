@@ -10,7 +10,7 @@ import { Copy } from "lucide-react";
 
 const parseCustomerText = (text) => {
   const lines = text.split(/[\n\r]+/).map(l => l.trim()).filter(Boolean);
-  const result = { customerInfo: {}, orderNumbers: [], orderAmounts: [], totalAmount: "0.00" };
+  const result = { customerInfo: {}, orderNumbers: [], orderAmounts: [], totalAmount: "0.00", invoiceType: "专票" };
   
   let totalAmount = new Decimal(0);
   for (const line of lines) {
@@ -38,10 +38,23 @@ const parseCustomerText = (text) => {
     }
   }
   
+  for (const line of lines) {
+    const invoiceTypeMatch = line.match(/开票类型[：:]\s*(.*)/);
+    if (invoiceTypeMatch) {
+      const typeText = invoiceTypeMatch[1];
+      if (/普票/.test(typeText)) {
+        result.invoiceType = "普票";
+      } else if (/专票/.test(typeText)) {
+        result.invoiceType = "专票";
+      }
+      break;
+    }
+  }
+  
   return result;
 };
 
-export function CustomerImportModal({ open, onOpenChange, onImport }) {
+export function CustomerImportModal({ open, onOpenChange, onImport, onInvoiceTypeChange }) {
   const [pasteText, setPasteText] = useState("");
   const [parsedResult, setParsedResult] = useState(null);
   const { toast } = useToast();
@@ -76,6 +89,11 @@ export function CustomerImportModal({ open, onOpenChange, onImport }) {
       const fields = [];
       if (parsedResult.customerInfo.customerName) fields.push("客户名称");
       if (parsedResult.customerInfo.taxId) fields.push("税号");
+      fields.push(`发票类型：${parsedResult.invoiceType}`);
+      
+      if (onInvoiceTypeChange) {
+        onInvoiceTypeChange(parsedResult.invoiceType);
+      }
       
       toast({ title: `已导入: ${fields.join("、")}${parsedResult.orderNumbers.length > 0 ? `,订单号已复制` : ""}` });
     } else if (parsedResult.orderNumbers.length > 0) {
@@ -137,6 +155,10 @@ export function CustomerImportModal({ open, onOpenChange, onImport }) {
                       <span className="font-medium">{customerInfo.taxId}</span>
                     </div>
                   )}
+                  <div className="p-2 bg-muted rounded col-span-2">
+                    <span className="text-muted-foreground">发票类型：</span>
+                    <span className="font-medium">{parsedResult.invoiceType}</span>
+                  </div>
                 </div>
               </div>
             )}
@@ -147,33 +169,51 @@ export function CustomerImportModal({ open, onOpenChange, onImport }) {
                   <p className="text-sm font-medium">识别到的订单号 ({orderNumbers.length}个)</p>
                   <Button variant="outline" size="sm" onClick={handleCopyOrderNumbers}>
                     <Copy className="w-4 h-4 mr-1" />
-                    复制订单号
+                    复制全部
                   </Button>
                 </div>
-                <div className="p-2 bg-muted rounded text-xs font-mono max-h-48 overflow-auto">
-                   <table className="w-full">
-                     <thead>
-                       <tr>
-                         <th className="py-1 px-2 text-center w-8 text-xs text-muted-foreground">#</th>
-                         <th className="py-1 px-2 text-xs text-muted-foreground">订单号</th>
-                         <th className="py-1 px-2 text-xs text-muted-foreground text-right">金额</th>
-                       </tr>
-                     </thead>
-                     <tbody>
-                       {parsedResult.orderAmounts.map((item, index) => (
-                         <tr key={index} className="border-b border-border last:border-0">
-                           <td className="py-1 px-2 text-center text-xs text-muted-foreground">{index + 1}</td>
-                           <td className="py-1 px-2">{item.orderNumber}</td>
-                           <td className="py-1 px-2 text-right">{item.amount}</td>
-                         </tr>
-                       ))}
-                       <tr className="font-bold border-t-2 border-border">
-                         <td></td>
-                         <td className="py-1 px-2">合计 ({orderNumbers.length}个订单)</td>
-                         <td className="py-1 px-2 text-right text-red-600">¥{parsedResult.totalAmount}</td>
-                       </tr>
-                     </tbody>
-                  </table>
+                
+                <div className="max-h-[400px] overflow-auto space-y-2">
+                  {(() => {
+                    const groups = [];
+                    for (let i = 0; i < orderNumbers.length; i += 20) {
+                      groups.push(orderNumbers.slice(i, i + 20));
+                    }
+                    
+                    return groups.map((group, groupIndex) => {
+                      const start = groupIndex * 20 + 1;
+                      const end = Math.min((groupIndex + 1) * 20, orderNumbers.length);
+                      
+                      const handleCopyGroup = () => {
+                        navigator.clipboard.writeText(group.join(","));
+                        toast({ title: `已复制第 ${groupIndex + 1} 组订单号 (${group.length}个)` });
+                      };
+                      
+                      return (
+                        <div key={groupIndex} className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs text-muted-foreground">
+                              第 {groupIndex + 1} 组：{start}-{end}（{group.length}个）
+                            </p>
+                            <Button variant="ghost" size="sm" onClick={handleCopyGroup}>
+                              <Copy className="w-3 h-3 mr-1" />
+                              复制本组
+                            </Button>
+                          </div>
+                          <div className="p-2 bg-muted rounded text-xs font-mono break-all">
+                            {group.join(",")}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+                
+                <div className="p-2 bg-muted rounded text-xs">
+                  <div className="flex justify-between font-bold border-t-2 border-border pt-2">
+                    <span>合计 ({orderNumbers.length}个订单)</span>
+                    <span className="text-red-600">¥{parsedResult.totalAmount}</span>
+                  </div>
                 </div>
               </div>
             )}

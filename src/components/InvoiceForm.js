@@ -14,7 +14,7 @@ import { getCurrentMonth, calculateRowAmount, groupItemsByMonth } from "@/lib/ut
 import Decimal from "decimal.js";
 
 export function InvoiceForm() {
-  const { basicInfo, customerInfo, lineItems, invoiceDate, setBasicInfo, setCustomerInfo, clearLineItems, addLineItems, setInvoiceDate } = useInvoice();
+  const { basicInfo, customerInfo, lineItems, invoiceDate, invoiceType, setBasicInfo, setCustomerInfo, clearLineItems, addLineItems, setInvoiceDate } = useInvoice();
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -104,7 +104,7 @@ export function InvoiceForm() {
         const monthItems = groupedByMonth[monthKey];
         const isCurrentMonth = monthKey === currentMonth;
         
-        await exportInvoice(basicInfo, customerInfo, monthItems, isCurrentMonth ? currentMonth : null);
+        await exportInvoice(basicInfo, customerInfo, monthItems, isCurrentMonth ? currentMonth : null, false, invoiceType);
         exportedMonths.push(isCurrentMonth ? currentMonth : "其他月");
 
         const totalAmount = monthItems.reduce((sum, item) => 
@@ -196,6 +196,12 @@ export function InvoiceForm() {
             <div className="space-y-2 md:col-span-2">
               <label className="text-sm font-medium">联系电话</label>
               <Input value={customerInfo.phone} onChange={(e) => handleCustomerChange("phone", e.target.value)} />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <label className="text-sm font-medium">发票类型</label>
+              <div className="p-2 bg-muted rounded text-sm font-medium">
+                {invoiceType === "普票" ? "增值税普通发票" : "增值税专用发票"}
+              </div>
             </div>
           </div>
         </CardContent>
