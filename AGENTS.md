@@ -5,7 +5,7 @@
 ## 命令
 
 ```bash
-npm run build           # next build（跳过类型检查）
+npm run build           # next build（JS 项目，无类型检查）
 npm run lint            # ESLint 9 flat config
 npm run pages:dev       # 本地开发（端口8788，自动先 pages:build）
 npm run pages:deploy    # 部署到 Cloudflare Pages（自动先 pages:build）
@@ -21,7 +21,7 @@ npx wrangler d1 migrations apply jd --remote  # 远程 D1 迁移
 
 - 路径别名: `@/*` → `./src/*`
 - DB: `env.DB` (wrangler.toml D1 binding `DB`)
-- 迁移: `migrations/00XX_desc.sql` 按序号执行
+- 迁移: `migrations/NNNN_desc.sql`（4位序号，从0002开始，无0001和0018）按序号执行
 - **布局**: 根 layout 包装 `AuthProvider → AuthGuard → SettlementProvider → InvoiceProvider → ErrorBoundary`；子路由**无嵌套 layout**，页面级用 `SimpleLayout`(京东万商) 或 `CanteenLayout`(食堂商城) 组件组合
 - **SupplierContext**: 页面级使用，不在根布局（`src/context/SupplierContext.js` 是静态 Provider，数据来自 `src/data/suppliers.js`）
 
@@ -31,6 +31,7 @@ npx wrangler d1 migrations apply jd --remote  # 远程 D1 迁移
 |---|---|
 | `/` | 业务选择（京东万商 / 食堂商城） |
 | `/jd-business` | 结算单处理（SimpleLayout + Sidebar） |
+| `/jd-business/virtual-assets` | 虚拟资产 |
 | `/purchase` | 采购单 |
 | `/invoice` | 发票导出 |
 | `/products` | 商品管理 |
@@ -137,7 +138,7 @@ items.forEach(i => addLineItem(i));  // ❌
 - D1 数据库名 `jd`，binding `DB`
 - 无 ORM，全部手写 SQL：`db.prepare(sql).bind(...).run() / all()`
 - 批量操作：`db.batch([preparedStatement1, preparedStatement2, ...])`
-- 迁移文件：`migrations/00XX_desc.sql`，数字递增。
+- 迁移文件：`migrations/NNNN_desc.sql`，数字递增。
   添加新字段步骤：创建迁移 → `npx wrangler d1 migrations apply jd --local` → 测试 → `--remote`
 
 ## 文件处理细节
@@ -177,6 +178,6 @@ Cookie 密码保护，默认密码 `qingyun2026`（30天有效期）。
 ## 添加新内容
 
 - **新供应商**: 在 `src/data/suppliers.js` 的 `SUPPLIERS` 数组添加 `{ id, name, supplierId, matchString }`
-- **新数据库字段**: 创建 `migrations/00XX_desc.sql`，运行 `wrangler d1 migrations apply jd --local && --remote`
+- **新数据库字段**: 创建 `migrations/NNNN_desc.sql`，运行 `wrangler d1 migrations apply jd --local && --remote`
 - **新服务费类型**: 按 "constants.js → settlementProcessor.js → utils.js → SettlementResultDisplay.js → DataDisplay.js" 链路同步修改
 - **新页面**: 在 `src/app/` 下建目录 + `page.js`，页面级用 `SimpleLayout` 或 `CanteenLayout` 组件包装，不要嵌套 layout
