@@ -549,7 +549,7 @@ const useAmt = Math.min(remainAmt, goods.totalAmt);
           phone: CUSTOMER_INFO_MAP[customerName]?.phone || "",
         };
 
-        await exportInvoice(basicInfo, customerInfo, adjustedItems, `${exportLabel}-${customerName}`, true);
+        await exportInvoice(basicInfo, customerInfo, adjustedItems, exportLabel, true);
 
         await fetch("/api/canteen-invoice-history", {
           method: "POST",

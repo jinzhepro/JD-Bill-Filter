@@ -194,7 +194,7 @@ const lineItemsData = lineItems.map((item) => {
     monthRow.getCell(TOTAL_COLUMNS).alignment = { horizontal: "right", vertical: "middle" };
     lastRowNumber = monthRow.number;
   } else {
-    lastRowNumber = worksheet.rowCount;
+    lastRowNumber = null;
   }
 
   worksheet.eachRow((row) => {
