@@ -14,6 +14,20 @@ import { Input } from "@/components/ui/input";
 import { Search, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { exportInvoice } from "@/lib/invoiceExporter";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const CANTEEN_NAMES = [
+  "开投大厦食堂",
+  "顺泽大厦食堂",
+  "经控五楼食堂",
+  "经控四楼食堂",
+  "经控十三楼",
+  "铁山食堂",
+  "小珠山食堂",
+  "开投数字产业园食堂",
+  "捷能高新园区食堂",
+  "捷能即墨园区食堂",
+];
 
 function getCurrentMonth() {
   const now = new Date();
@@ -453,11 +467,16 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1">
               <label className="text-sm font-medium">食堂名称</label>
-              <Input
-                value={canteenName}
-                onChange={(e) => setCanteenName(e.target.value)}
-                placeholder="输入食堂名称"
-              />
+              <Select value={canteenName} onValueChange={setCanteenName}>
+                <SelectTrigger>
+                  <SelectValue placeholder="选择食堂" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CANTEEN_NAMES.map((name) => (
+                    <SelectItem key={name} value={name}>{name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium">月份</label>
