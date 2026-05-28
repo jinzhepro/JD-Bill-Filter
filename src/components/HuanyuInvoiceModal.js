@@ -62,7 +62,7 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
   const [pasteData, setPasteData] = useState("");
   const [previewItems, setPreviewItems] = useState([]);
   const [matchErrors, setMatchErrors] = useState([]);
-  const [canteenName, setCanteenName] = useState("");
+
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
   const [searchResults, setSearchResults] = useState([]);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
@@ -424,7 +424,7 @@ const now = new Date();
     const applyDate = now.toISOString().split("T")[0];
 
     const monthNum = parseInt(selectedMonth.split("-")[1]);
-    const exportLabel = canteenName ? `${canteenName}${monthNum}月` : `${monthNum}月`;
+    const exportLabel = `${monthNum}月`;
 
     try {
       // 商品结构
@@ -573,7 +573,6 @@ const useAmt = Math.min(remainAmt, goods.totalAmt);
       setPasteData("");
       setPreviewItems([]);
       setMatchErrors([]);
-      setCanteenName("");
       setSelectedMonth(getCurrentMonth());
       setSelectedCustomers(HUANYU_CUSTOMERS);
       const amounts = {};
@@ -584,7 +583,7 @@ const useAmt = Math.min(remainAmt, goods.totalAmt);
       console.error("导出发票失败:", error);
       toast({ title: "导出发票失败", variant: "destructive" });
     }
-  }, [previewItems, selectedCustomers, customerAmounts, canteenName, selectedMonth, toast, onOpenChange, getOriginalTotalAmount, getCustomerTotalAmount]);
+  }, [previewItems, selectedCustomers, customerAmounts, selectedMonth, toast, onOpenChange, getOriginalTotalAmount, getCustomerTotalAmount]);
 
   const handleSearchProduct = useCallback(async (name, index) => {
     setSearchQuery(name);
@@ -708,7 +707,6 @@ const useAmt = Math.min(remainAmt, goods.totalAmt);
     setPasteData("");
     setPreviewItems([]);
     setMatchErrors([]);
-    setCanteenName("");
     setSelectedMonth(getCurrentMonth());
     setSelectedCustomers(HUANYU_CUSTOMERS);
     const amounts = {};
@@ -734,23 +732,13 @@ const useAmt = Math.min(remainAmt, goods.totalAmt);
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="text-sm font-medium">食堂名称</label>
-              <Input
-                value={canteenName}
-                onChange={(e) => setCanteenName(e.target.value)}
-                placeholder="输入食堂名称"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">月份</label>
-              <Input
-                type="month"
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-              />
-            </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium">月份</label>
+            <Input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+            />
           </div>
 
           <div className="space-y-2">
