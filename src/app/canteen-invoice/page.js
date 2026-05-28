@@ -170,7 +170,8 @@ export default function CanteenInvoicePage() {
         taxRate: item.tax_rate,
       }));
 
-      await exportInvoice(basicInfo, customerInfo, items, record.canteen_name);
+      const remark = record.canteen_name?.includes("-") ? "" : record.canteen_name;
+      await exportInvoice(basicInfo, customerInfo, items, record.canteen_name, true, "专票", remark);
       toast({ title: "发票重新导出成功" });
     } catch (error) {
       console.error('导出失败:', error);

@@ -51,7 +51,11 @@ const CUSTOMER_INFO_MAP = {
 
 function getCurrentMonth() {
   const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const prevMonth = month === 0 ? 11 : month - 1;
+  const prevYear = month === 0 ? year - 1 : year;
+  return `${prevYear}-${String(prevMonth + 1).padStart(2, "0")}`;
 }
 
 export function HuanyuInvoiceModal({ open, onOpenChange, products }) {

@@ -17,7 +17,11 @@ import { exportInvoice } from "@/lib/invoiceExporter";
 
 function getCurrentMonth() {
   const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const prevMonth = month === 0 ? 11 : month - 1;
+  const prevYear = month === 0 ? year - 1 : year;
+  return `${prevYear}-${String(prevMonth + 1).padStart(2, "0")}`;
 }
 
 export function CanteenInvoiceModal({ open, onOpenChange, products }) {
@@ -254,7 +258,7 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
     const exportLabel = canteenName ? `${canteenName}${monthNum}月` : `${monthNum}月`;
 
     try {
-      await exportInvoice(basicInfo, customerInfo, previewItems, exportLabel);
+      await exportInvoice(basicInfo, customerInfo, previewItems, exportLabel, true, "专票", exportLabel);
 
       const totalAmount = previewItems.reduce(
         (sum, item) => sum + (item.inputAmount || item.quantity * item.price),

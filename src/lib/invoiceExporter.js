@@ -9,9 +9,10 @@ import Decimal from "decimal.js";
  * @param {string|null} month - 月份标签 (如 "2024-01" 或 null 表示其他月) 或食堂名称
  * @param {boolean} hideMonthLabel - 是否隐藏月份标签
  * @param {string} invoiceType - 发票类型 ("专票" 或 "普票")
+ * @param {string} remark - 备注内容（如食堂名称+月份）
  * @returns {Promise<void>}
  */
-export async function exportInvoice(basicInfo, customerInfo, lineItems, month, hideMonthLabel = false, invoiceType = "专票") {
+export async function exportInvoice(basicInfo, customerInfo, lineItems, month, hideMonthLabel = false, invoiceType = "专票", remark = "") {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("发票");
 
@@ -171,6 +172,13 @@ const lineItemsData = lineItems.map((item) => {
     row.getCell(2).font = { bold: true };
     row.getCell(2).alignment = { horizontal: "center" };
   });
+
+  if (remark) {
+    const remarkRow = worksheet.addRow(["", "备注", remark, "", "", "", "", "", "", "", ""]);
+    worksheet.mergeCells(remarkRow.number, 3, remarkRow.number, TOTAL_COLUMNS);
+    remarkRow.getCell(2).font = { bold: true };
+    remarkRow.getCell(2).alignment = { horizontal: "center" };
+  }
 
   let monthLabel;
   let fileName;
