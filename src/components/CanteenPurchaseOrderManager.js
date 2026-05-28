@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Trash2, Search, Copy, Download, FileText } from "lucide-react";
 import Decimal from "decimal.js";
 import mammoth from "mammoth";
+import { CANTEEN_SUPPLIERS } from "@/data/canteenSuppliers";
 
 export function CanteenPurchaseOrderManager() {
   const [orders, setOrders] = useState([]);
@@ -18,7 +19,6 @@ export function CanteenPurchaseOrderManager() {
   const [previewItems, setPreviewItems] = useState([]);
   const [previewErrors, setPreviewErrors] = useState([]);
   const [importing, setImporting] = useState(false);
-  const [suppliers, setSuppliers] = useState([]);
   const [selectedSupplierId, setSelectedSupplierId] = useState("");
   const fileInputRef = useRef(null);
   const { toast } = useToast();
@@ -46,24 +46,7 @@ export function CanteenPurchaseOrderManager() {
     fetchOrders();
   };
 
-  const fetchSuppliers = useCallback(async () => {
-    try {
-      const res = await fetch('/api/canteen-suppliers');
-      const data = await res.json();
-      
-      if (data.success) {
-        setSuppliers(data.data);
-      } else {
-        console.error('获取供应商列表失败:', data.error);
-      }
-    } catch (error) {
-      console.error('获取供应商列表失败:', error);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchSuppliers();
-  }, [fetchSuppliers]);
+  const suppliers = CANTEEN_SUPPLIERS;
   
   const parseWordFile = useCallback(async (file) => {
     const items = [];

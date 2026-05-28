@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileSpreadsheet, LogOut, UtensilsCrossed, ShoppingBag, Users } from "lucide-react";
+import { FileSpreadsheet, LogOut, UtensilsCrossed, ShoppingBag } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 
@@ -28,11 +28,7 @@ export function CanteenSidebar() {
           href: "/canteen-invoice",
           icon: <FileSpreadsheet className="w-5 h-5" />,
         },
-        {
-          name: "供应商管理",
-          href: "/canteen-suppliers",
-          icon: <Users className="w-5 h-5" />,
-        },
+
       ],
     },
   ];
