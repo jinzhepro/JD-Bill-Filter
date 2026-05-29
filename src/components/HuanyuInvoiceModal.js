@@ -217,7 +217,7 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
 
       return { matchedItems: allItems, errors };
     },
-    [products]
+    [products, getMatchScore]
   );
 
   const generateAllocationPreview = useCallback((items) => {

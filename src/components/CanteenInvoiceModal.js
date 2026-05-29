@@ -218,7 +218,7 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
 
       return { matchedItems: allItems, errors };
     },
-    [products]
+    [products, getMatchScore]
   );
 
   const handleParse = useCallback(() => {
