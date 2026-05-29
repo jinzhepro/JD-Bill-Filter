@@ -11,6 +11,7 @@ export async function GET(request) {
   const pageSize = parseInt(url.searchParams.get('pageSize') || '20');
   const offset = (page - 1) * pageSize;
   const latestContractNo = url.searchParams.get('latestContractNo');
+  const search = url.searchParams.get('search')?.trim();
 
   try {
     if (latestContractNo === 'true') {
@@ -20,25 +21,64 @@ export async function GET(request) {
       return Response.json({ success: true, contractNo: result?.contract_no || null });
     }
 
-    const countResult = await db.prepare(
-      'SELECT COUNT(*) as total FROM canteen_invoice_history'
-    ).first();
+    let countResult, historyResult;
 
-    const historyResult = await db.prepare(
-      'SELECT * FROM canteen_invoice_history ORDER BY created_at DESC LIMIT ? OFFSET ?'
-    ).bind(pageSize, offset).all();
+    if (search) {
+      const searchPattern = `%${search}%`;
+      const idsResult = await db.prepare(
+        'SELECT DISTINCT history_id FROM canteen_invoice_history_items WHERE name LIKE ?'
+      ).bind(searchPattern).all();
+      const ids = idsResult.results.map(r => r.history_id);
+
+      if (ids.length === 0) {
+        return Response.json({
+          success: true,
+          data: [],
+          pagination: { page, pageSize, total: 0, totalPages: 0 }
+        });
+      }
+
+      const placeholders = ids.map(() => '?').join(',');
+      countResult = await db.prepare(
+        `SELECT COUNT(*) as total FROM canteen_invoice_history WHERE id IN (${placeholders})`
+      ).bind(...ids).first();
+
+      historyResult = await db.prepare(
+        `SELECT * FROM canteen_invoice_history WHERE id IN (${placeholders}) ORDER BY created_at DESC LIMIT ? OFFSET ?`
+      ).bind(...ids, pageSize, offset).all();
+    } else {
+      countResult = await db.prepare(
+        'SELECT COUNT(*) as total FROM canteen_invoice_history'
+      ).first();
+
+      historyResult = await db.prepare(
+        'SELECT * FROM canteen_invoice_history ORDER BY created_at DESC LIMIT ? OFFSET ?'
+      ).bind(pageSize, offset).all();
+    }
 
     const history = historyResult.results.map(row => ({ ...row, items: [] }));
 
     if (history.length > 0) {
-      const batch = history.map(h =>
-        db.prepare('SELECT name, spec, unit, quantity, price, tax_rate, amount, tax, total FROM canteen_invoice_history_items WHERE history_id = ?').bind(h.id)
-      );
-      const itemsResults = await db.batch(batch);
-
-      history.forEach((h, i) => {
-        h.items = itemsResults[i].results;
-      });
+      if (search) {
+        const searchPattern = `%${search}%`;
+        const batch = history.map(h =>
+          db.prepare(
+            'SELECT id, name, spec, unit, quantity, price, tax_rate, amount, tax, total FROM canteen_invoice_history_items WHERE history_id = ? AND name LIKE ?'
+          ).bind(h.id, searchPattern)
+        );
+        const itemsResults = await db.batch(batch);
+        history.forEach((h, i) => {
+          h.items = itemsResults[i].results;
+        });
+      } else {
+        const batch = history.map(h =>
+          db.prepare('SELECT id, name, spec, unit, quantity, price, tax_rate, amount, tax, total FROM canteen_invoice_history_items WHERE history_id = ?').bind(h.id)
+        );
+        const itemsResults = await db.batch(batch);
+        history.forEach((h, i) => {
+          h.items = itemsResults[i].results;
+        });
+      }
     }
 
     return Response.json({

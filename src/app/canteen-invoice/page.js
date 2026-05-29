@@ -9,6 +9,22 @@ import { useToast } from "@/hooks/use-toast";
 import { FileSpreadsheet, Trash2, ChevronLeft, ChevronRight, Copy, ChevronDown, ChevronUp, Download } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { exportInvoice } from "@/lib/invoiceExporter";
+import Decimal from "decimal.js";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const CANTEEN_NAMES = [
+  "开投大厦食堂",
+  "顺泽大厦食堂",
+  "经控五楼食堂",
+  "经控四楼食堂",
+  "经控十三楼",
+  "铁山食堂",
+  "小珠山食堂",
+  "开投数字产业园食堂",
+  "捷能高新园区食堂",
+  "捷能即墨园区食堂",
+];
 
 export default function CanteenInvoicePage() {
   const [products, setProducts] = useState([]);
@@ -19,6 +35,12 @@ export default function CanteenInvoicePage() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0, pageSize: 20 });
   const [expandedRecords, setExpandedRecords] = useState({});
+  const [editingCell, setEditingCell] = useState(null); // { recordId, itemId, field }
+  const [editingCellValue, setEditingCellValue] = useState("");
+  const [editingCanteenRecordId, setEditingCanteenRecordId] = useState(null);
+  const [editingCanteenName, setEditingCanteenName] = useState("");
+  const [editingMonth, setEditingMonth] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
 
   const fetchProducts = useCallback(async () => {
@@ -40,6 +62,7 @@ export default function CanteenInvoicePage() {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page, pageSize: pagination.pageSize });
+      if (searchQuery) params.set('search', searchQuery);
       const res = await fetch(`/api/canteen-invoice-history?${params}`);
       const data = await res.json();
 
@@ -54,7 +77,7 @@ export default function CanteenInvoicePage() {
       toast({ title: "获取历史记录失败", variant: "destructive" });
     }
     setLoading(false);
-  }, [page, pagination.pageSize, toast]);
+  }, [page, pagination.pageSize, searchQuery, toast]);
 
   useEffect(() => {
     fetchProducts();
@@ -142,6 +165,102 @@ export default function CanteenInvoicePage() {
     }));
   };
 
+  const parseCanteenName = (name) => {
+    if (!name) return { baseName: "", month: "" };
+    for (const c of CANTEEN_NAMES) {
+      if (name.startsWith(c)) {
+        const rest = name.slice(c.length);
+        const match = rest.match(/^(\d+)月$/);
+        return { baseName: c, month: match ? match[1] : "" };
+      }
+    }
+    const match = name.match(/^(.+?)(\d+)月$/);
+    if (match) return { baseName: match[1], month: match[2] };
+    return { baseName: name, month: "" };
+  };
+
+  const saveCell = async (recordId, itemId, field, value, originalItem) => {
+    let body;
+    if (field === 'tax_rate') {
+      const newTaxRate = new Decimal(value);
+      const total = new Decimal(originalItem.total);
+      const amount = total.div(new Decimal(1).plus(newTaxRate));
+      const tax = total.minus(amount);
+      body = { items: [{ id: itemId, tax_rate: value, amount: Number(amount.toFixed(2)), tax: Number(tax.toFixed(2)) }] };
+    } else {
+      body = { items: [{ id: itemId, name: value }] };
+    }
+    try {
+      const res = await fetch(`/api/canteen-invoice-history/${recordId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchHistory();
+      } else {
+        toast({ title: data.error, variant: "destructive" });
+      }
+    } catch (error) {
+      console.error('保存失败:', error);
+      toast({ title: "保存失败", variant: "destructive" });
+    }
+  };
+
+  const handleCellDoubleClick = (recordId, itemId, field, currentValue) => {
+    setEditingCell({ recordId, itemId, field });
+    setEditingCellValue(field === 'tax_rate' ? new Decimal(currentValue).times(100).toFixed(2) : String(currentValue));
+  };
+
+  const handleCellBlur = (record, item) => {
+    const cell = editingCell;
+    if (!cell) return;
+    setEditingCell(null);
+    const val = cell.field === 'tax_rate' ? new Decimal(editingCellValue).div(100).toNumber() : editingCellValue;
+    if (String(val) !== String(item[cell.field])) {
+      saveCell(cell.recordId, cell.itemId, cell.field, val, item);
+    }
+  };
+
+  const handleCellKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.target.blur();
+    } else if (e.key === 'Escape') {
+      setEditingCell(null);
+    }
+  };
+
+  const handleCanteenCellDoubleClick = (record) => {
+    setEditingCanteenRecordId(record.id);
+    const { baseName, month } = parseCanteenName(record.canteen_name);
+    setEditingCanteenName(baseName);
+    setEditingMonth(month);
+  };
+
+  const handleCanteenSave = async (recordId, monthOverride) => {
+    if (editingCanteenRecordId !== recordId) return;
+    const month = monthOverride !== undefined ? monthOverride : editingMonth;
+    const canteenName = month ? `${editingCanteenName}${month}月` : editingCanteenName;
+    try {
+      const res = await fetch(`/api/canteen-invoice-history/${recordId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ canteenName }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEditingCanteenRecordId(null);
+        fetchHistory();
+      } else {
+        toast({ title: data.error, variant: "destructive" });
+      }
+    } catch (error) {
+      console.error('保存失败:', error);
+      toast({ title: "保存失败", variant: "destructive" });
+    }
+  };
+
   const handleReExport = async (record) => {
     try {
       const basicInfo = {
@@ -212,6 +331,17 @@ export default function CanteenInvoicePage() {
               <FileSpreadsheet className="w-5 h-5" />
               开票记录
             </CardTitle>
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="搜索商品名称..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setPage(1);
+                }}
+                className="h-8 text-sm max-w-xs"
+              />
+            </div>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -220,7 +350,7 @@ export default function CanteenInvoicePage() {
               <p className="text-muted-foreground text-center py-4">暂无历史记录</p>
             ) : (
               <div className="space-y-4">
-                {history.map((record) => (
+                  {history.map((record) => (
                   <div key={record.id} className="border rounded-lg p-4">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
@@ -230,7 +360,38 @@ export default function CanteenInvoicePage() {
                           ) : (
                             <ChevronDown className="w-4 h-4 text-muted-foreground" />
                           )}
-                          <p className="font-medium">{record.canteen_name || "未指定食堂"}</p>
+                          {editingCanteenRecordId === record.id ? (
+                            <div className="flex items-center gap-1">
+                              <Select value={editingCanteenName} onValueChange={setEditingCanteenName}>
+                                <SelectTrigger
+                                  className="h-7 text-sm font-medium border shadow-none focus-visible:ring-1 gap-1"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <SelectValue placeholder="选择食堂" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {CANTEEN_NAMES.map((name) => (
+                                    <SelectItem key={name} value={name}>{name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Select value={editingMonth} onValueChange={(v) => { setEditingMonth(v); handleCanteenSave(record.id, v); }}>
+                                <SelectTrigger
+                                  className="h-7 text-sm border shadow-none focus-visible:ring-1 w-20"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <SelectValue placeholder="月份" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {Array.from({ length: 12 }, (_, i) => (
+                                    <SelectItem key={i + 1} value={String(i + 1)}>{i + 1}月</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          ) : (
+                            <p className="font-medium" onDoubleClick={() => handleCanteenCellDoubleClick(record)}>{record.canteen_name || "未指定食堂"}</p>
+                          )}
                         </div>
                         <p className="text-sm text-muted-foreground ml-6">
                           客户：{record.customer_name} | 导出时间：{formatDateTime(record.created_at)}
@@ -279,19 +440,50 @@ export default function CanteenInvoicePage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {record.items.map((item, idx) => (
-                              <tr key={idx}>
+                            {record.items.map((item, idx) => {
+                              const isEditingName = editingCell?.recordId === record.id && editingCell?.itemId === item.id && editingCell?.field === 'name';
+                              const isEditingTaxRate = editingCell?.recordId === record.id && editingCell?.itemId === item.id && editingCell?.field === 'tax_rate';
+                              return (
+                              <tr key={item.id || idx}>
                                 <td className="border px-2 py-1 text-center text-muted-foreground text-xs">{idx + 1}</td>
-                                <td className="border px-2 py-1">{item.name}</td>
+                                <td className="border px-2 py-1">
+                                  {isEditingName ? (
+                                    <Input
+                                      value={editingCellValue}
+                                      onChange={(e) => setEditingCellValue(e.target.value)}
+                                      onBlur={() => handleCellBlur(record, item)}
+                                      onKeyDown={(e) => handleCellKeyDown(e)}
+                                      className="h-7 text-sm border shadow-none focus-visible:ring-1"
+                                      autoFocus
+                                    />
+                                  ) : (
+                                    <span onDoubleClick={() => handleCellDoubleClick(record.id, item.id, 'name', item.name)}>{item.name}</span>
+                                  )}
+                                </td>
                                 <td className="border px-2 py-1 text-center">{item.unit || ""}</td>
                                 <td className="border px-2 py-1 text-right">{item.quantity}</td>
                                 <td className="border px-2 py-1 text-right">{formatAmount(item.price)}</td>
                                 <td className="border px-2 py-1 text-right">
-                                  {(item.tax_rate * 100).toFixed(0)}%
+                                  {isEditingTaxRate ? (
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      value={editingCellValue}
+                                      onChange={(e) => setEditingCellValue(e.target.value)}
+                                      onBlur={() => handleCellBlur(record, item)}
+                                      onKeyDown={(e) => handleCellKeyDown(e)}
+                                      className="h-7 text-sm text-right border shadow-none focus-visible:ring-1 w-20 ml-auto"
+                                      autoFocus
+                                    />
+                                  ) : (
+                                    <span onDoubleClick={() => handleCellDoubleClick(record.id, item.id, 'tax_rate', item.tax_rate)}>{(item.tax_rate * 100).toFixed(0)}%</span>
+                                  )}
                                 </td>
                                 <td className="border px-2 py-1 text-right">{formatAmount(item.total)}</td>
                               </tr>
-                            ))}
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>

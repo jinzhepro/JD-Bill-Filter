@@ -1,22 +1,11 @@
 import ExcelJS from "exceljs";
 import Decimal from "decimal.js";
 
-/**
- * 导出发票申请表
- * @param {Object} basicInfo - 基本信息 {companyName, contractNo, applyDate, department, applicant}
- * @param {Object} customerInfo - 客户信息 {customerName, taxId, bankName, bankAccount, address, phone}
- * @param {Array<Object>} lineItems - 开票明细 [{name, spec, unit, quantity, price, taxRate}]
- * @param {string|null} month - 月份标签 (如 "2024-01" 或 null 表示其他月) 或食堂名称
- * @param {boolean} hideMonthLabel - 是否隐藏月份标签
- * @param {string} invoiceType - 发票类型 ("专票" 或 "普票")
- * @param {string} remark - 备注内容（如食堂名称+月份）
- * @returns {Promise<void>}
- */
 export async function exportInvoice(basicInfo, customerInfo, lineItems, month, hideMonthLabel = false, invoiceType = "专票", remark = "") {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("发票");
 
-  const TOTAL_COLUMNS = 11;
+  const TOTAL_COLUMNS = 10;
 
   worksheet.columns = [
     { width: 6 },
@@ -26,8 +15,7 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month, h
     { width: 10 },
     { width: 10 },
     { width: 12 },
-    { width: 15 },
-    { width: 15 },
+    { width: 12 },
     { width: 12 },
     { width: 12 },
   ];
@@ -50,27 +38,27 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month, h
   worksheet.mergeCells(rowOffset, 1, rowOffset, TOTAL_COLUMNS);
 
   const basicStartRow = rowOffset + 1;
-  worksheet.addRow(["", "公司名称", basicInfo.companyName, "", "", "合同号", basicInfo.contractNo, "", "申请日期", basicInfo.applyDate, ""]);
-  worksheet.mergeCells(basicStartRow, 3, basicStartRow, 5);
-  worksheet.mergeCells(basicStartRow, 7, basicStartRow, 8);
-  worksheet.mergeCells(basicStartRow, 10, basicStartRow, 11);
+  worksheet.addRow(["", "公司名称", basicInfo.companyName, "", "合同号", basicInfo.contractNo, "", "申请日期", basicInfo.applyDate, ""]);
+  worksheet.mergeCells(basicStartRow, 3, basicStartRow, 4);
+  worksheet.mergeCells(basicStartRow, 6, basicStartRow, 7);
+  worksheet.mergeCells(basicStartRow, 9, basicStartRow, 10);
   worksheet.getRow(basicStartRow).getCell(2).font = { bold: true };
-  worksheet.getRow(basicStartRow).getCell(6).font = { bold: true };
-  worksheet.getRow(basicStartRow).getCell(9).font = { bold: true };
+  worksheet.getRow(basicStartRow).getCell(5).font = { bold: true };
+  worksheet.getRow(basicStartRow).getCell(8).font = { bold: true };
 
   const basicRow2 = basicStartRow + 1;
-  worksheet.addRow(["", "申请部门", basicInfo.department, "", "申请人", basicInfo.applicant, "", "", "部门负责人", "", ""]);
+  worksheet.addRow(["", "申请部门", basicInfo.department, "", "申请人", basicInfo.applicant, "", "部门负责人", "", ""]);
   worksheet.mergeCells(basicRow2, 3, basicRow2, 4);
-  worksheet.mergeCells(basicRow2, 6, basicRow2, 8);
-  worksheet.mergeCells(basicRow2, 10, basicRow2, 11);
+  worksheet.mergeCells(basicRow2, 6, basicRow2, 7);
   worksheet.getRow(basicRow2).getCell(2).font = { bold: true };
   worksheet.getRow(basicRow2).getCell(5).font = { bold: true };
-  worksheet.getRow(basicRow2).getCell(9).font = { bold: true };
-  worksheet.getRow(basicRow2).getCell(9).alignment = { horizontal: "center", vertical: "middle" };
+  worksheet.mergeCells(basicRow2, 9, basicRow2, 10);
+  worksheet.getRow(basicRow2).getCell(8).font = { bold: true };
+  worksheet.getRow(basicRow2).getCell(8).alignment = { horizontal: "center", vertical: "middle" };
 
   const customerFields = [
     ["客户名称", customerInfo.customerName],
-    ["发票类型", invoiceType === "普票" 
+    ["发票类型", invoiceType === "普票"
       ? "增值税专用发票（    ）     增值税普通发票（ √ ）"
       : "增值税专用发票（ √ ）     增值税普通发票（    ）"],
     ["公司全称", customerInfo.customerName],
@@ -82,14 +70,14 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month, h
   ];
 
   customerFields.forEach(([label, value]) => {
-    const row = worksheet.addRow(["", label, value, "", "", "", "", "", "", "", ""]);
+    const row = worksheet.addRow(["", label, value, "", "", "", "", "", "", ""]);
     worksheet.mergeCells(row.number, 3, row.number, TOTAL_COLUMNS);
     row.getCell(2).font = { bold: true };
     row.getCell(2).alignment = { horizontal: "center" };
     row.getCell(3).alignment = { horizontal: "left" };
   });
 
-  const lineHeaderRow = worksheet.addRow(["序号", "开票内容", "商品名称", "规格", "单位", "数量", "金额(含税)", "金额(不含税)", "税率", "税额", "合计金额"]);
+  const lineHeaderRow = worksheet.addRow(["序号", "开票内容", "商品名称", "规格", "单位", "数量", "单价(含税)", "税率", "税额", "合计金额"]);
   lineHeaderRow.eachCell((cell) => {
     cell.font = { bold: true };
     cell.alignment = { horizontal: "center" };
@@ -123,10 +111,10 @@ const lineItemsData = lineItems.map((item) => {
       total = amount.plus(tax);
     }
 
-    const row = worksheet.addRow([rowIndex + 1, "", item.name, item.spec, item.unit, item.quantity.toFixed(2), total.toFixed(2), amount.toFixed(2), `${item.taxRate.times(100).toFixed(0)}%`, tax.toFixed(2), total.toFixed(2)]);
+    const row = worksheet.addRow([rowIndex + 1, "", item.name, item.spec, item.unit, item.quantity.toFixed(2), item.price.toFixed(2), `${item.taxRate.times(100).toFixed(0)}%`, tax.toFixed(2), total.toFixed(2)]);
     row.eachCell((cell, colNumber) => {
       cell.border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
-      if (colNumber >= 6 && colNumber <= 11) {
+      if (colNumber >= 6 && colNumber <= TOTAL_COLUMNS) {
         cell.alignment = { horizontal: "right" };
       }
     });
@@ -147,7 +135,7 @@ const lineItemsData = lineItems.map((item) => {
   }, new Decimal(0));
   const totalTax = grandTotal.minus(totalAmount);
 
-  const totalRow = worksheet.addRow(["", "", "合计", "", "", totalQuantity.toFixed(2), grandTotal.toFixed(2), totalAmount.toFixed(2), "", totalTax.toFixed(2), grandTotal.toFixed(2)]);
+  const totalRow = worksheet.addRow(["", "", "合计", "", "", totalQuantity.toFixed(2), "", "", totalTax.toFixed(2), grandTotal.toFixed(2)]);
   worksheet.mergeCells(totalRow.number, 3, totalRow.number, 5);
   totalRow.eachCell((cell) => {
     cell.font = { bold: true };
@@ -167,14 +155,14 @@ const lineItemsData = lineItems.map((item) => {
   ];
 
   footerFields.forEach(([label, value]) => {
-    const row = worksheet.addRow(["", label, value, "", "", "", "", "", "", "", ""]);
+    const row = worksheet.addRow(["", label, value, "", "", "", "", "", "", ""]);
     worksheet.mergeCells(row.number, 3, row.number, TOTAL_COLUMNS);
     row.getCell(2).font = { bold: true };
     row.getCell(2).alignment = { horizontal: "center" };
   });
 
   if (remark) {
-    const remarkRow = worksheet.addRow(["", "备注", remark, "", "", "", "", "", "", "", ""]);
+    const remarkRow = worksheet.addRow(["", "备注", remark, "", "", "", "", "", "", ""]);
     worksheet.mergeCells(remarkRow.number, 3, remarkRow.number, TOTAL_COLUMNS);
     remarkRow.getCell(2).font = { bold: true };
     remarkRow.getCell(2).alignment = { horizontal: "center" };
@@ -197,7 +185,7 @@ const lineItemsData = lineItems.map((item) => {
   let lastRowNumber;
   
   if (!hideMonthLabel) {
-    const monthRow = worksheet.addRow(["", "", "", "", "", "", "", "", "", "", monthLabel]);
+    const monthRow = worksheet.addRow(["", "", "", "", "", "", "", "", "", monthLabel]);
     monthRow.getCell(TOTAL_COLUMNS).font = { bold: true };
     monthRow.getCell(TOTAL_COLUMNS).alignment = { horizontal: "right", vertical: "middle" };
     lastRowNumber = monthRow.number;
