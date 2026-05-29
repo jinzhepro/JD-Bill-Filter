@@ -2,98 +2,173 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 命令
+## 项目概述
+
+电商业务结算助手 — 基于 Next.js 15 (App Router, JavaScript) 的京东结算单处理系统，部署于 Cloudflare Pages + D1 数据库。支持结算单文件导入处理、供应商转换、商品/品牌管理、发票开具、采购单管理等京东万商业务，以及食堂采购单管理和食堂开票功能。
+
+## 常用命令
 
 ```bash
-npm run pages:dev       # 本地开发（端口8788，自动先 pages:build）
-npm run build           # next build
-npm run lint            # ESLint 9 flat config
-npm run pages:deploy    # 部署到 Cloudflare Pages
-npx wrangler d1 migrations apply jd --local   # 本地 D1 迁移
-npx wrangler d1 migrations apply jd --remote  # 远程 D1 迁移
+npm run dev        # 本地开发服务器 (localhost:3000)
+npm run build      # 生产构建 (next build)
+npm run lint       # ESLint 代码检查 (ESLint 9 flat config)
+npm run pages:dev  # Cloudflare Pages 本地开发 (端口 8788，自动先 build)
+npm run pages:build # Cloudflare Pages 构建
+npm run pages:deploy # 部署到 Cloudflare Pages
+npm start          # 启动生产服务器
 ```
 
-**没有 `npm run dev` 或 `npm start`** — 始终用 `pages:dev`。没有测试框架。
+### D1 数据库迁移
 
-## 技术栈与架构
-
-**Next.js 15 App Router + Cloudflare Pages + D1** · JavaScript（无 TS）· shadcn/ui New York · Tailwind CSS 3 · Decimal.js · Volta Node 24.14.1
-
-- 路径别名: `@/*` → `./src/*`
-- 数据库绑定: `env.DB`（D1, wrangler.toml 配置）
-- 迁移: `migrations/*.sql`，按序号依次执行
-- UI 组件: `src/components/ui/*`（shadcn 注册表）
-
-### Context 层级（layout.js）
-
-```
-AuthProvider → AuthGuard → SettlementProvider → InvoiceProvider → ErrorBoundary → children
+```bash
+npx wrangler d1 migrations apply jd --local   # 本地数据库
+npx wrangler d1 migrations apply jd --remote  # 远程数据库
 ```
 
-四个 Context：`AuthContext`（登录态）→ `SettlementContext`（结算单）→ `InvoiceContext`（发票）→ `SupplierContext`（供应商，非全局包装，页面级单独使用）。
+## 技术栈
 
-### 核心业务模块
+- **框架**: Next.js 15.5.2 (App Router, JavaScript, 无 TypeScript)
+- **UI**: shadcn/ui (New York 风格) + Tailwind CSS 3.4.18 + Lucide React 图标
+- **状态管理**: React Context + useReducer
+- **高精度计算**: Decimal.js（所有金额运算必须使用）
+- **文件处理**: ExcelJS (Excel 读写), 原生 FileReader API (CSV)
+- **部署**: Cloudflare Pages + D1 数据库 (SQLite)
+- **Node**: 24.14.1 (Volta 管理)
 
-- **结算单处理**：`src/lib/settlementProcessor.js` — 解析京东结算单 CSV/Excel，过滤"货款"记录，合并相同 SKU 数量和金额，按货款比例分摊"售后卖家赔付费"，关联直营服务费和交易服务费
-- **发票导出**：`src/lib/invoiceExporter.js` — 生成发票申请表 Excel，含公司/客户信息、明细行、合计行、签字区域
-- **Excel 读写**：`src/lib/excelHandler.js` — 文件解析（CSV UTF-8 → GBK 回退，Excel），Excel 下载（商品编号列文本格式防自动转换）
-- **商品/品牌管理**：CRUD 操作通过 `/api/products/*` 和 `/api/brand-mappings/*`，对接 D1 数据库
-- **食堂模块**：独立于主营业务的食堂采购单、供应商、发票管理，路由 `/canteen-purchase`, `/canteen-suppliers`, `/canteen-invoice`，API 前缀 `/api/canteen-*`
+## 架构概览
 
-### API Route 规则
+### 两大业务线
 
-每个 API route 文件**第一行必须是** `export const runtime = 'edge';`。DB 通过 `getRequestContext().env.DB` 获取（来自 `@cloudflare/next-on-pages`）。
+项目有两条独立的业务线，通过首页 `/` 选择进入：
 
-## 关键规则
+1. **京东万商业务** (`/jd-business`) — 主业务，功能完整
+   - 使用 `MainLayout` + `Sidebar` 布局
+   - 页面: 结算单处理、供应商转换、商品管理、品牌管理、发票开具、采购单管理、虚拟资产汇总
+   
+2. **食堂商城业务** (`/canteen-*`) — 子业务
+   - 使用 `CanteenLayout` (内部使用 MainLayout + CanteenSidebar)
+   - 页面: 食堂采购单 (`/canteen-purchase`)、食堂开票 (`/canteen-invoice`)
 
-### 金额计算：必须用 Decimal.js
+### 目录结构
 
+```
+src/
+├── app/                    # Next.js App Router 页面和 API
+│   ├── page.js            # 首页 — 业务选择 (京东/食堂)
+│   ├── layout.js          # 根布局: Auth → AuthGuard → SettlementProvider → InvoiceProvider
+│   ├── login/             # 登录页
+│   ├── jd-business/       # 京东万商业务页面
+│   ├── canteen-*/         # 食堂业务页面
+│   ├── suppliers/         # 供应商转换
+│   ├── products/          # 商品管理
+│   ├── brands/            # 品牌映射
+│   ├── invoice/           # 发票开具
+│   ├── invoice-history/   # 发票历史
+│   ├── purchase/          # 采购单管理
+│   └── api/               # API Routes (D1 数据库 CRUD)
+├── components/            # React 组件
+│   ├── ui/               # shadcn/ui 基础组件 (button, input, select, table, dialog...)
+│   └── *.js              # 业务组件 (每个页面一个主组件)
+├── context/               # React Context 状态管理
+│   ├── AuthContext.js     # 认证状态 (cookie-based)
+│   ├── SettlementContext.js # 结算单处理状态 (useReducer)
+│   └── InvoiceContext.js  # 发票开具状态 (useReducer)
+├── lib/                   # 核心业务逻辑 (纯函数)
+│   ├── settlementProcessor.js  # 结算单处理核心逻辑
+│   ├── excelHandler.js    # Excel/CSV 读写
+│   ├── invoiceExporter.js # 发票 Excel 导出
+│   ├── reconciliation.js  # 对账逻辑 (Dice 系数匹配)
+│   ├── virtualAssetProcessor.js # 虚拟资产CSV处理
+│   ├── utils.js           # 通用工具 (金额清理、格式化、cn())
+│   └── constants.js       # 全局常量
+├── data/                  # 静态数据
+│   ├── suppliers.js       # 供应商列表
+│   └── canteenSuppliers.js # 食堂供应商列表
+└── hooks/                 # 自定义 Hooks
+    ├── use-toast.js       # 通知 Hook
+    └── useProductMatching.js # SKU 与商品映射匹配
+```
+
+### 认证系统
+
+- 简单密码保护，默认密码 `qingyun2026`
+- 通过 `AUTH_PASSWORD` 环境变量覆盖
+- Cookie-based (httpOnly, secure, sameSite=strict)
+- API 端点: `POST /api/login` (登录), `DELETE /api/login` (登出), `GET /api/check-auth` (验证)
+
+### 状态管理模式
+
+使用 `Context + useReducer` 模式：
+- 每个 Context 定义一个 `initialState` 和 `reducer` 函数
+- Actions 通过 `useMemo` 包装确保引用稳定性
+- Provider 通过 `useMemo` 优化 value 避免不必要重渲染
+- 派生数据（如计算汇总值）在组件层用 `useMemo` 计算，避免状态冗余
+
+### API Routes 模式
+
+所有 API Routes 遵循统一模式：
+```javascript
+export const runtime = 'edge';  // 必须第一行 — Cloudflare Edge Runtime
+import { getRequestContext } from '@cloudflare/next-on-pages';
+
+export async function GET(request) {
+  const { env } = getRequestContext();
+  const db = env.DB;  // D1 数据库绑定
+  // ... 业务逻辑
+}
+```
+
+API 端点列表：
+- `/api/products` — 商品映射 CRUD + 分页搜索
+- `/api/brand-mappings` — 品牌映射 CRUD + 分页搜索
+- `/api/invoice-history` — 发票历史 CRUD + 批量查询
+- `/api/purchase-orders` — 采购单 CRUD + 批量导入
+- `/api/canteen-purchase-orders` — 食堂采购单 CRUD + 关联供应商
+- `/api/canteen-invoice-history` — 食堂开票历史 CRUD
+- `/api/login` / `/api/check-auth` — 认证
+- `/api/tax-classification` — 税收分类
+
+### 数据库
+
+使用 Cloudflare D1 (SQLite)，迁移文件在 `migrations/` 目录，按序号命名。主要表：
+- `product_mappings` — SKU 与商品名称映射
+- `brand_mappings` — 品牌关键词与发票名称映射
+- `invoice_history` / `invoice_history_items` — 发票历史
+- `purchase_orders` — 采购单
+- `canteen_purchase_orders` — 食堂采购单（关联 canteen_suppliers）
+- `canteen_invoice_history` / `canteen_invoice_history_items` — 食堂开票历史
+- `canteen_suppliers` — 食堂供应商
+
+### 关键开发规范
+
+**金额计算** — 始终使用 Decimal.js 避免浮点精度问题：
 ```javascript
 import Decimal from "decimal.js";
 import { cleanAmountString } from "@/lib/utils";
 const amount = new Decimal(cleanAmountString(value));
 ```
 
-`cleanAmountString()` 用于安全转向 Decimal 字符串，`cleanAmount()` 用于 JS 显示。禁止用 `parseFloat` 做金额加法。
-
-### 商品编号：必须是字符串
-
+**商品编号** — 必须字符串化并清理 Excel 等号前缀：
 ```javascript
 import { cleanProductCode } from "@/lib/utils";
-const code = cleanProductCode(row["商品编号"]); // 处理 Excel ="..." 格式
+const productCode = cleanProductCode(row["商品编号"]);
 ```
 
-### Context 状态管理：禁止直接修改
+**CSV 编码** — 先尝试 UTF-8 读取，若检测不到中文则自动尝试 GBK 重新读取。
 
-```javascript
-// ✅ 用 action 替换整个状态
-setProcessedData(newData);
-// ❌ 直接修改
-processedData.push(item);
+**客户端组件** — 所有交互组件必须加 `"use client"` 指令。
 
-// ✅ 批量添加用批量 action
-addLineItems(items);
-// ❌ 循环调用单个 action
-items.forEach(i => addLineItem(i));
-```
+**CSS 规范** — 使用 shadcn/ui 语义化 CSS 变量 (`bg-card`, `text-foreground`, `border-border`)，避免直接使用 `bg-white`, `text-gray-800` 等。
 
-### 样式
+**Context 状态** — 禁止直接修改 state，始终使用 Context 提供的 action 函数。
 
-使用 shadcn/ui 语义化 CSS 变量：`bg-card`, `text-foreground`, `border-border`，不用原始颜色值。
+### 文件处理
 
-## 文件处理
+- 支持 `.xlsx`, `.xls`, `.csv` 格式，最大 50MB
+- 读取: 使用 `readFile(file, fileType)` — 内部自动区分 Excel/CSV
+- 导出: 使用 `downloadExcel(data, fileName)` — 商品编号列设置为文本格式 (`numFmt: '@'`)
+- 发票导出: 使用 `exportInvoice(basicInfo, customerInfo, lineItems, month, ...)` — 生成标准发票申请表格式
 
-- 支持 `.xlsx/.xls/.csv`（最大 50MB）
-- CSV 编码：先 UTF-8，失败后 GBK
-- Excel 导出：商品编号列设文本格式 `numFmt: '@'`
-- 结算单必需列：`商品编号` + 金额列（`应结金额`/`金额`/`合计金额`/`总金额` 任一）
+### 对账逻辑
 
-## 认证
-
-Cookie 密码保护，默认密码 `qingyun2026`（30天有效期）。修改：环境变量 `AUTH_PASSWORD` 或改 `src/app/api/login/route.js`。
-
-## 添加新内容
-
-- **新供应商**: `src/data/suppliers.js` 的 `SUPPLIERS` 数组
-- **新数据库字段**: 创建 `migrations/00XX_desc.sql`，然后本地+远程 D1 迁移
-- **新服务费类型**: 同步改 `constants.js` → `settlementProcessor.js` → `utils.js` 的 `calculateColumnTotals` → `SettlementResultDisplay.js` → `DataDisplay.js`
+`reconciliation.js` 中的 `reconcileOrderWithInvoice()` 使用 Dice 系数匹配采购单与发票明细，按数量+含税金额精确匹配。匹配状态: `matched` / `unmatched` / `partial` / `missing`。
