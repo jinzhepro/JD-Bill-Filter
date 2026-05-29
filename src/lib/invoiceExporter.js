@@ -86,61 +86,80 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month, h
 
 const lineItemsData = lineItems.map((item) => {
     const qty = parseFloat(item.quantity) || 0;
-    const prc = parseFloat(item.price) || 0;
     const rate = parseFloat(item.taxRate) || 0;
+
+    let totalDecimal, priceDecimal;
+    if (item.total !== undefined && qty > 0) {
+      totalDecimal = new Decimal(item.total);
+      priceDecimal = totalDecimal.div(qty);
+    } else {
+      const prc = parseFloat(item.price) || 0;
+      priceDecimal = new Decimal(prc);
+      totalDecimal = priceDecimal.times(qty);
+    }
+
+    let amountDecimal, taxDecimal;
+    if (item.amount !== undefined) {
+      amountDecimal = new Decimal(item.amount);
+    } else {
+      amountDecimal = totalDecimal.div(new Decimal(1).plus(new Decimal(rate)));
+    }
+    taxDecimal = totalDecimal.minus(amountDecimal);
+
     return {
       name: item.name || "",
       spec: item.spec || "",
       unit: item.unit || "",
       quantity: new Decimal(qty),
-      price: new Decimal(prc),
+      price: priceDecimal,
+      total: totalDecimal,
+      amount: amountDecimal,
+      tax: taxDecimal,
       taxRate: new Decimal(rate),
-      amount: item.amount,
     };
   });
 
   lineItemsData.forEach((item, rowIndex) => {
-    let total, amount, tax;
-    if (item.amount !== undefined) {
-      total = new Decimal(item.amount);
-      amount = total.div(new Decimal(1).plus(item.taxRate));
-      tax = total.minus(amount);
-    } else {
-      amount = item.quantity.times(item.price).div(new Decimal(1).plus(item.taxRate));
-      tax = amount.times(item.taxRate);
-      total = amount.plus(tax);
-    }
-
-    const row = worksheet.addRow([rowIndex + 1, "", item.name, item.spec, item.unit, item.quantity.toFixed(2), item.price.toFixed(2), `${item.taxRate.times(100).toFixed(0)}%`, tax.toFixed(2), total.toFixed(2)]);
+    const row = worksheet.addRow([
+      rowIndex + 1, "",
+      item.name, item.spec, item.unit,
+      item.quantity.toNumber(),
+      item.price.toNumber(),
+      item.taxRate.toNumber(),
+      item.tax.toNumber(),
+      item.total.toNumber(),
+    ]);
     row.eachCell((cell, colNumber) => {
       cell.border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
       if (colNumber >= 6 && colNumber <= TOTAL_COLUMNS) {
         cell.alignment = { horizontal: "right" };
       }
+      if (colNumber === 6 || colNumber === 9 || colNumber === 10) {
+        cell.numFmt = '0.00';
+      }
+      if (colNumber === 7) {
+        cell.numFmt = '0.000000';
+      }
+      if (colNumber === 8) {
+        cell.numFmt = '0%';
+      }
     });
   });
 
   const totalQuantity = lineItemsData.reduce((sum, item) => sum.plus(item.quantity), new Decimal(0));
-  const grandTotal = lineItemsData.reduce((sum, item) => {
-    if (item.amount !== undefined) {
-      return sum.plus(new Decimal(item.amount));
-    }
-    return sum.plus(item.quantity.times(item.price));
-  }, new Decimal(0));
-  const totalAmount = lineItemsData.reduce((sum, item) => {
-    if (item.amount !== undefined) {
-      return sum.plus(new Decimal(item.amount).div(new Decimal(1).plus(item.taxRate)));
-    }
-    return sum.plus(item.quantity.times(item.price).div(new Decimal(1).plus(item.taxRate)));
-  }, new Decimal(0));
+  const grandTotal = lineItemsData.reduce((sum, item) => sum.plus(item.total), new Decimal(0));
+  const totalAmount = lineItemsData.reduce((sum, item) => sum.plus(item.amount), new Decimal(0));
   const totalTax = grandTotal.minus(totalAmount);
 
-  const totalRow = worksheet.addRow(["", "", "合计", "", "", totalQuantity.toFixed(2), "", "", totalTax.toFixed(2), grandTotal.toFixed(2)]);
+  const totalRow = worksheet.addRow(["", "", "合计", "", "", totalQuantity.toNumber(), "", "", totalTax.toNumber(), grandTotal.toNumber()]);
   worksheet.mergeCells(totalRow.number, 3, totalRow.number, 5);
-  totalRow.eachCell((cell) => {
+  totalRow.eachCell((cell, colNumber) => {
     cell.font = { bold: true };
     cell.border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
     cell.alignment = { horizontal: "center" };
+    if (colNumber === 6 || colNumber === 9 || colNumber === 10) {
+      cell.numFmt = '0.00';
+    }
   });
 
   const mergeStart = lineHeaderRow.number;
