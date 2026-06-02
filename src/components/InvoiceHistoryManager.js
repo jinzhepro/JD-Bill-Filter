@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, FileDown, Trash2, RefreshCw, Copy } from "lucide-react";
 import { exportInvoice } from "@/lib/invoiceExporter";
+import { getCurrentMonth } from "@/lib/utils";
 
 const ThWithCopy = ({ items, columnKey, columnName, onCopy }) => (
   <th className="border border-border px-3 py-2 text-left">
@@ -24,8 +26,8 @@ const ThWithCopy = ({ items, columnKey, columnName, onCopy }) => (
 );
 
 export function InvoiceHistoryManager() {
-  const [currentMonthHistory, setCurrentMonthHistory] = useState([]);
-  const [otherMonthHistory, setOtherMonthHistory] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
+  const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedHistory, setSelectedHistory] = useState(null);
@@ -33,20 +35,27 @@ export function InvoiceHistoryManager() {
   const [updating, setUpdating] = useState(false);
   const { toast } = useToast();
 
-  const currentMonth = new Date().toISOString().slice(0, 7);
+  const monthOptions = useMemo(() => {
+    const current = getCurrentMonth();
+    const [currentYear, currentMonthNum] = current.split("-").map(Number);
+    const options = [];
+    for (let year = 2024; year <= currentYear; year++) {
+      const endMonth = year === currentYear ? currentMonthNum : 12;
+      for (let m = 1; m <= endMonth; m++) {
+        options.push(`${year}-${String(m).padStart(2, "0")}`);
+      }
+    }
+    return options.reverse();
+  }, []);
 
   const fetchHistory = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/invoice-history");
+      const res = await fetch(`/api/invoice-history?month=${selectedMonth}`);
       const data = await res.json();
 
       if (data.success) {
-        const all = data.data || [];
-        const current = all.filter(h => h.invoice_date && h.invoice_date.startsWith(currentMonth));
-        const other = all.filter(h => h.invoice_date && !h.invoice_date.startsWith(currentMonth));
-        setCurrentMonthHistory(current);
-        setOtherMonthHistory(other);
+        setHistory(data.data || []);
       } else {
         toast({ title: data.error, variant: "destructive" });
       }
@@ -55,7 +64,7 @@ export function InvoiceHistoryManager() {
       toast({ title: "获取历史数据失败", variant: "destructive" });
     }
     setLoading(false);
-  }, [currentMonth, toast]);
+  }, [selectedMonth, toast]);
 
   useEffect(() => {
     fetchHistory();
@@ -176,38 +185,55 @@ export function InvoiceHistoryManager() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end mb-4">
-        <Button variant="outline" onClick={handleUpdateNames} disabled={updating}>
-          <RefreshCw className={`w-4 h-4 mr-2 ${updating ? "animate-spin" : ""}`} />
-          {updating ? "更新中..." : "更新发票名称"}
-        </Button>
+      <div className="flex items-center gap-4 mb-4">
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium whitespace-nowrap">选择月份</label>
+          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {monthOptions.map((month) => (
+                <SelectItem key={month} value={month}>
+                  {month}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="ml-auto">
+          <Button variant="outline" onClick={handleUpdateNames} disabled={updating}>
+            <RefreshCw className={`w-4 h-4 mr-2 ${updating ? "animate-spin" : ""}`} />
+            {updating ? "更新中..." : "更新发票名称"}
+          </Button>
+        </div>
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>当前月份 ({currentMonth})</CardTitle>
+          <CardTitle>{selectedMonth} 发票历史 ({history.length}条)</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <p className="text-muted-foreground text-center py-4">加载中...</p>
-          ) : currentMonthHistory.length === 0 ? (
+          ) : history.length === 0 ? (
             <p className="text-muted-foreground text-center py-4">暂无数据</p>
           ) : (
             <div className="space-y-2">
-              {currentMonthHistory.map((history) => (
-                <div key={history.id} className="border border-border rounded-lg p-3 flex justify-between items-center">
+              {history.map((h) => (
+                <div key={h.id} className="border border-border rounded-lg p-3 flex justify-between items-center">
                   <div className="flex-1">
-                    <div className="font-medium">{history.customer_name}</div>
+                    <div className="font-medium">{h.customer_name}</div>
                     <div className="text-sm text-muted-foreground">
-                      发票日期: {formatDate(history.invoice_date)} | {history.items_count} 项 | 总金额: {formatAmount(history.total_amount)}
+                      发票日期: {formatDate(h.invoice_date)} | {h.items_count} 项 | 总金额: {formatAmount(h.total_amount)}
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => handleViewDetail(history)}>
+                  <Button variant="ghost" size="sm" onClick={() => handleViewDetail(h)}>
                     <Eye className="w-4 h-4" />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleReExport(history)}>
+                  <Button variant="ghost" size="sm" onClick={() => handleReExport(h)}>
                     <FileDown className="w-4 h-4" />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(history)}>
+                  <Button variant="ghost" size="sm" onClick={() => handleDelete(h)}>
                     <Trash2 className="w-4 h-4 text-destructive" />
                   </Button>
                 </div>
@@ -215,41 +241,6 @@ export function InvoiceHistoryManager() {
             </div>
           )}
         </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>其他月份 ({otherMonthHistory.length}条)</CardTitle>
-        </CardHeader>
-        <CardContent>
-            {loading ? (
-              <p className="text-muted-foreground text-center py-4">加载中...</p>
-            ) : otherMonthHistory.length === 0 ? (
-              <p className="text-muted-foreground text-center py-4">暂无数据</p>
-            ) : (
-              <div className="space-y-2">
-                {otherMonthHistory.map((history) => (
-                  <div key={history.id} className="border border-border rounded-lg p-3 flex justify-between items-center">
-                    <div className="flex-1">
-                      <div className="font-medium">{history.customer_name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        发票日期: {formatDate(history.invoice_date)} | {history.items_count} 项 | 总金额: {formatAmount(history.total_amount)}
-                      </div>
-                    </div>
-                    <Button variant="ghost" size="sm" onClick={() => handleViewDetail(history)}>
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleReExport(history)}>
-                      <FileDown className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(history)}>
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
       </Card>
 
       <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>

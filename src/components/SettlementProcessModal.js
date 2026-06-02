@@ -5,6 +5,7 @@ import Decimal from "decimal.js";
 import Modal from "./ui/modal";
 import { Textarea } from "./ui/textarea";
 import { Button } from "./ui/button";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useSettlement } from "@/context/SettlementContext";
 import { useToast } from "@/hooks/use-toast";
 import { Check, Calendar } from "lucide-react";
@@ -14,7 +15,7 @@ import {
   parsePastedContent,
   mergeSameSkuRows,
 } from "@/lib/settlementHelpers";
-import { cleanAmountString } from "@/lib/utils";
+import { cleanAmountString, getCurrentMonth } from "@/lib/utils";
 
 /**
  * 结算单处理Modal组件
@@ -29,15 +30,25 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
 
   const [pasteContent, setPasteContent] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
   const [currentMonthHistory, setCurrentMonthHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
-  const currentMonth = new Date().toISOString().slice(0, 7);
+  const monthOptions = [];
+  const current = getCurrentMonth();
+  const [currentYear, currentMonthNum] = current.split("-").map(Number);
+  for (let year = 2024; year <= currentYear; year++) {
+    const endMonth = year === currentYear ? currentMonthNum : 12;
+    for (let m = 1; m <= endMonth; m++) {
+      monthOptions.push(`${year}-${String(m).padStart(2, "0")}`);
+    }
+  }
+  monthOptions.reverse();
 
   const fetchCurrentMonthHistory = async () => {
     setLoadingHistory(true);
     try {
-      const res = await fetch(`/api/invoice-history?month=${currentMonth}`);
+      const res = await fetch(`/api/invoice-history?month=${selectedMonth}`);
       const data = await res.json();
       if (data.success) {
         setCurrentMonthHistory(data.data || []);
@@ -53,7 +64,7 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
     if (isOpen) {
       fetchCurrentMonthHistory();
     }
-  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen, selectedMonth]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePasteContentChange = (e) => {
     setPasteContent(e.target.value);
@@ -429,12 +440,24 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
           )}
         </div>
 
-        {/* 当前月份发票历史 */}
+        {/* 发票历史 */}
         <div>
           <div className="flex justify-between items-center mb-2">
             <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
               <Calendar className="w-4 h-4" />
-              当前月份发票历史 ({currentMonth}) {currentMonthHistory.length > 0 && `- ${currentMonthHistory.length} 条记录`}
+              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <SelectTrigger className="w-36 h-7 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {monthOptions.map((month) => (
+                    <SelectItem key={month} value={month} className="text-xs">
+                      {month}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {currentMonthHistory.length > 0 && `- ${currentMonthHistory.length} 条记录`}
             </h3>
           </div>
           {loadingHistory ? (
