@@ -156,31 +156,31 @@ function mergeSKUData(data, actualAmountColumn, hasFeeNameColumn, hasQuantityCol
     if (!hasFeeNameColumn || feeName === SETTLEMENT_FEE_NAME_FILTER) {
       processedCount++;
 
+      const cleanAmountStringValue = cleanAmountString(row[actualAmountColumn] || 0);
+      const amountDecimal = new Decimal(cleanAmountStringValue);
+      const amountSign = amountDecimal.lt(0) ? -1 : 1;
+
       if (mergedData.has(productNo)) {
         // 已存在，累加金额和数量
         const existing = mergedData.get(productNo);
-        const cleanAmountStringValue = cleanAmountString(row[actualAmountColumn] || 0);
-        existing.应结金额 = existing.应结金额.plus(new Decimal(cleanAmountStringValue));
+        existing.应结金额 = existing.应结金额.plus(amountDecimal);
 
         if (hasQuantityColumn) {
           const cleanQuantityValue = cleanAmountString(row[SETTLEMENT_QUANTITY_COLUMN] || 0);
           const quantityDecimal = new Decimal(cleanQuantityValue);
-          const quantitySign = quantityDecimal.lt(0) ? -1 : 1;
-          existing.数量 = existing.数量.plus(quantityDecimal.times(quantitySign));
+          existing.数量 = existing.数量.plus(quantityDecimal.abs().times(amountSign));
         }
       } else {
         // 新建记录
-        const cleanAmountStringValue = cleanAmountString(row[actualAmountColumn] || 0);
         const initialData = {
           商品编号: productNo,
-          应结金额: new Decimal(cleanAmountStringValue),
+          应结金额: amountDecimal,
         };
 
         if (hasQuantityColumn) {
           const cleanQuantityValue = cleanAmountString(row[SETTLEMENT_QUANTITY_COLUMN] || 0);
           const quantityDecimal = new Decimal(cleanQuantityValue);
-          const quantitySign = quantityDecimal.lt(0) ? -1 : 1;
-          initialData.数量 = quantityDecimal.times(quantitySign);
+          initialData.数量 = quantityDecimal.abs().times(amountSign);
         }
 
         mergedData.set(productNo, initialData);
