@@ -4,14 +4,20 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, Edit, Search, Upload, RefreshCw } from "lucide-react";
 
 const getInvoiceName = (name, brandMappings) => {
   for (const mapping of brandMappings) {
-    const keywords = mapping.brand_keywords.split(",").map(k => k.trim());
+    const keywords = mapping.brand_keywords.split(",").map((k) => k.trim());
     for (const keyword of keywords) {
       if (name.includes(keyword)) {
         return mapping.invoice_name;
@@ -34,7 +40,7 @@ export function ProductManager() {
     product_name: "",
     warehouse: "",
     spec: "",
-    invoice_name: ""
+    invoice_name: "",
   });
   const [importText, setImportText] = useState("");
   const [importing, setImporting] = useState(false);
@@ -43,8 +49,8 @@ export function ProductManager() {
 
   const stats = useMemo(() => {
     const total = products.length;
-    const missingSpec = products.filter(p => !p.spec).length;
-    const missingInvoiceName = products.filter(p => !p.invoice_name).length;
+    const missingSpec = products.filter((p) => !p.spec).length;
+    const missingInvoiceName = products.filter((p) => !p.invoice_name).length;
     return { total, missingSpec, missingInvoiceName };
   }, [products]);
 
@@ -56,8 +62,8 @@ export function ProductManager() {
         setBrandMappings(data.data);
       }
     } catch (error) {
-      console.error('获取商品映射失败:', error);
-      setMappings([]);
+      console.error("获取品牌映射失败:", error);
+      setBrandMappings([]);
     }
   }, []);
 
@@ -67,14 +73,14 @@ export function ProductManager() {
       const params = new URLSearchParams({ search, pageSize: 1000 });
       const res = await fetch(`/api/products?${params}`);
       const data = await res.json();
-      
+
       if (data.success) {
         setProducts(data.data);
       } else {
         toast({ title: data.error, variant: "destructive" });
       }
     } catch (error) {
-      console.error('获取商品数据失败:', error);
+      console.error("获取商品数据失败:", error);
       toast({ title: "获取数据失败", variant: "destructive" });
     }
     setLoading(false);
@@ -96,7 +102,7 @@ export function ProductManager() {
       product_name: "",
       warehouse: "",
       spec: "",
-      invoice_name: ""
+      invoice_name: "",
     });
     setModalOpen(true);
   };
@@ -108,7 +114,7 @@ export function ProductManager() {
       product_name: product.product_name,
       warehouse: product.warehouse || "",
       spec: product.spec || "",
-      invoice_name: product.invoice_name || ""
+      invoice_name: product.invoice_name || "",
     });
     setModalOpen(true);
   };
@@ -116,14 +122,19 @@ export function ProductManager() {
   const handleProductNameChange = (name) => {
     const spec = extractSpec(name);
     const invoiceName = getInvoiceName(name, brandMappings);
-    setFormData({ ...formData, product_name: name, spec, invoice_name: invoiceName });
+    setFormData({
+      ...formData,
+      product_name: name,
+      spec,
+      invoice_name: invoiceName,
+    });
   };
 
-const handleDelete = async (id) => {
+  const handleDelete = async (id) => {
     try {
       const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
       const data = await res.json();
-      
+
       if (data.success) {
         toast({ title: "删除成功" });
         fetchProducts();
@@ -131,7 +142,7 @@ const handleDelete = async (id) => {
         toast({ title: data.error, variant: "destructive" });
       }
     } catch (error) {
-      console.error('删除商品失败:', error);
+      console.error("删除商品失败:", error);
       toast({ title: "删除失败", variant: "destructive" });
     }
   };
@@ -147,29 +158,40 @@ const handleDelete = async (id) => {
       return;
     }
 
-    const expectedInvoiceName = getInvoiceName(formData.product_name, brandMappings);
+    const expectedInvoiceName = getInvoiceName(
+      formData.product_name,
+      brandMappings,
+    );
     if (!formData.invoice_name || formData.invoice_name.trim() === "") {
       if (expectedInvoiceName) {
-        toast({ title: "发票名称未填写，品牌映射建议：" + expectedInvoiceName, variant: "destructive" });
+        toast({
+          title: "发票名称未填写，品牌映射建议：" + expectedInvoiceName,
+          variant: "destructive",
+        });
         return;
       } else {
-        toast({ title: "发票名称必填，未匹配到品牌映射", variant: "destructive" });
+        toast({
+          title: "发票名称必填，未匹配到品牌映射",
+          variant: "destructive",
+        });
         return;
       }
     }
 
     try {
-      const url = editingProduct ? `/api/products/${editingProduct.id}` : "/api/products/add";
+      const url = editingProduct
+        ? `/api/products/${editingProduct.id}`
+        : "/api/products/add";
       const method = editingProduct ? "PUT" : "POST";
-      
+
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(formData),
       });
-      
+
       const data = await res.json();
-      
+
       if (data.success) {
         toast({ title: editingProduct ? "更新成功" : "添加成功" });
         setModalOpen(false);
@@ -178,13 +200,15 @@ const handleDelete = async (id) => {
         toast({ title: data.error, variant: "destructive" });
       }
     } catch (error) {
-      console.error('保存商品失败:', error);
+      console.error("保存商品失败:", error);
       toast({ title: "操作失败", variant: "destructive" });
     }
   };
 
   const extractSpec = (name) => {
-    const specMatch = name.match(/(\d+(?:ml|L|g|kg|ML))\s*(?:\/[^*]*)?[×*xX]\s*(\d+)/i);
+    const specMatch = name.match(
+      /(\d+(?:ml|L|g|kg|ML))\s*(?:\/[^*]*)?[×*xX]\s*(\d+)/i,
+    );
     if (specMatch) {
       const spec = `${specMatch[1]}×${specMatch[2]}`;
       return spec;
@@ -195,7 +219,7 @@ const handleDelete = async (id) => {
   const parseImportText = (text) => {
     const lines = text.trim().split("\n");
     const items = [];
-    
+
     for (const line of lines) {
       const parts = line.split("\t");
       if (parts.length >= 2) {
@@ -207,11 +231,11 @@ const handleDelete = async (id) => {
           product_name: productName,
           warehouse: parts.length >= 3 ? parts[2].trim() : "",
           spec: spec,
-          invoice_name: invoiceName
+          invoice_name: invoiceName,
         });
       }
     }
-    
+
     return items;
   };
 
@@ -222,47 +246,57 @@ const handleDelete = async (id) => {
     }
 
     const items = parseImportText(importText);
-    
+
     if (items.length === 0) {
       toast({ title: "无法解析导入内容，请检查格式", variant: "destructive" });
       return;
     }
 
-    const missingSpecItems = items.filter(item => !item.spec || item.spec.trim() === "");
+    const missingSpecItems = items.filter(
+      (item) => !item.spec || item.spec.trim() === "",
+    );
     if (missingSpecItems.length > 0) {
-      const missingNames = missingSpecItems.map(item => item.product_name).slice(0, 3).join(", ");
-      toast({ 
-        title: `以下商品缺少规格：${missingNames}${missingSpecItems.length > 3 ? "..." : ""}`, 
-        variant: "destructive" 
+      const missingNames = missingSpecItems
+        .map((item) => item.product_name)
+        .slice(0, 3)
+        .join(", ");
+      toast({
+        title: `以下商品缺少规格：${missingNames}${missingSpecItems.length > 3 ? "..." : ""}`,
+        variant: "destructive",
       });
       return;
     }
 
-    const unmatchedItems = items.filter(item => !item.invoice_name || item.invoice_name.trim() === "");
+    const unmatchedItems = items.filter(
+      (item) => !item.invoice_name || item.invoice_name.trim() === "",
+    );
     if (unmatchedItems.length > 0) {
-      const unmatchedNames = unmatchedItems.map(item => item.product_name).slice(0, 3).join(", ");
-      toast({ 
-        title: `以下商品未匹配到发票名称：${unmatchedNames}${unmatchedItems.length > 3 ? "..." : ""}`, 
-        variant: "destructive" 
+      const unmatchedNames = unmatchedItems
+        .map((item) => item.product_name)
+        .slice(0, 3)
+        .join(", ");
+      toast({
+        title: `以下商品未匹配到发票名称：${unmatchedNames}${unmatchedItems.length > 3 ? "..." : ""}`,
+        variant: "destructive",
       });
       return;
     }
 
     setImporting(true);
-    
+
     try {
       const res = await fetch("/api/products/batch-import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items })
+        body: JSON.stringify({ items }),
       });
-      
+
       const data = await res.json();
-      
+
       if (data.success) {
         const { results } = data;
-        toast({ 
-          title: `导入完成：新增 ${results.success} 条，更新 ${results.updated} 条，失败 ${results.failed} 条` 
+        toast({
+          title: `导入完成：新增 ${results.success} 条，更新 ${results.updated} 条，失败 ${results.failed} 条`,
         });
         setImportModalOpen(false);
         setImportText("");
@@ -271,10 +305,10 @@ const handleDelete = async (id) => {
         toast({ title: data.error, variant: "destructive" });
       }
     } catch (error) {
-      console.error('批量导入商品失败:', error);
+      console.error("批量导入商品失败:", error);
       toast({ title: "导入失败", variant: "destructive" });
     }
-    
+
     setImporting(false);
   };
 
@@ -290,15 +324,15 @@ const handleDelete = async (id) => {
       const data = await res.json();
 
       if (data.success) {
-        toast({ 
-          title: `更新完成：成功 ${data.updated} 条，未匹配 ${data.unmatched} 条` 
+        toast({
+          title: `更新完成：成功 ${data.updated} 条，未匹配 ${data.unmatched} 条`,
         });
         fetchProducts();
       } else {
         toast({ title: data.error, variant: "destructive" });
       }
     } catch (error) {
-      console.error('更新发票名称失败:', error);
+      console.error("更新发票名称失败:", error);
       toast({ title: "更新失败", variant: "destructive" });
     }
 
@@ -312,12 +346,21 @@ const handleDelete = async (id) => {
           <CardTitle>商品名称-SKU映射管理</CardTitle>
           {!loading && (
             <div className="flex gap-4 text-sm mt-2">
-              <span className="text-muted-foreground">总条数：<span className="font-medium text-foreground">{stats.total}</span></span>
+              <span className="text-muted-foreground">
+                总条数：
+                <span className="font-medium text-foreground">
+                  {stats.total}
+                </span>
+              </span>
               {stats.missingSpec > 0 && (
-                <span className="text-destructive">缺少规格：{stats.missingSpec}</span>
+                <span className="text-destructive">
+                  缺少规格：{stats.missingSpec}
+                </span>
               )}
               {stats.missingInvoiceName > 0 && (
-                <span className="text-destructive">缺少发票名称：{stats.missingInvoiceName}</span>
+                <span className="text-destructive">
+                  缺少发票名称：{stats.missingInvoiceName}
+                </span>
               )}
             </div>
           )}
@@ -338,9 +381,15 @@ const handleDelete = async (id) => {
               <Upload className="w-4 h-4 mr-1" />
               导入
             </Button>
-            <Button variant="outline" onClick={handleUpdateInvoiceNames} disabled={updatingInvoiceNames}>
-              <RefreshCw className={`w-4 h-4 mr-1 ${updatingInvoiceNames ? 'animate-spin' : ''}`} />
-              {updatingInvoiceNames ? '更新中...' : '更新发票名称'}
+            <Button
+              variant="outline"
+              onClick={handleUpdateInvoiceNames}
+              disabled={updatingInvoiceNames}
+            >
+              <RefreshCw
+                className={`w-4 h-4 mr-1 ${updatingInvoiceNames ? "animate-spin" : ""}`}
+              />
+              {updatingInvoiceNames ? "更新中..." : "更新发票名称"}
             </Button>
             <Button onClick={handleAdd}>
               <Plus className="w-4 h-4 mr-1" />
@@ -352,43 +401,83 @@ const handleDelete = async (id) => {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-muted">
-                  <th className="border border-border px-3 py-2 text-center w-12">序号</th>
-                  <th className="border border-border px-3 py-2 text-left">SKU</th>
-                  <th className="border border-border px-3 py-2 text-left">商品名称</th>
-                  <th className="border border-border px-3 py-2 text-left">仓库</th>
-                  <th className="border border-border px-3 py-2 text-left">规格</th>
-                  <th className="border border-border px-3 py-2 text-left">发票名称</th>
-                  <th className="border border-border px-3 py-2 text-center w-20">操作</th>
+                  <th className="border border-border px-3 py-2 text-center w-12">
+                    序号
+                  </th>
+                  <th className="border border-border px-3 py-2 text-left">
+                    SKU
+                  </th>
+                  <th className="border border-border px-3 py-2 text-left">
+                    商品名称
+                  </th>
+                  <th className="border border-border px-3 py-2 text-left">
+                    仓库
+                  </th>
+                  <th className="border border-border px-3 py-2 text-left">
+                    规格
+                  </th>
+                  <th className="border border-border px-3 py-2 text-left">
+                    发票名称
+                  </th>
+                  <th className="border border-border px-3 py-2 text-center w-20">
+                    操作
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="border border-border px-3 py-4 text-center text-muted-foreground">
+                    <td
+                      colSpan={7}
+                      className="border border-border px-3 py-4 text-center text-muted-foreground"
+                    >
                       加载中...
                     </td>
                   </tr>
                 ) : products.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="border border-border px-3 py-4 text-center text-muted-foreground">
+                    <td
+                      colSpan={7}
+                      className="border border-border px-3 py-4 text-center text-muted-foreground"
+                    >
                       暂无数据
                     </td>
                   </tr>
                 ) : (
                   products.map((product, index) => (
                     <tr key={product.id}>
-                      <td className="border border-border px-3 py-2 text-center text-muted-foreground">{index + 1}</td>
-                      <td className="border border-border px-3 py-2">{product.sku}</td>
-                      <td className="border border-border px-3 py-2">{product.product_name}</td>
-                      <td className="border border-border px-3 py-2">{product.warehouse || "-"}</td>
-                      <td className="border border-border px-3 py-2">{product.spec || "-"}</td>
-                      <td className="border border-border px-3 py-2">{product.invoice_name || "-"}</td>
+                      <td className="border border-border px-3 py-2 text-center text-muted-foreground">
+                        {index + 1}
+                      </td>
+                      <td className="border border-border px-3 py-2">
+                        {product.sku}
+                      </td>
+                      <td className="border border-border px-3 py-2">
+                        {product.product_name}
+                      </td>
+                      <td className="border border-border px-3 py-2">
+                        {product.warehouse || "-"}
+                      </td>
+                      <td className="border border-border px-3 py-2">
+                        {product.spec || "-"}
+                      </td>
+                      <td className="border border-border px-3 py-2">
+                        {product.invoice_name || "-"}
+                      </td>
                       <td className="border border-border px-3 py-2 text-center">
                         <div className="flex gap-1 justify-center">
-                          <Button variant="ghost" size="sm" onClick={() => handleEdit(product)}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(product)}
+                          >
                             <Edit className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(product.id)}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(product.id)}
+                          >
                             <Trash2 className="w-4 h-4 text-destructive" />
                           </Button>
                         </div>
@@ -405,14 +494,18 @@ const handleDelete = async (id) => {
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingProduct ? "编辑商品" : "添加商品"}</DialogTitle>
+            <DialogTitle>
+              {editingProduct ? "编辑商品" : "添加商品"}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-2">
               <label className="text-sm font-medium">SKU *</label>
               <Input
                 value={formData.sku}
-                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, sku: e.target.value })
+                }
               />
             </div>
             <div className="space-y-2">
@@ -426,14 +519,18 @@ const handleDelete = async (id) => {
               <label className="text-sm font-medium">仓库</label>
               <Input
                 value={formData.warehouse}
-                onChange={(e) => setFormData({ ...formData, warehouse: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, warehouse: e.target.value })
+                }
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">规格 *</label>
               <Input
                 value={formData.spec}
-                onChange={(e) => setFormData({ ...formData, spec: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, spec: e.target.value })
+                }
               />
               <p className="text-xs text-muted-foreground">如：600ml×15</p>
             </div>
@@ -441,9 +538,13 @@ const handleDelete = async (id) => {
               <label className="text-sm font-medium">发票名称 *</label>
               <Input
                 value={formData.invoice_name}
-                onChange={(e) => setFormData({ ...formData, invoice_name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, invoice_name: e.target.value })
+                }
               />
-              <p className="text-xs text-muted-foreground">根据品牌映射自动填充，请检查是否正确</p>
+              <p className="text-xs text-muted-foreground">
+                根据品牌映射自动填充，请检查是否正确
+              </p>
             </div>
           </div>
           <DialogFooter>
@@ -464,7 +565,9 @@ const handleDelete = async (id) => {
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-2">
-              <label className="text-sm font-medium">粘贴导入内容（每行一条，Tab分隔）</label>
+              <label className="text-sm font-medium">
+                粘贴导入内容（每行一条，Tab分隔）
+              </label>
               <Textarea
                 placeholder="格式示例：&#10;SKU	商品名称	仓库"
                 value={importText}
@@ -474,7 +577,9 @@ const handleDelete = async (id) => {
               />
             </div>
             <p className="text-sm text-muted-foreground">
-              每行以 Tab 分隔，取前 3 列：SKU、商品名称、仓库。规格和发票名称自动匹配。重复 SKU 将被覆盖更新。
+              每行以 Tab 分隔，取前 3
+              列：SKU、商品名称、仓库。规格和发票名称自动匹配。重复 SKU
+              将被覆盖更新。
             </p>
           </div>
           <DialogFooter>

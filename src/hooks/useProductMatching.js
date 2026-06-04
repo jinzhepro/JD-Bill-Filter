@@ -16,40 +16,44 @@ export function useProductMatching(processedData) {
         if (data.success) {
           setProducts(data.data || []);
         }
-} catch (error) {
-      console.error('获取商品映射失败:', error);
-      return [];
-    }
+      } catch (error) {
+        console.error("获取商品映射失败:", error);
+        return [];
+      }
     };
     fetchProducts();
   }, []);
 
+  // 预先构建 SKU → Product 的 Map，避免 O(n²) 查找
+  const productMap = useMemo(() => {
+    const map = new Map();
+    products.forEach((p) => map.set(p.sku, p));
+    return map;
+  }, [products]);
+
   const getProductDisplayName = useMemo(() => {
     return (sku) => {
       if (!sku) return null;
-      const product = products.find(p => p.sku === String(sku).trim());
+      const product = productMap.get(String(sku).trim());
       if (product && product.product_name) {
-        const cleanName = product.product_name.replace(/\s+/g, '');
+        const cleanName = product.product_name.replace(/\s+/g, "");
         return `${cleanName}_${sku}`;
       }
       return null;
     };
-  }, [products]);
+  }, [productMap]);
 
   const unmatchedSkus = useMemo(() => {
     if (!processedData || products.length === 0) return [];
     const skuSet = new Set();
-    processedData.forEach(row => {
-      const sku = row["商品编号"] || row["SKU"];
-      if (sku) {
-        const product = products.find(p => p.sku === String(sku).trim());
-        if (!product) {
-          skuSet.add(String(sku).trim());
-        }
+    processedData.forEach((row) => {
+      const sku = String(row["商品编号"] || row["SKU"] || "").trim();
+      if (sku && !productMap.has(sku)) {
+        skuSet.add(sku);
       }
     });
     return Array.from(skuSet);
-  }, [processedData, products]);
+  }, [processedData, productMap]);
 
   return { products, unmatchedSkus, getProductDisplayName };
 }

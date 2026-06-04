@@ -3,7 +3,16 @@
 import React, { useState, useRef, useCallback } from "react";
 import { Button } from "./ui/button";
 import { isValidFileExtension } from "@/lib/fileValidation";
-import { Upload, Plus, CheckCircle2, Clock, FolderOpen, Files, Info } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Upload,
+  Plus,
+  CheckCircle2,
+  Clock,
+  FolderOpen,
+  Files,
+  Info,
+} from "lucide-react";
 
 /**
  * 通用文件上传组件
@@ -33,19 +42,15 @@ export default function FileUploader({
 }) {
   const [isDragOver, setIsDragOver] = useState(false);
   const inputRef = useRef(null);
+  const { toast } = useToast();
 
   const isValidFileExtensionMemo = useCallback((fileName) => {
     try {
       isValidFileExtension(fileName);
       return true;
-} catch (error) {
-        console.error('文件处理失败:', error);
-        toast({
-          variant: "destructive",
-          title: "文件读取失败",
-          description: error instanceof Error ? error.message : "请确保文件格式正确",
-        });
-      }
+    } catch {
+      return false;
+    }
   }, []);
 
   // 处理文件选择
@@ -56,7 +61,7 @@ export default function FileUploader({
         if (!files || files.length === 0) return;
 
         const validFiles = Array.from(files).filter((file) =>
-          isValidFileExtensionMemo(file.name)
+          isValidFileExtensionMemo(file.name),
         );
 
         if (validFiles.length === 0) {
@@ -71,8 +76,8 @@ export default function FileUploader({
         if (onFilesSelected) {
           onFilesSelected(filesWithPath);
         }
-} catch (error) {
-        console.error('文件选择错误:', error);
+      } catch (error) {
+        console.error("文件选择错误:", error);
         toast({
           variant: "destructive",
           title: "文件选择失败",
@@ -80,7 +85,7 @@ export default function FileUploader({
         });
       }
     },
-    [isValidFileExtensionMemo, onFilesSelected]
+    [isValidFileExtensionMemo, onFilesSelected, toast],
   );
 
   // 处理拖拽上传
@@ -96,7 +101,7 @@ export default function FileUploader({
         }
 
         const validFiles = Array.from(files).filter((file) =>
-          isValidFileExtensionMemo(file.name)
+          isValidFileExtensionMemo(file.name),
         );
 
         if (validFiles.length === 0) {
@@ -111,8 +116,8 @@ export default function FileUploader({
         if (onFilesSelected) {
           onFilesSelected(filesWithPath);
         }
-} catch (error) {
-        console.error('文件拖拽错误:', error);
+      } catch (error) {
+        console.error("文件拖拽错误:", error);
         toast({
           variant: "destructive",
           title: "文件拖拽失败",
@@ -120,7 +125,7 @@ export default function FileUploader({
         });
       }
     },
-    [isValidFileExtensionMemo, onFilesSelected]
+    [isValidFileExtensionMemo, onFilesSelected, toast],
   );
 
   const handleDragOver = useCallback((event) => {
@@ -144,9 +149,10 @@ export default function FileUploader({
         <div
           className={`
             relative overflow-hidden rounded-xl border-2 border-dashed p-12 transition-all duration-300 cursor-pointer
-            ${isDragOver
-              ? "border-primary bg-primary/5 scale-[1.01] shadow-lg shadow-primary/10"
-              : "border-border bg-gradient-to-br from-muted/30 to-muted/60 hover:border-primary/40 hover:bg-gradient-to-br hover:from-muted/50 hover:to-muted/70 hover:shadow-md"
+            ${
+              isDragOver
+                ? "border-primary bg-primary/5 scale-[1.01] shadow-lg shadow-primary/10"
+                : "border-border bg-gradient-to-br from-muted/30 to-muted/60 hover:border-primary/40 hover:bg-gradient-to-br hover:from-muted/50 hover:to-muted/70 hover:shadow-md"
             }
             ${disabled ? "opacity-50 cursor-not-allowed" : ""}
           `}
