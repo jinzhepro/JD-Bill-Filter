@@ -2,16 +2,16 @@
 
 ## 开发命令
 
-| 命令 | 用途 |
-|---|---|
-| `npm run dev` | Next.js 开发服务器 |
-| `npm run lint` | ESLint |
-| `npm run build` | Next.js 构建 |
-| `npm run pages:build` | Cloudflare Pages 构建 (`@cloudflare/next-on-pages`) |
-| `npm run pages:dev` | 本地模拟 Pages 环境 (port 8788) |
-| `npm run pages:deploy` | 构建 + 发布到 Cloudflare Pages |
-| `npx wrangler d1 migrations apply jd --local` | 本地 D1 迁移 |
-| `npx wrangler d1 migrations apply jd --remote` | 远程 D1 迁移 |
+| 命令                                           | 用途                                                |
+| ---------------------------------------------- | --------------------------------------------------- |
+| `npm run dev`                                  | Next.js 开发服务器                                  |
+| `npm run lint`                                 | ESLint                                              |
+| `npm run build`                                | Next.js 构建                                        |
+| `npm run pages:build`                          | Cloudflare Pages 构建 (`@cloudflare/next-on-pages`) |
+| `npm run pages:dev`                            | 本地模拟 Pages 环境 (port 8788)                     |
+| `npm run pages:deploy`                         | 构建 + 发布到 Cloudflare Pages                      |
+| `npx wrangler d1 migrations apply jd --local`  | 本地 D1 迁移                                        |
+| `npx wrangler d1 migrations apply jd --remote` | 远程 D1 迁移                                        |
 
 ## 架构关键点
 
@@ -45,8 +45,8 @@ AuthProvider → AuthGuard → SettlementProvider → InvoiceProvider → ErrorB
 所有 `src/app/api/` 下的路由文件遵循相同模式：
 
 ```js
-export const runtime = 'edge';
-import { getRequestContext } from '@cloudflare/next-on-pages';
+export const runtime = "edge";
+import { getRequestContext } from "@cloudflare/next-on-pages";
 
 export async function GET(request) {
   const { env } = getRequestContext();
@@ -57,46 +57,46 @@ export async function GET(request) {
 
 可用端点：
 
-| 路径 | 方法 | 用途 |
-|---|---|---|
-| `/api/login` | POST | 密码登录 |
-| `/api/check-auth` | GET | 验证登录状态 |
-| `/api/products` | GET, POST | 商品 SKU 映射 CRUD |
-| `/api/products/[id]` | DELETE | 删除单个映射 |
-| `/api/products/add` | POST | 新增商品映射 |
-| `/api/products/batch-import` | POST | 批量导入映射 |
-| `/api/products/update-invoice-names` | POST | 更新发票名称 |
-| `/api/brand-mappings` | GET, POST | 品牌映射 CRUD |
-| `/api/brand-mappings/[id]` | DELETE | 删除品牌映射 |
-| `/api/purchase-orders` | GET, POST | 采购单管理 |
-| `/api/invoice-history` | GET, POST | 发票历史 |
-| `/api/invoice-history/[id]` | DELETE | 删除历史记录 |
-| `/api/invoice-history/update-names` | POST | 批量更新历史记录名称 |
-| `/api/canteen-purchase-orders` | GET, POST | 食堂采购单 |
-| `/api/canteen-invoice-history` | GET, POST | 食堂发票历史 |
-| `/api/canteen-invoice-history/[id]` | DELETE | 删除食堂发票历史 |
-| `/api/tax-classification/analyze` | POST | 税务分类分析 |
+| 路径                                 | 方法      | 用途                 |
+| ------------------------------------ | --------- | -------------------- |
+| `/api/login`                         | POST      | 密码登录             |
+| `/api/check-auth`                    | GET       | 验证登录状态         |
+| `/api/products`                      | GET, POST | 商品 SKU 映射 CRUD   |
+| `/api/products/[id]`                 | DELETE    | 删除单个映射         |
+| `/api/products/add`                  | POST      | 新增商品映射         |
+| `/api/products/batch-import`         | POST      | 批量导入映射         |
+| `/api/products/update-invoice-names` | POST      | 更新发票名称         |
+| `/api/brand-mappings`                | GET, POST | 品牌映射 CRUD        |
+| `/api/brand-mappings/[id]`           | DELETE    | 删除品牌映射         |
+| `/api/purchase-orders`               | GET, POST | 采购单管理           |
+| `/api/invoice-history`               | GET, POST | 发票历史             |
+| `/api/invoice-history/[id]`          | DELETE    | 删除历史记录         |
+| `/api/invoice-history/update-names`  | POST      | 批量更新历史记录名称 |
+| `/api/canteen-purchase-orders`       | GET, POST | 食堂采购单           |
+| `/api/canteen-invoice-history`       | GET, POST | 食堂发票历史         |
+| `/api/canteen-invoice-history/[id]`  | DELETE    | 删除食堂发票历史     |
+| `/api/tax-classification/analyze`    | POST      | 税务分类分析         |
 
 ## 核心模块
 
-| 文件 | 职责 |
-|---|---|
-| `src/lib/settlementProcessor.js` | 结算单处理：验证→售后赔付→服务费收集→货款合并→赔付分摊→最终计算 |
-| `src/lib/settlementHelpers.js` | 结算单辅助函数（供应商识别、数据转换等） |
-| `src/lib/excelHandler.js` | Excel/CSV 读写，CSV 编码检测 UTF-8→GBK 回退，导出处商品编号文本格式 (`numFmt: '@'`) |
-| `src/lib/invoiceExporter.js` | 发票申请单 Excel 导出，含合并单元格和税额计算 |
-| `src/lib/reconciliation.js` | 订单与发票行对账，Dice 系数匹配商品名 |
-| `src/lib/virtualAssetProcessor.js` | 虚拟资产 CSV 处理，按 SKU 合并实际金额 |
-| `src/lib/fileValidation.js` | 文件类型（.xlsx/.xls/.csv）和大小（50MB）验证 |
-| `src/lib/constants.js` | 常量定义 |
-| `src/lib/utils.js` | 通用工具函数：`cn()`（Tailwind 类合并）、`cleanAmount()`/`cleanAmountString()`、`formatAmount()`、`safeJsonParse()`、`safeLocalStorageGet()`/`Set()`、`silentTry()` 等 |
+| 文件                               | 职责                                                                                                                                                                   |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/lib/settlementProcessor.js`   | 结算单处理：验证→售后赔付→服务费收集→货款合并→赔付分摊→最终计算                                                                                                        |
+| `src/lib/settlementHelpers.js`     | 结算单辅助函数（供应商识别、数据转换等）                                                                                                                               |
+| `src/lib/excelHandler.js`          | Excel/CSV 读写，CSV 编码检测 UTF-8→GBK 回退，导出处商品编号文本格式 (`numFmt: '@'`)                                                                                    |
+| `src/lib/invoiceExporter.js`       | 发票申请单 Excel 导出，含合并单元格和税额计算                                                                                                                          |
+| `src/lib/reconciliation.js`        | 订单与发票行对账，Dice 系数匹配商品名                                                                                                                                  |
+| `src/lib/virtualAssetProcessor.js` | 虚拟资产 CSV 处理，按 SKU 合并实际金额                                                                                                                                 |
+| `src/lib/fileValidation.js`        | 文件类型（.xlsx/.xls/.csv）和大小（50MB）验证                                                                                                                          |
+| `src/lib/constants.js`             | 常量定义                                                                                                                                                               |
+| `src/lib/utils.js`                 | 通用工具函数：`cn()`（Tailwind 类合并）、`cleanAmount()`/`cleanAmountString()`、`formatAmount()`、`safeJsonParse()`、`safeLocalStorageGet()`/`Set()`、`silentTry()` 等 |
 
 ## Hooks
 
-| 文件 | 用途 |
-|---|---|
-| `src/hooks/use-toast.js` | shadcn toast 通知 |
-| `src/hooks/useProductMatching.js` | 商品匹配逻辑 |
+| 文件                              | 用途              |
+| --------------------------------- | ----------------- |
+| `src/hooks/use-toast.js`          | shadcn toast 通知 |
+| `src/hooks/useProductMatching.js` | 商品匹配逻辑      |
 
 ## shadcn/ui 约定
 
