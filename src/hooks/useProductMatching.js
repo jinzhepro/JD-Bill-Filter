@@ -53,7 +53,7 @@ export function useProductMatching(processedData) {
       }
     });
     return Array.from(skuSet);
-  }, [processedData, productMap]);
+  }, [processedData, productMap, products.length]);
 
   return { products, unmatchedSkus, getProductDisplayName };
 }
