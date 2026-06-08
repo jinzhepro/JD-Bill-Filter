@@ -56,17 +56,14 @@ const parseCustomerText = (text) => {
     }
   }
 
-  // 扫描文本中是否包含发票类型关键词
+  // 扫描所有行检测发票类型关键词
   for (const line of lines) {
-    const hasPu = /普票/.test(line);
-    const hasZhuan = /专票/.test(line);
-    if (hasPu && !hasZhuan) {
+    if (/普票/.test(line)) {
       result.invoiceType = "普票";
       break;
     }
-    if (hasZhuan) {
+    if (/专票/.test(line)) {
       result.invoiceType = "专票";
-      break;
     }
   }
 
