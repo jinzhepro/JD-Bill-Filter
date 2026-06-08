@@ -56,18 +56,21 @@ const parseCustomerText = (text) => {
     }
   }
 
-  // 扫描所有行检测发票类型关键词
+  // 检测发票类型：专票优先，有专票字样就开专票，有普票字样且无专票才开普票
+  let hasPu = false;
   for (const line of lines) {
-    if (/普票/.test(line)) {
-      result.invoiceType = "普票";
-      break;
-    }
     if (/专票/.test(line)) {
       result.invoiceType = "专票";
+      hasPu = false; // 专票优先级高，覆盖之前的普票标记
+      break;
+    }
+    if (/普票/.test(line)) {
+      hasPu = true;
     }
   }
-
-  // 未识别到任何发票类型关键词时默认专票
+  if (!result.invoiceType && hasPu) {
+    result.invoiceType = "普票";
+  }
   if (!result.invoiceType) {
     result.invoiceType = "专票";
   }
