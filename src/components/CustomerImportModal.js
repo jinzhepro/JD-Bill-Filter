@@ -2,16 +2,31 @@
 
 import React, { useState } from "react";
 import Decimal from "decimal.js";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Copy } from "lucide-react";
 
 const parseCustomerText = (text) => {
-  const lines = text.split(/[\n\r]+/).map(l => l.trim()).filter(Boolean);
-  const result = { customerInfo: {}, orderNumbers: [], orderAmounts: [], totalAmount: "0.00", invoiceType: "专票" };
-  
+  const lines = text
+    .split(/[\n\r]+/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const result = {
+    customerInfo: {},
+    orderNumbers: [],
+    orderAmounts: [],
+    totalAmount: "0.00",
+    invoiceType: "",
+  };
+
   let totalAmount = new Decimal(0);
   for (const line of lines) {
     const orderMatches = line.matchAll(/(\d{12})[\s\t]+(\d+(?:\.\d+)?)/g);
@@ -22,14 +37,17 @@ const parseCustomerText = (text) => {
     }
   }
   result.totalAmount = totalAmount.toFixed(2);
-  
+
   for (let i = 0; i < lines.length; i++) {
     const taxIdMatch = lines[i].match(/[A-Z0-9]{18}/i);
     if (taxIdMatch) {
       result.customerInfo.taxId = taxIdMatch[0].toUpperCase();
       if (i > 0) {
         const parts = lines[i - 1].split(/[；;：:,，\s]+/).filter(Boolean);
-        const longestPart = parts.reduce((a, b) => a.length >= b.length ? a : b, "");
+        const longestPart = parts.reduce(
+          (a, b) => (a.length >= b.length ? a : b),
+          "",
+        );
         if (longestPart && !/^\d+$/.test(longestPart.replace(/\s/g, ""))) {
           result.customerInfo.customerName = longestPart;
         }
@@ -37,24 +55,36 @@ const parseCustomerText = (text) => {
       break;
     }
   }
-  
+
+  // 扫描文本中是否包含发票类型关键词
   for (const line of lines) {
-    const invoiceTypeMatch = line.match(/开票类型[：:]\s*(.*)/);
-    if (invoiceTypeMatch) {
-      const typeText = invoiceTypeMatch[1];
-      if (/普票/.test(typeText)) {
-        result.invoiceType = "普票";
-      } else if (/专票/.test(typeText)) {
-        result.invoiceType = "专票";
-      }
+    const hasPu = /普票/.test(line);
+    const hasZhuan = /专票/.test(line);
+    if (hasPu && !hasZhuan) {
+      result.invoiceType = "普票";
+      break;
+    }
+    if (hasZhuan) {
+      result.invoiceType = "专票";
       break;
     }
   }
-  
+
+  // 未识别到任何发票类型关键词时默认专票
+  if (!result.invoiceType) {
+    result.invoiceType = "专票";
+  }
+
   return result;
 };
 
-export function CustomerImportModal({ open, onOpenChange, onImport, onInvoiceTypeChange, onTotalAmountChange }) {
+export function CustomerImportModal({
+  open,
+  onOpenChange,
+  onImport,
+  onInvoiceTypeChange,
+  onTotalAmountChange,
+}) {
   const [pasteText, setPasteText] = useState("");
   const [parsedResult, setParsedResult] = useState(null);
   const { toast } = useToast();
@@ -67,7 +97,10 @@ export function CustomerImportModal({ open, onOpenChange, onImport, onInvoiceTyp
 
     const parsed = parseCustomerText(pasteText);
 
-    if (Object.keys(parsed.customerInfo).length === 0 && parsed.orderNumbers.length === 0) {
+    if (
+      Object.keys(parsed.customerInfo).length === 0 &&
+      parsed.orderNumbers.length === 0
+    ) {
       toast({ title: "无法解析开票信息，请检查格式", variant: "destructive" });
       return;
     }
@@ -77,33 +110,41 @@ export function CustomerImportModal({ open, onOpenChange, onImport, onInvoiceTyp
 
   const handleImport = () => {
     if (!parsedResult) return;
-    
-    if (parsedResult.orderNumbers.length > 0 && parsedResult.orderNumbers.length <= 20) {
+
+    if (
+      parsedResult.orderNumbers.length > 0 &&
+      parsedResult.orderNumbers.length <= 20
+    ) {
       const text = parsedResult.orderNumbers.join(",");
       navigator.clipboard.writeText(text);
     }
-    
+
     if (Object.keys(parsedResult.customerInfo).length > 0) {
       onImport(parsedResult.customerInfo);
-      
+
       const fields = [];
       if (parsedResult.customerInfo.customerName) fields.push("客户名称");
       if (parsedResult.customerInfo.taxId) fields.push("税号");
       fields.push(`发票类型：${parsedResult.invoiceType}`);
-      
+
       if (onInvoiceTypeChange) {
         onInvoiceTypeChange(parsedResult.invoiceType);
       }
-      
+
       if (onTotalAmountChange) {
         onTotalAmountChange(parsedResult.totalAmount);
       }
-      
-      toast({ title: `已导入: ${fields.join("、")}${parsedResult.orderNumbers.length > 0 && parsedResult.orderNumbers.length <= 20 ? `,订单号已复制` : ""}` });
-    } else if (parsedResult.orderNumbers.length > 0 && parsedResult.orderNumbers.length <= 20) {
+
+      toast({
+        title: `已导入: ${fields.join("、")}${parsedResult.orderNumbers.length > 0 && parsedResult.orderNumbers.length <= 20 ? `,订单号已复制` : ""}`,
+      });
+    } else if (
+      parsedResult.orderNumbers.length > 0 &&
+      parsedResult.orderNumbers.length <= 20
+    ) {
       toast({ title: `订单号已复制 (${parsedResult.orderNumbers.length}个)` });
     }
-    
+
     handleClose();
   };
 
@@ -136,11 +177,13 @@ export function CustomerImportModal({ open, onOpenChange, onImport, onInvoiceTyp
           <Textarea
             value={pasteText}
             onChange={(e) => setPasteText(e.target.value)}
-            placeholder={"抬头：黑龙江速达商贸有限公司\n税号：91230103MA1CM7L37M\n邮箱：1491503293@qq.com\n订单号：\n328220152890\t49.9\n330211482160\t52\n开票类型：数电普票（多个订单可合开，开明细）"}
+            placeholder={
+              "抬头：黑龙江速达商贸有限公司\n税号：91230103MA1CM7L37M\n邮箱：1491503293@qq.com\n订单号：\n328220152890\t49.9\n330211482160\t52\n开票类型：数电普票（多个订单可合开，开明细）"
+            }
             rows={8}
           />
         </div>
-        
+
         {parsedResult && (
           <div className="space-y-4 border-t pt-4">
             {Object.keys(customerInfo).length > 0 && (
@@ -148,49 +191,80 @@ export function CustomerImportModal({ open, onOpenChange, onImport, onInvoiceTyp
                 <p className="text-sm font-medium">识别到的客户信息</p>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   {customerInfo.customerName && (
-                    <span><span className="text-muted-foreground">客户名称：</span><span className="font-medium text-foreground">{customerInfo.customerName}</span></span>
+                    <span>
+                      <span className="text-muted-foreground">客户名称：</span>
+                      <span className="font-medium text-foreground">
+                        {customerInfo.customerName}
+                      </span>
+                    </span>
                   )}
                   {customerInfo.taxId && (
-                    <span><span className="text-muted-foreground">税号：</span><span className="font-medium text-foreground">{customerInfo.taxId}</span></span>
+                    <span>
+                      <span className="text-muted-foreground">税号：</span>
+                      <span className="font-medium text-foreground">
+                        {customerInfo.taxId}
+                      </span>
+                    </span>
                   )}
-                  <span><span className="text-muted-foreground">发票类型：</span><span className="font-medium text-foreground">{parsedResult.invoiceType}</span></span>
+                  <span>
+                    <span className="text-muted-foreground">发票类型：</span>
+                    <span className="font-medium text-foreground">
+                      {parsedResult.invoiceType}
+                    </span>
+                  </span>
                 </div>
               </div>
             )}
-            
+
             {orderNumbers.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium">识别到的订单号 ({orderNumbers.length}个)</p>
-                  <Button variant="outline" size="sm" onClick={handleCopyOrderNumbers}>
+                  <p className="text-sm font-medium">
+                    识别到的订单号 ({orderNumbers.length}个)
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyOrderNumbers}
+                  >
                     <Copy className="w-4 h-4 mr-1" />
                     复制全部
                   </Button>
                 </div>
-                
+
                 <div className="max-h-[400px] overflow-auto space-y-2">
                   {(() => {
                     const groups = [];
                     for (let i = 0; i < orderNumbers.length; i += 20) {
                       groups.push(orderNumbers.slice(i, i + 20));
                     }
-                    
+
                     return groups.map((group, groupIndex) => {
                       const start = groupIndex * 20 + 1;
-                      const end = Math.min((groupIndex + 1) * 20, orderNumbers.length);
-                      
+                      const end = Math.min(
+                        (groupIndex + 1) * 20,
+                        orderNumbers.length,
+                      );
+
                       const handleCopyGroup = () => {
                         navigator.clipboard.writeText(group.join(","));
-                        toast({ title: `已复制第 ${groupIndex + 1} 组订单号 (${group.length}个)` });
+                        toast({
+                          title: `已复制第 ${groupIndex + 1} 组订单号 (${group.length}个)`,
+                        });
                       };
-                      
+
                       return (
                         <div key={groupIndex} className="space-y-1">
                           <div className="flex items-center justify-between">
                             <p className="text-xs text-muted-foreground">
-                              第 {groupIndex + 1} 组：{start}-{end}（{group.length}个）
+                              第 {groupIndex + 1} 组：{start}-{end}（
+                              {group.length}个）
                             </p>
-                            <Button variant="ghost" size="sm" onClick={handleCopyGroup}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleCopyGroup}
+                            >
                               <Copy className="w-3 h-3 mr-1" />
                               复制本组
                             </Button>
@@ -203,26 +277,26 @@ export function CustomerImportModal({ open, onOpenChange, onImport, onInvoiceTyp
                     });
                   })()}
                 </div>
-                
+
                 <div className="p-2 bg-muted rounded text-xs">
                   <div className="flex justify-between font-bold border-t-2 border-border pt-2">
                     <span>合计 ({orderNumbers.length}个订单)</span>
-                    <span className="text-red-600">¥{parsedResult.totalAmount}</span>
+                    <span className="text-red-600">
+                      ¥{parsedResult.totalAmount}
+                    </span>
                   </div>
                 </div>
               </div>
             )}
           </div>
         )}
-        
+
         <DialogFooter>
           <Button variant="outline" onClick={handleClose}>
             取消
           </Button>
           <Button onClick={handleParse}>识别</Button>
-          {parsedResult && (
-            <Button onClick={handleImport}>确认导入</Button>
-          )}
+          {parsedResult && <Button onClick={handleImport}>确认导入</Button>}
         </DialogFooter>
       </DialogContent>
     </Dialog>
