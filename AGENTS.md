@@ -136,3 +136,155 @@ export function XProvider({ children }) {
 - [架构设计详解](docs/blog/从业务痛点到技术实践-Next.js15-Cloudflare-D1-构建电商结算系统.md)
 - [发票导出混合月份分离设计](docs/superpowers/specs/2026-04-22-invoice-export-mixed-months-design.md)
 - [发票历史批量更新名称设计](docs/superpowers/specs/2026-05-08-invoice-history-update-names-design.md)
+
+## 组件清单（`src/components/`）
+
+### 布局组件
+
+| 文件                | 用途                                                                         |
+| ------------------- | ---------------------------------------------------------------------------- |
+| `MainLayout.js`     | 基础布局：固定左侧栏 `w-64 z-50` + 粘性顶栏 `z-40` + 主内容区 `p-6` 渐变背景 |
+| `SimpleLayout.js`   | 京东业务线布局（MainLayout + Sidebar）                                       |
+| `CanteenLayout.js`  | 食堂业务线布局（MainLayout + CanteenSidebar）                                |
+| `Sidebar.js`        | 京东万商侧边栏导航（结算/供应商/商品/品牌/发票/采购）                        |
+| `CanteenSidebar.js` | 食堂侧边栏导航                                                               |
+
+### 业务组件
+
+| 文件                             | 用途                                 |
+| -------------------------------- | ------------------------------------ |
+| `SettlementContent.js`           | 结算单处理主界面（上传→处理→展示）   |
+| `SettlementFolderUpload.js`      | 批量文件夹上传（树形结构拖拽）       |
+| `SettlementProcessModal.js`      | 启动结算处理流水线的模态框           |
+| `SettlementResultDisplay.js`     | 合并/处理后的结算结果展示与导出      |
+| `VirtualAssetUpload.js`          | 虚拟资产 CSV 上传处理                |
+| `VirtualAssetResultDisplay.js`   | 虚拟资产处理结果展示                 |
+| `ProductManager.js`              | 商品 SKU 映射 CRUD                   |
+| `BrandManager.js`                | 品牌关键词→发票名称映射 CRUD         |
+| `SupplierManager.js`             | 供应商列表查看与查找                 |
+| `PurchaseOrderManager.js`        | 京东采购单管理（上传/查看/标记入账） |
+| `CanteenPurchaseOrderManager.js` | 食堂采购单管理（含供应商映射）       |
+| `InvoiceHistoryManager.js`       | 发票历史查看/导出/删除               |
+
+### 发票组件
+
+| 文件                     | 用途                                           |
+| ------------------------ | ---------------------------------------------- |
+| `InvoiceForm.js`         | 发票申请单表单（公司信息 + 客户信息 + 明细行） |
+| `InvoiceImportModal.js`  | 从 Excel/CSV 导入发票数据                      |
+| `InvoiceLineItems.js`    | 发票明细行可编辑表格（数量/单价/税率/金额）    |
+| `HuanyuInvoiceModal.js`  | 寰宇供应商专用发票模态框                       |
+| `CanteenInvoiceModal.js` | 食堂发票创建模态框                             |
+| `CustomerImportModal.js` | 从结算数据导入客户信息                         |
+
+### 通用组件
+
+| 文件               | 用途                                           |
+| ------------------ | ---------------------------------------------- |
+| `FileUploader.js`  | 通用拖拽上传器（支持文件夹、校验扩展名+50MB）  |
+| `DataDisplay.js`   | 通用表格组件（排序、复制、金额格式化）         |
+| `ErrorBoundary.js` | 类组件错误边界（开发环境显示错误栈、重试按钮） |
+| `AuthGuard.js`     | 路由守卫，未认证重定向到 `/login`              |
+
+### UI 基座组件（`src/components/ui/`）
+
+shadcn New York 风格：`badge.js`、`button.js`、`card.js`、`checkbox.js`、`dialog.js`、`input.js`、`modal.js`、`select.js`、`skeleton.js`、`table.js`、`textarea.js`、`toast.js`、`toaster.js`
+
+## Hooks（`src/hooks/`）
+
+| 文件                    | 用途                                                                                                                         |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `useProductMatching.js` | 获取商品映射（1000 条/页），返回 `products[]`、`unmatchedSkus[]`、`getProductDisplayName(sku)`，`useMemo` 实现 O(1) SKU 查找 |
+| `use-toast.js`          | 消息通知系统（最多 1 条活动 Toast，1 分钟自动消失）                                                                          |
+
+## 数据文件（`src/data/`）
+
+| 文件                  | 用途                                                                                                                                             |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `suppliers.js`        | 京东万商供应商静态数据（`{ id, name, supplierId, matchString }[]`），导出 `SUPPLIERS`、`findSupplierByMatchString()`、`convertTextToSuppliers()` |
+| `canteenSuppliers.js` | 食堂供应商静态数据（结构同上）                                                                                                                   |
+
+## 页面路由映射
+
+| 路由                          | 文件                                 | 说明                            |
+| ----------------------------- | ------------------------------------ | ------------------------------- |
+| `/`                           | `page.js`                            | 业务线选择器（京东万商 / 食堂） |
+| `/login`                      | `login/page.js`                      | 密码登录页                      |
+| `/jd-business`                | `jd-business/page.js`                | 京东结算处理（SimpleLayout）    |
+| `/jd-business/virtual-assets` | `jd-business/virtual-assets/page.js` | 虚拟资产处理                    |
+| `/products`                   | `products/page.js`                   | 商品 SKU 管理                   |
+| `/brands`                     | `brands/page.js`                     | 品牌映射管理                    |
+| `/suppliers`                  | `suppliers/page.js`                  | 供应商查看                      |
+| `/invoice`                    | `invoice/page.js`                    | 发票申请单                      |
+| `/invoice-history`            | `invoice-history/page.js`            | 发票历史                        |
+| `/purchase`                   | `purchase/page.js`                   | 京东采购单管理                  |
+| `/canteen-purchase`           | `canteen-purchase/page.js`           | 食堂采购单管理（CanteenLayout） |
+| `/canteen-invoice`            | `canteen-invoice/page.js`            | 食堂发票（CanteenLayout）       |
+
+所有页面以 `"use client"` 开头，JD 路由用 `SimpleLayout`，食堂路由用 `CanteenLayout`。
+
+## 通用 UI 模式
+
+### Modal 模式
+
+所有模态框（发票导入、寰宇、食堂等）遵循统一模式：
+
+- `isOpen` prop + `onClose()` 回调
+- 提交按钮触发 API POST
+- 成功 → Toast 通知 + Context 更新 + 关闭模态框
+
+### Manager CRUD 模式
+
+```
+[搜索栏] [添加按钮] [批量导入按钮]
+[分页控件]
+[可排序数据表格 + 删除/编辑按钮]
+[分页信息]
+```
+
+所有 Manager 组件：挂载时 fetch 数据，支持分页和搜索过滤。
+
+## API 路由模式
+
+### 统一响应格式
+
+```javascript
+// 成功
+{ success: true, data: [...], pagination: { page, pageSize, total, totalPages } }
+// 错误
+{ success: false, error: "message" } // status: 500 或 400
+```
+
+- GET 均支持 `page`、`pageSize` 分页参数和搜索过滤
+- POST 使用 `.bind()` 参数化查询防 SQL 注入
+- DELETE 按 ID 删除
+
+### 数据库表概览
+
+| 表                        | 关键列                                                                                   | 用途                |
+| ------------------------- | ---------------------------------------------------------------------------------------- | ------------------- |
+| `product_mappings`        | `sku (UNIQUE)`, `product_name`, `brand_name`, `invoice_name`, `spec`, `unit`, `tax_rate` | 商品目录            |
+| `brand_mappings`          | `brand_keywords`, `invoice_name`                                                         | 品牌关键词→发票名称 |
+| `purchase_orders`         | `supplier_name`, `sku`, `quantity`, `amount_with_tax`, `is_entered`                      | 京东采购单          |
+| `invoice_history`         | `export_date`, `invoice_date`, `customer_name`, `total_amount`                           | 发票头信息          |
+| `invoice_history_items`   | `history_id (FK)`, `name`, `sku`, `quantity`, `price`, `amount`, `tax`                   | 发票明细行          |
+| `canteen_purchase_orders` | `canteen_name`, `supplier_id`, `sku`, `quantity`, `amount_with_tax`                      | 食堂采购单          |
+| `canteen_invoice_history` | `contract_no`, `customer_name`, `total_amount`                                           | 食堂发票            |
+| `canteen_suppliers`       | —                                                                                        | 食堂供应商映射      |
+
+全部 29 次迁移（0002-0029），位于 `migrations/` 目录。
+
+## CSS 变量系统
+
+shadcn New York 风格，语义化 HSL 变量：
+
+```
+--background / --foreground  — 页面背景和文字
+--card / --card-foreground    — 卡片背景和文字
+--primary / --primary-foreground — 主色调
+--secondary / --secondary-foreground — 次色调
+--destructive / --warning / --success — 状态色
+--radius: 0.5rem              — 全局圆角
+```
+
+定义在 `src/app/globals.css`，Tailwind 配置在 `tailwind.config.js`。
