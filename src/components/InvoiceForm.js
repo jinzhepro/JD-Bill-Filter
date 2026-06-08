@@ -10,11 +10,27 @@ import { InvoiceImportModal } from "./InvoiceImportModal";
 import { exportInvoice } from "@/lib/invoiceExporter";
 import { useToast } from "@/hooks/use-toast";
 import { FileDown, FileText } from "lucide-react";
-import { getCurrentMonth, calculateRowAmount, groupItemsByMonth } from "@/lib/utils";
+import {
+  getCurrentMonth,
+  calculateRowAmount,
+  groupItemsByMonth,
+} from "@/lib/utils";
 import Decimal from "decimal.js";
 
 export function InvoiceForm() {
-  const { basicInfo, customerInfo, lineItems, invoiceDate, invoiceType, expectedAmount, setBasicInfo, setCustomerInfo, clearLineItems, addLineItems, setInvoiceDate } = useInvoice();
+  const {
+    basicInfo,
+    customerInfo,
+    lineItems,
+    invoiceDate,
+    invoiceType,
+    expectedAmount,
+    setBasicInfo,
+    setCustomerInfo,
+    clearLineItems,
+    addLineItems,
+    setInvoiceDate,
+  } = useInvoice();
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -57,9 +73,17 @@ export function InvoiceForm() {
     if (lineItems.length === 0) {
       return "请添加开票内容明细";
     }
-    
-    const incompleteIndex = lineItems.findIndex((item) => 
-      !item.name || !item.spec || !item.unit || !item.quantity || !item.price || item.quantity <= 0 || item.price <= 0 || item.name === "其他"
+
+    const incompleteIndex = lineItems.findIndex(
+      (item) =>
+        !item.name ||
+        !item.spec ||
+        !item.unit ||
+        !item.quantity ||
+        !item.price ||
+        item.quantity <= 0 ||
+        item.price <= 0 ||
+        item.name === "其他",
     );
     if (incompleteIndex !== -1) {
       const item = lineItems[incompleteIndex];
@@ -69,10 +93,14 @@ export function InvoiceForm() {
     return null;
   };
 
-  const saveInvoiceHistory = async (monthItems, invoiceDateForHistory, totalAmount) => {
-    const itemsWithCalculations = monthItems.map(item => ({
+  const saveInvoiceHistory = async (
+    monthItems,
+    invoiceDateForHistory,
+    totalAmount,
+  ) => {
+    const itemsWithCalculations = monthItems.map((item) => ({
       ...item,
-      ...calculateRowAmount(item)
+      ...calculateRowAmount(item),
     }));
 
     try {
@@ -83,15 +111,15 @@ export function InvoiceForm() {
           invoiceDate: invoiceDateForHistory,
           customerInfo,
           items: itemsWithCalculations,
-          totalAmount
-        })
+          totalAmount,
+        }),
       });
       const data = await res.json();
       if (!data.success) {
-        console.error('保存历史失败:', data.error);
+        console.error("保存历史失败:", data.error);
       }
     } catch (error) {
-      console.error('保存历史失败:', error);
+      console.error("保存历史失败:", error);
     }
   };
 
@@ -103,7 +131,7 @@ export function InvoiceForm() {
     }
 
     setIsExporting(true);
-    
+
     try {
       const currentMonth = getCurrentMonth();
       const groupedByMonth = groupItemsByMonth(lineItems);
@@ -118,25 +146,50 @@ export function InvoiceForm() {
       for (const monthKey of months) {
         const monthItems = groupedByMonth[monthKey];
         const isCurrentMonth = monthKey === currentMonth;
-        
-        await exportInvoice(basicInfo, customerInfo, monthItems, isCurrentMonth ? currentMonth : null, false, invoiceType);
+
+        await exportInvoice(
+          basicInfo,
+          customerInfo,
+          monthItems,
+          isCurrentMonth ? currentMonth : null,
+          false,
+          invoiceType,
+        );
         exportedMonths.push(isCurrentMonth ? currentMonth : "其他月");
 
-        const totalAmount = monthItems.reduce((sum, item) => 
-          sum + new Decimal(item.quantity).times(item.price).toNumber(), 0
+        const totalAmount = monthItems.reduce(
+          (sum, item) =>
+            sum + new Decimal(item.quantity).times(item.price).toNumber(),
+          0,
         );
 
-        const invoiceDateForHistory = isCurrentMonth 
-          ? `${currentMonth}-01` 
+        const invoiceDateForHistory = isCurrentMonth
+          ? `${currentMonth}-01`
           : monthItems[0]?.date || new Date().toISOString().split("T")[0];
 
-        await saveInvoiceHistory(monthItems, invoiceDateForHistory, totalAmount);
+        await saveInvoiceHistory(
+          monthItems,
+          invoiceDateForHistory,
+          totalAmount,
+        );
       }
 
-      toast({ 
-        title: months.length === 1 
-          ? "发票导出成功" 
-          : `导出完成：已生成 ${months.length} 个文件（${exportedMonths.join("、")}）`
+      // 导出成功后清空客户信息和开票内容
+      setCustomerInfo({
+        customerName: "",
+        taxId: "",
+        bankName: "",
+        bankAccount: "",
+        address: "",
+        phone: "",
+      });
+      clearLineItems();
+
+      toast({
+        title:
+          months.length === 1
+            ? "发票导出成功"
+            : `导出完成：已生成 ${months.length} 个文件（${exportedMonths.join("、")}）`,
       });
     } catch (error) {
       toast({ title: `导出失败: ${error.message}`, variant: "destructive" });
@@ -160,23 +213,45 @@ export function InvoiceForm() {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">公司名称 *</label>
-              <Input value={basicInfo.companyName} onChange={(e) => handleBasicChange("companyName", e.target.value)} />
+              <Input
+                value={basicInfo.companyName}
+                onChange={(e) =>
+                  handleBasicChange("companyName", e.target.value)
+                }
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">合同号 *</label>
-              <Input value={basicInfo.contractNo} onChange={(e) => handleBasicChange("contractNo", e.target.value)} />
+              <Input
+                value={basicInfo.contractNo}
+                onChange={(e) =>
+                  handleBasicChange("contractNo", e.target.value)
+                }
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">申请日期 *</label>
-              <Input type="date" value={basicInfo.applyDate} onChange={(e) => handleBasicChange("applyDate", e.target.value)} />
+              <Input
+                type="date"
+                value={basicInfo.applyDate}
+                onChange={(e) => handleBasicChange("applyDate", e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">申请部门</label>
-              <Input value={basicInfo.department} onChange={(e) => handleBasicChange("department", e.target.value)} />
+              <Input
+                value={basicInfo.department}
+                onChange={(e) =>
+                  handleBasicChange("department", e.target.value)
+                }
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">申请人</label>
-              <Input value={basicInfo.applicant} onChange={(e) => handleBasicChange("applicant", e.target.value)} />
+              <Input
+                value={basicInfo.applicant}
+                onChange={(e) => handleBasicChange("applicant", e.target.value)}
+              />
             </div>
           </div>
         </CardContent>
@@ -189,28 +264,56 @@ export function InvoiceForm() {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="space-y-2 md:col-span-4">
-              <label className="text-sm font-medium">客户名称（公司全称） *</label>
-              <Input value={customerInfo.customerName} onChange={(e) => handleCustomerChange("customerName", e.target.value)} />
+              <label className="text-sm font-medium">
+                客户名称（公司全称） *
+              </label>
+              <Input
+                value={customerInfo.customerName}
+                onChange={(e) =>
+                  handleCustomerChange("customerName", e.target.value)
+                }
+              />
             </div>
             <div className="space-y-2 md:col-span-4">
               <label className="text-sm font-medium">纳税人识别号 *</label>
-              <Input value={customerInfo.taxId} onChange={(e) => handleCustomerChange("taxId", e.target.value)} />
+              <Input
+                value={customerInfo.taxId}
+                onChange={(e) => handleCustomerChange("taxId", e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">开户银行</label>
-              <Input value={customerInfo.bankName} onChange={(e) => handleCustomerChange("bankName", e.target.value)} />
+              <Input
+                value={customerInfo.bankName}
+                onChange={(e) =>
+                  handleCustomerChange("bankName", e.target.value)
+                }
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">银行账号</label>
-              <Input value={customerInfo.bankAccount} onChange={(e) => handleCustomerChange("bankAccount", e.target.value)} />
+              <Input
+                value={customerInfo.bankAccount}
+                onChange={(e) =>
+                  handleCustomerChange("bankAccount", e.target.value)
+                }
+              />
             </div>
             <div className="space-y-2 md:col-span-2">
               <label className="text-sm font-medium">公司地址</label>
-              <Input value={customerInfo.address} onChange={(e) => handleCustomerChange("address", e.target.value)} />
+              <Input
+                value={customerInfo.address}
+                onChange={(e) =>
+                  handleCustomerChange("address", e.target.value)
+                }
+              />
             </div>
             <div className="space-y-2 md:col-span-2">
               <label className="text-sm font-medium">联系电话</label>
-              <Input value={customerInfo.phone} onChange={(e) => handleCustomerChange("phone", e.target.value)} />
+              <Input
+                value={customerInfo.phone}
+                onChange={(e) => handleCustomerChange("phone", e.target.value)}
+              />
             </div>
             <div className="space-y-2 md:col-span-2">
               <label className="text-sm font-medium">发票类型</label>
@@ -227,12 +330,16 @@ export function InvoiceForm() {
           <CardTitle className="flex items-center gap-3">
             开票内容
             {expectedAmount && (
-              <span className={`text-base font-mono ${amountMatch === true ? "text-green-600" : "text-red-600"}`}>
+              <span
+                className={`text-base font-mono ${amountMatch === true ? "text-green-600" : "text-red-600"}`}
+              >
                 需要开票金额：¥{expectedAmount}
               </span>
             )}
             {invoiceDate && (
-              <span className="text-sm text-muted-foreground font-normal ml-auto">发票日期: {invoiceDate}</span>
+              <span className="text-sm text-muted-foreground font-normal ml-auto">
+                发票日期: {invoiceDate}
+              </span>
             )}
           </CardTitle>
         </CardHeader>
