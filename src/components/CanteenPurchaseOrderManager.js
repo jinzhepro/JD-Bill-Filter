@@ -37,7 +37,21 @@ export function CanteenPurchaseOrderManager() {
       const data = await res.json();
 
       if (data.success) {
-        setOrders(data.data);
+        // 用静态供应商数据覆盖数据库 JOIN 结果（canteen_suppliers 表 ID 可能与静态文件不匹配）
+        const enriched = data.data.map((order) => {
+          const staticSupplier = CANTEEN_SUPPLIERS.find(
+            (s) => s.id === order.supplier_id,
+          );
+          if (staticSupplier) {
+            return {
+              ...order,
+              supplier_name: staticSupplier.name,
+              supplier_contract_no: staticSupplier.contract_no,
+            };
+          }
+          return order;
+        });
+        setOrders(enriched);
       } else {
         toast({ title: data.error, variant: "destructive" });
       }
@@ -79,7 +93,22 @@ export function CanteenPurchaseOrderManager() {
 
       const cleanNumberStr = (str) => {
         if (!str) return "0";
-        return str.replace(/[^\d.\-]/g, "") || "0";
+        // 去除所有非数字/点/负号的字符，然后只取第一个有效数值（防止合并单元格内容拼接）
+        const cleaned = str.replace(/[^\d.\-]/g, "");
+        if (!cleaned) return "0";
+        // 匹配第一个有效数字
+        const match = cleaned.match(/-?\d+(\.\d+)?/);
+        if (!match) return "0";
+        const result = match[0];
+        // 检查匹配后是否还有更多数字内容（合并单元格导致重复值，如 "94.25¥94.25" → "94.2594.25"）
+        const rest = cleaned.slice(match.index + result.length);
+        if (rest.length > 0 && /[\d.]/.test(rest)) {
+          // 有重复值，只保留最多 2 位小数
+          const dotIdx = result.indexOf(".");
+          if (dotIdx !== -1) return result.slice(0, dotIdx + 3);
+          return result;
+        }
+        return result;
       };
 
       tables.forEach((table, tableIndex) => {
@@ -108,24 +137,38 @@ export function CanteenPurchaseOrderManager() {
           const cells = row.querySelectorAll("td, th");
           const cellValues = Array.from(cells).map((c) => c.textContent.trim());
 
+          console.log(
+            `[CanteenParse] 表格${tableIndex + 1} 行${rowIndex + 1}:`,
+            cellValues,
+            `(列数: ${cellValues.length})`,
+          );
+
           if (cellValues.length === 0) {
             continue;
           }
 
           const firstCell = cellValues[0];
-          if (
-            firstCell.includes("小计") ||
-            firstCell.includes("合计") ||
-            firstCell.includes("总计")
-          ) {
-            break;
+
+          // 合计行检测：以 * 开头的行说明"合计"是合并单元格残留，清理后继续处理
+          const rowText = cellValues.join("");
+          const hasSummaryMarker =
+            rowText.includes("小计") ||
+            /合\s*计/.test(rowText) ||
+            rowText.includes("总计");
+          if (hasSummaryMarker && !firstCell.startsWith("*")) {
+            break; // 纯合计行（非 * 开头），跳过该表剩余行
           }
 
           if (!firstCell.startsWith("*")) {
             continue;
           }
 
-          const productName = firstCell;
+          // 清理因合并单元格导致的"合计"残留：项目名末尾的"合"、"合 计"；规格末尾的"计"
+          const cleanProductName = (name) =>
+            name.replace(/\s*合\s*计?\s*$/, "");
+          const cleanSpec = (s) => (s.endsWith("计") ? s.slice(0, -1) : s);
+
+          const productName = cleanProductName(firstCell);
           let spec = "";
           let unit = "";
           let quantity = 0;
@@ -135,7 +178,7 @@ export function CanteenPurchaseOrderManager() {
           let taxAmount = 0;
 
           if (hasSpecColumn && cellValues.length >= 8) {
-            spec = cellValues[1] || "";
+            spec = cleanSpec(cellValues[1] || "");
             unit = cellValues[2] || "";
             quantity = parseFloat(cleanNumberStr(cellValues[3])) || 0;
             unitPrice = parseFloat(cleanNumberStr(cellValues[4])) || 0;
@@ -190,7 +233,7 @@ export function CanteenPurchaseOrderManager() {
             .plus(taxAmount)
             .toNumber();
 
-          items.push({
+          const parsedItem = {
             product_name: productName,
             spec: spec,
             unit: unit,
@@ -202,7 +245,9 @@ export function CanteenPurchaseOrderManager() {
             amount_with_tax: amountWithTax,
             canteen_name: "",
             batch_no: batchNo,
-          });
+          };
+          console.log(`[CanteenParse] ✅ 解析成功:`, parsedItem);
+          items.push(parsedItem);
         }
       });
 
@@ -794,10 +839,11 @@ export function CanteenPurchaseOrderManager() {
             )}
 
             {previewItems.length > 0 && (
-              <div className="bg-muted rounded-lg p-4 space-y-2">
+              <div className="bg-muted rounded-lg p-4 space-y-3">
                 <p className="text-sm font-medium">解析结果</p>
                 <div className="flex gap-6 text-sm">
                   <span>共 {previewItems.length} 条</span>
+                  <span>批次号: {previewItems[0]?.batch_no}</span>
                   <span>
                     不含税金额:{" "}
                     {formatAmount(
@@ -834,6 +880,80 @@ export function CanteenPurchaseOrderManager() {
                         .toNumber(),
                     )}
                   </span>
+                </div>
+                <div className="overflow-x-auto max-h-80 overflow-y-auto border border-border rounded-md">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="bg-background sticky top-0">
+                        <th className="border border-border px-2 py-1.5 text-xs text-center w-10">
+                          #
+                        </th>
+                        <th className="border border-border px-2 py-1.5 text-xs text-left">
+                          项目名称
+                        </th>
+                        <th className="border border-border px-2 py-1.5 text-xs text-center">
+                          规格型号
+                        </th>
+                        <th className="border border-border px-2 py-1.5 text-xs text-center">
+                          单位
+                        </th>
+                        <th className="border border-border px-2 py-1.5 text-xs text-right">
+                          数量
+                        </th>
+                        <th className="border border-border px-2 py-1.5 text-xs text-right">
+                          单价
+                        </th>
+                        <th className="border border-border px-2 py-1.5 text-xs text-right">
+                          金额
+                        </th>
+                        <th className="border border-border px-2 py-1.5 text-xs text-right">
+                          税率
+                        </th>
+                        <th className="border border-border px-2 py-1.5 text-xs text-right">
+                          税额
+                        </th>
+                        <th className="border border-border px-2 py-1.5 text-xs text-right">
+                          含税金额
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {previewItems.map((item, index) => (
+                        <tr key={index} className="hover:bg-accent/50">
+                          <td className="border border-border px-2 py-1.5 text-xs text-center text-muted-foreground">
+                            {index + 1}
+                          </td>
+                          <td className="border border-border px-2 py-1.5 text-xs">
+                            {item.product_name}
+                          </td>
+                          <td className="border border-border px-2 py-1.5 text-xs text-center">
+                            {item.spec || ""}
+                          </td>
+                          <td className="border border-border px-2 py-1.5 text-xs text-center">
+                            {item.unit}
+                          </td>
+                          <td className="border border-border px-2 py-1.5 text-xs text-right">
+                            {item.quantity}
+                          </td>
+                          <td className="border border-border px-2 py-1.5 text-xs text-right">
+                            {formatAmount(item.unit_price)}
+                          </td>
+                          <td className="border border-border px-2 py-1.5 text-xs text-right">
+                            {formatAmount(item.total_amount)}
+                          </td>
+                          <td className="border border-border px-2 py-1.5 text-xs text-right">
+                            {(item.tax_rate * 100).toFixed(0)}%
+                          </td>
+                          <td className="border border-border px-2 py-1.5 text-xs text-right">
+                            {formatAmount(item.tax_amount)}
+                          </td>
+                          <td className="border border-border px-2 py-1.5 text-xs text-right">
+                            {formatAmount(item.amount_with_tax || 0)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
