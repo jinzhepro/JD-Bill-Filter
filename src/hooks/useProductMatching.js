@@ -18,7 +18,6 @@ export function useProductMatching(processedData) {
         }
       } catch (error) {
         console.error("获取商品映射失败:", error);
-        return [];
       }
     };
     fetchProducts();

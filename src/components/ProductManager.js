@@ -62,7 +62,6 @@ export function ProductManager() {
         setBrandMappings(data.data);
       }
     } catch (error) {
-      console.error("获取品牌映射失败:", error);
       setBrandMappings([]);
     }
   }, []);
@@ -80,7 +79,6 @@ export function ProductManager() {
         toast({ title: data.error, variant: "destructive" });
       }
     } catch (error) {
-      console.error("获取商品数据失败:", error);
       toast({ title: "获取数据失败", variant: "destructive" });
     }
     setLoading(false);
@@ -142,7 +140,6 @@ export function ProductManager() {
         toast({ title: data.error, variant: "destructive" });
       }
     } catch (error) {
-      console.error("删除商品失败:", error);
       toast({ title: "删除失败", variant: "destructive" });
     }
   };
@@ -200,7 +197,6 @@ export function ProductManager() {
         toast({ title: data.error, variant: "destructive" });
       }
     } catch (error) {
-      console.error("保存商品失败:", error);
       toast({ title: "操作失败", variant: "destructive" });
     }
   };
@@ -305,7 +301,6 @@ export function ProductManager() {
         toast({ title: data.error, variant: "destructive" });
       }
     } catch (error) {
-      console.error("批量导入商品失败:", error);
       toast({ title: "导入失败", variant: "destructive" });
     }
 
@@ -332,7 +327,6 @@ export function ProductManager() {
         toast({ title: data.error, variant: "destructive" });
       }
     } catch (error) {
-      console.error("更新发票名称失败:", error);
       toast({ title: "更新失败", variant: "destructive" });
     }
 

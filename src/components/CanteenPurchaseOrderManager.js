@@ -137,12 +137,6 @@ export function CanteenPurchaseOrderManager() {
           const cells = row.querySelectorAll("td, th");
           const cellValues = Array.from(cells).map((c) => c.textContent.trim());
 
-          console.log(
-            `[CanteenParse] 表格${tableIndex + 1} 行${rowIndex + 1}:`,
-            cellValues,
-            `(列数: ${cellValues.length})`,
-          );
-
           if (cellValues.length === 0) {
             continue;
           }
@@ -246,7 +240,6 @@ export function CanteenPurchaseOrderManager() {
             canteen_name: "",
             batch_no: batchNo,
           };
-          console.log(`[CanteenParse] ✅ 解析成功:`, parsedItem);
           items.push(parsedItem);
         }
       });
@@ -255,7 +248,6 @@ export function CanteenPurchaseOrderManager() {
         errors.push("未找到有效数据，请确保项目名称以「*」开头");
       }
     } catch (error) {
-      console.error("解析 Word 文件失败:", error);
       errors.push(`解析失败：${error.message}`);
     }
 
@@ -333,7 +325,6 @@ export function CanteenPurchaseOrderManager() {
         toast({ title: data.error, variant: "destructive" });
       }
     } catch (error) {
-      console.error("操作失败:", error);
       toast({ title: "导入失败", variant: "destructive" });
     }
 
@@ -357,7 +348,6 @@ export function CanteenPurchaseOrderManager() {
         toast({ title: data.error, variant: "destructive" });
       }
     } catch (error) {
-      console.error("操作失败:", error);
       toast({ title: "删除失败", variant: "destructive" });
     }
   };

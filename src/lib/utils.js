@@ -64,7 +64,7 @@ export function cleanProductCode(value) {
   }
   const strValue = String(value);
   // 处理格式：="123456" 或="数字"
-  if (strValue.startsWith('=') && strValue.includes('"')) {
+  if (strValue.startsWith("=") && strValue.includes('"')) {
     const match = strValue.match(/^="([^"]+)"$/);
     if (match) {
       return match[1];
@@ -84,9 +84,9 @@ export function cleanProductCode(value) {
  */
 export function formatAmount(value, forcePositive = false) {
   const num = parseFloat(value || 0);
-  const formatted = Math.abs(num).toLocaleString('zh-CN', {
+  const formatted = Math.abs(num).toLocaleString("zh-CN", {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2
+    maximumFractionDigits: 2,
   });
   if (forcePositive || num >= 0) {
     return `¥${formatted}`;
@@ -117,26 +117,31 @@ export function formatAmountJSX(value, forcePositive = false) {
  * @param {Array<string>} columns - 需要计算的列名数组
  * @returns {Object.<string, number>} 各列的总和
  */
-export function calculateColumnTotals(data, columns = ["应结金额", "直营服务费", "交易服务费", "数量"]) {
+export function calculateColumnTotals(
+  data,
+  columns = ["应结金额", "直营服务费", "交易服务费", "数量"],
+) {
   return columns.reduce((totals, col) => {
-    totals[col] = data.reduce((sum, row) => {
-      const value = parseFloat(String(row[col] || 0).replace(/[^\d.-]/g, ""));
-      return sum + value;
-    }, 0);
+    totals[col] = data
+      .reduce((sum, row) => {
+        const cleanStr = String(row[col] || 0).replace(/[^\d.-]/g, "");
+        return sum.plus(new Decimal(cleanStr || "0"));
+      }, new Decimal(0))
+      .toNumber();
     return totals;
   }, {});
 }
 
 export function getCurrentMonth() {
   const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
 export function formatTimestamp(timestamp) {
   const date = new Date(timestamp);
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 

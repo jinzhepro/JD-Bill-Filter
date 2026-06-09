@@ -1,7 +1,15 @@
 import ExcelJS from "exceljs";
 import Decimal from "decimal.js";
 
-export async function exportInvoice(basicInfo, customerInfo, lineItems, month, hideMonthLabel = false, invoiceType = "专票", remark = "") {
+export async function exportInvoice(
+  basicInfo,
+  customerInfo,
+  lineItems,
+  month,
+  hideMonthLabel = false,
+  invoiceType = "专票",
+  remark = "",
+) {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("发票");
 
@@ -21,7 +29,7 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month, h
   ];
 
   worksheet.pageSetup = {
-    orientation: 'portrait',
+    orientation: "portrait",
     paperSize: 9,
     fitToPage: true,
     fitToWidth: 1,
@@ -38,7 +46,18 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month, h
   worksheet.mergeCells(rowOffset, 1, rowOffset, TOTAL_COLUMNS);
 
   const basicStartRow = rowOffset + 1;
-  worksheet.addRow(["", "公司名称", basicInfo.companyName, "", "合同号", basicInfo.contractNo, "", "申请日期", basicInfo.applyDate, ""]);
+  worksheet.addRow([
+    "",
+    "公司名称",
+    basicInfo.companyName,
+    "",
+    "合同号",
+    basicInfo.contractNo,
+    "",
+    "申请日期",
+    basicInfo.applyDate,
+    "",
+  ]);
   worksheet.mergeCells(basicStartRow, 3, basicStartRow, 4);
   worksheet.mergeCells(basicStartRow, 6, basicStartRow, 7);
   worksheet.mergeCells(basicStartRow, 9, basicStartRow, 10);
@@ -47,20 +66,37 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month, h
   worksheet.getRow(basicStartRow).getCell(8).font = { bold: true };
 
   const basicRow2 = basicStartRow + 1;
-  worksheet.addRow(["", "申请部门", basicInfo.department, "", "申请人", basicInfo.applicant, "", "部门负责人", "", ""]);
+  worksheet.addRow([
+    "",
+    "申请部门",
+    basicInfo.department,
+    "",
+    "申请人",
+    basicInfo.applicant,
+    "",
+    "部门负责人",
+    "",
+    "",
+  ]);
   worksheet.mergeCells(basicRow2, 3, basicRow2, 4);
   worksheet.mergeCells(basicRow2, 6, basicRow2, 7);
   worksheet.getRow(basicRow2).getCell(2).font = { bold: true };
   worksheet.getRow(basicRow2).getCell(5).font = { bold: true };
   worksheet.mergeCells(basicRow2, 9, basicRow2, 10);
   worksheet.getRow(basicRow2).getCell(8).font = { bold: true };
-  worksheet.getRow(basicRow2).getCell(8).alignment = { horizontal: "center", vertical: "middle" };
+  worksheet.getRow(basicRow2).getCell(8).alignment = {
+    horizontal: "center",
+    vertical: "middle",
+  };
 
   const customerFields = [
     ["客户名称", customerInfo.customerName],
-    ["发票类型", invoiceType === "普票"
-      ? "增值税专用发票（    ）     增值税普通发票（ √ ）"
-      : "增值税专用发票（ √ ）     增值税普通发票（    ）"],
+    [
+      "发票类型",
+      invoiceType === "普票"
+        ? "增值税专用发票（    ）     增值税普通发票（ √ ）"
+        : "增值税专用发票（ √ ）     增值税普通发票（    ）",
+    ],
     ["公司全称", customerInfo.customerName],
     ["纳税人识别号", customerInfo.taxId],
     ["开户银行", customerInfo.bankName],
@@ -70,31 +106,57 @@ export async function exportInvoice(basicInfo, customerInfo, lineItems, month, h
   ];
 
   customerFields.forEach(([label, value]) => {
-    const row = worksheet.addRow(["", label, value, "", "", "", "", "", "", ""]);
+    const row = worksheet.addRow([
+      "",
+      label,
+      value,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+    ]);
     worksheet.mergeCells(row.number, 3, row.number, TOTAL_COLUMNS);
     row.getCell(2).font = { bold: true };
     row.getCell(2).alignment = { horizontal: "center" };
     row.getCell(3).alignment = { horizontal: "left" };
   });
 
-  const lineHeaderRow = worksheet.addRow(["序号", "开票内容", "商品名称", "规格", "单位", "数量", "单价(含税)", "税率", "税额", "合计金额"]);
+  const lineHeaderRow = worksheet.addRow([
+    "序号",
+    "开票内容",
+    "商品名称",
+    "规格",
+    "单位",
+    "数量",
+    "单价(含税)",
+    "税率",
+    "税额",
+    "合计金额",
+  ]);
   lineHeaderRow.eachCell((cell) => {
     cell.font = { bold: true };
     cell.alignment = { horizontal: "center" };
-    cell.border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
+    cell.border = {
+      top: { style: "thin" },
+      bottom: { style: "thin" },
+      left: { style: "thin" },
+      right: { style: "thin" },
+    };
   });
 
-const lineItemsData = lineItems.map((item) => {
-    const qty = parseFloat(item.quantity) || 0;
-    const rate = parseFloat(item.taxRate) || 0;
+  const lineItemsData = lineItems.map((item) => {
+    const qty = new Decimal(item.quantity || 0);
+    const rate = new Decimal(item.taxRate || 0);
 
     let totalDecimal, priceDecimal;
-    if (item.total !== undefined && qty > 0) {
+    if (item.total !== undefined && qty.gt(0)) {
       totalDecimal = new Decimal(item.total);
       priceDecimal = totalDecimal.div(qty);
     } else {
-      const prc = parseFloat(item.price) || 0;
-      priceDecimal = new Decimal(prc);
+      priceDecimal = new Decimal(item.price || 0);
       totalDecimal = priceDecimal.times(qty);
     }
 
@@ -102,7 +164,7 @@ const lineItemsData = lineItems.map((item) => {
     if (item.amount !== undefined) {
       amountDecimal = new Decimal(item.amount);
     } else {
-      amountDecimal = totalDecimal.div(new Decimal(1).plus(new Decimal(rate)));
+      amountDecimal = totalDecimal.div(new Decimal(1).plus(rate));
     }
     taxDecimal = totalDecimal.minus(amountDecimal);
 
@@ -110,19 +172,22 @@ const lineItemsData = lineItems.map((item) => {
       name: item.name || "",
       spec: item.spec || "",
       unit: item.unit || "",
-      quantity: new Decimal(qty),
+      quantity: qty,
       price: priceDecimal,
       total: totalDecimal,
       amount: amountDecimal,
       tax: taxDecimal,
-      taxRate: new Decimal(rate),
+      taxRate: rate,
     };
   });
 
   lineItemsData.forEach((item, rowIndex) => {
     const row = worksheet.addRow([
-      rowIndex + 1, "",
-      item.name, item.spec, item.unit,
+      rowIndex + 1,
+      "",
+      item.name,
+      item.spec,
+      item.unit,
       item.quantity.toNumber(),
       item.price.toNumber(),
       item.taxRate.toNumber(),
@@ -130,42 +195,75 @@ const lineItemsData = lineItems.map((item) => {
       item.total.toNumber(),
     ]);
     row.eachCell((cell, colNumber) => {
-      cell.border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
+      cell.border = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
       if (colNumber >= 6 && colNumber <= TOTAL_COLUMNS) {
         cell.alignment = { horizontal: "right" };
       }
       if (colNumber === 6 || colNumber === 9 || colNumber === 10) {
-        cell.numFmt = '0.00';
+        cell.numFmt = "0.00";
       }
       if (colNumber === 7) {
-        cell.numFmt = '0.000000';
+        cell.numFmt = "0.000000";
       }
       if (colNumber === 8) {
-        cell.numFmt = '0%';
+        cell.numFmt = "0%";
       }
     });
   });
 
-  const totalQuantity = lineItemsData.reduce((sum, item) => sum.plus(item.quantity), new Decimal(0));
-  const grandTotal = lineItemsData.reduce((sum, item) => sum.plus(item.total), new Decimal(0));
-  const totalAmount = lineItemsData.reduce((sum, item) => sum.plus(item.amount), new Decimal(0));
+  const totalQuantity = lineItemsData.reduce(
+    (sum, item) => sum.plus(item.quantity),
+    new Decimal(0),
+  );
+  const grandTotal = lineItemsData.reduce(
+    (sum, item) => sum.plus(item.total),
+    new Decimal(0),
+  );
+  const totalAmount = lineItemsData.reduce(
+    (sum, item) => sum.plus(item.amount),
+    new Decimal(0),
+  );
   const totalTax = grandTotal.minus(totalAmount);
 
-  const totalRow = worksheet.addRow(["", "", "合计", "", "", totalQuantity.toNumber(), "", "", totalTax.toNumber(), grandTotal.toNumber()]);
+  const totalRow = worksheet.addRow([
+    "",
+    "",
+    "合计",
+    "",
+    "",
+    totalQuantity.toNumber(),
+    "",
+    "",
+    totalTax.toNumber(),
+    grandTotal.toNumber(),
+  ]);
   worksheet.mergeCells(totalRow.number, 3, totalRow.number, 5);
   totalRow.eachCell((cell, colNumber) => {
     cell.font = { bold: true };
-    cell.border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
+    cell.border = {
+      top: { style: "thin" },
+      bottom: { style: "thin" },
+      left: { style: "thin" },
+      right: { style: "thin" },
+    };
     cell.alignment = { horizontal: "center" };
     if (colNumber === 6 || colNumber === 9 || colNumber === 10) {
-      cell.numFmt = '0.00';
+      cell.numFmt = "0.00";
     }
   });
 
   const mergeStart = lineHeaderRow.number;
   const mergeEnd = totalRow.number;
   worksheet.mergeCells(mergeStart, 2, mergeEnd, 2);
-  worksheet.getCell(mergeStart, 2).alignment = { horizontal: "center", vertical: "middle" };
+  worksheet.getCell(mergeStart, 2).alignment = {
+    horizontal: "center",
+    vertical: "middle",
+  };
 
   const footerFields = [
     ["审核人", ""],
@@ -174,14 +272,36 @@ const lineItemsData = lineItems.map((item) => {
   ];
 
   footerFields.forEach(([label, value]) => {
-    const row = worksheet.addRow(["", label, value, "", "", "", "", "", "", ""]);
+    const row = worksheet.addRow([
+      "",
+      label,
+      value,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+    ]);
     worksheet.mergeCells(row.number, 3, row.number, TOTAL_COLUMNS);
     row.getCell(2).font = { bold: true };
     row.getCell(2).alignment = { horizontal: "center" };
   });
 
   if (remark) {
-    const remarkRow = worksheet.addRow(["", "备注", remark, "", "", "", "", "", "", ""]);
+    const remarkRow = worksheet.addRow([
+      "",
+      "备注",
+      remark,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+    ]);
     worksheet.mergeCells(remarkRow.number, 3, remarkRow.number, TOTAL_COLUMNS);
     remarkRow.getCell(2).font = { bold: true };
     remarkRow.getCell(2).alignment = { horizontal: "center" };
@@ -189,7 +309,7 @@ const lineItemsData = lineItems.map((item) => {
 
   let monthLabel;
   let fileName;
-  
+
   if (month && /^\d{4}-\d{2}$/.test(month)) {
     monthLabel = "当月";
     fileName = `${month}_${customerInfo.customerName || "未命名"}.xlsx`;
@@ -200,13 +320,27 @@ const lineItemsData = lineItems.map((item) => {
     monthLabel = "其他月";
     fileName = `其他月_${customerInfo.customerName || "未命名"}.xlsx`;
   }
-  
+
   let lastRowNumber;
-  
+
   if (!hideMonthLabel) {
-    const monthRow = worksheet.addRow(["", "", "", "", "", "", "", "", "", monthLabel]);
+    const monthRow = worksheet.addRow([
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      monthLabel,
+    ]);
     monthRow.getCell(TOTAL_COLUMNS).font = { bold: true };
-    monthRow.getCell(TOTAL_COLUMNS).alignment = { horizontal: "right", vertical: "middle" };
+    monthRow.getCell(TOTAL_COLUMNS).alignment = {
+      horizontal: "right",
+      vertical: "middle",
+    };
     lastRowNumber = monthRow.number;
   } else {
     lastRowNumber = null;
@@ -216,7 +350,12 @@ const lineItemsData = lineItems.map((item) => {
     row.height = 25;
     row.eachCell((cell) => {
       if (!cell.border && row.number !== lastRowNumber) {
-        cell.border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
+        cell.border = {
+          top: { style: "thin" },
+          bottom: { style: "thin" },
+          left: { style: "thin" },
+          right: { style: "thin" },
+        };
       }
       if (row.number !== lastRowNumber) {
         cell.alignment = { horizontal: "center", vertical: "middle" };
@@ -225,7 +364,9 @@ const lineItemsData = lineItems.map((item) => {
   });
 
   const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
 
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");

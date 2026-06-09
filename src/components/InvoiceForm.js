@@ -38,9 +38,9 @@ export function InvoiceForm() {
   const lineItemsTotal = useMemo(() => {
     if (lineItems.length === 0) return null;
     return lineItems.reduce((sum, item) => {
-      const qty = parseFloat(item.quantity) || 0;
-      const prc = parseFloat(item.price) || 0;
-      return sum.plus(new Decimal(qty).times(new Decimal(prc)));
+      return sum.plus(
+        new Decimal(item.quantity || 0).times(new Decimal(item.price || 0)),
+      );
     }, new Decimal(0));
   }, [lineItems]);
 
