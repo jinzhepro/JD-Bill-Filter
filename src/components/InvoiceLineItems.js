@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import { useInvoice } from "@/context/InvoiceContext";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Trash2, RefreshCw } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import {
   getCurrentMonth,
   calculateRowAmount,
@@ -12,7 +13,36 @@ import {
 import Decimal from "decimal.js";
 
 export function InvoiceLineItems() {
-  const { lineItems, removeLineItem } = useInvoice();
+  const { lineItems, removeLineItem, updateLineItem } = useInvoice();
+  const { toast } = useToast();
+  const [rematchingIndex, setRematchingIndex] = useState(null);
+
+  const handleRematch = useCallback(async (index, sku) => {
+    setRematchingIndex(index);
+    try {
+      const res = await fetch("/api/products?pageSize=1000");
+      const data = await res.json();
+      if (!data.success) {
+        toast({ title: "获取商品数据失败", variant: "destructive" });
+        return;
+      }
+      const product = data.data.find((p) => p.sku === sku);
+      if (product) {
+        updateLineItem(index, {
+          name: product.invoice_name || "其他",
+          spec: product.spec || "",
+          unmatched: false,
+        });
+        toast({ title: `SKU ${sku} 匹配成功：${product.invoice_name || "其他"}` });
+      } else {
+        toast({ title: `SKU ${sku} 仍未匹配到商品`, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "重新匹配失败", variant: "destructive" });
+    } finally {
+      setRematchingIndex(null);
+    }
+  }, [updateLineItem, toast]);
 
   const groupedByMonth = useMemo(
     () => groupItemsByMonth(lineItems),
@@ -110,22 +140,44 @@ export function InvoiceLineItems() {
             <tbody>
               {items.map((item, index) => {
                 const row = calculateRowAmount(item);
+                const isUnmatched = item.unmatched;
                 return (
-                  <tr key={item.originalIndex}>
+                  <tr
+                    key={item.originalIndex}
+                    className={isUnmatched ? "bg-destructive/5" : ""}
+                  >
                     <td className="border border-border px-1 py-1 text-center">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeLineItem(item.originalIndex)}
-                      >
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
+                      <div className="flex items-center justify-center gap-1">
+                        {isUnmatched && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={rematchingIndex === item.originalIndex}
+                            onClick={() =>
+                              handleRematch(item.originalIndex, item.sku)
+                            }
+                          >
+                            <RefreshCw
+                              className={`w-4 h-4 text-destructive ${rematchingIndex === item.originalIndex ? "animate-spin" : ""}`}
+                            />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeLineItem(item.originalIndex)}
+                        >
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </div>
                     </td>
                     <td className="border border-border px-2 py-2 text-center text-muted-foreground">
                       {index + 1}
                     </td>
-                    <td className="border border-border px-2 py-2">
-                      {item.name}
+                    <td
+                      className={`border border-border px-2 py-2 ${isUnmatched ? "text-destructive font-bold" : ""}`}
+                    >
+                      {isUnmatched ? "SKU 未匹配" : item.name}
                     </td>
                     <td className="border border-border px-2 py-2">
                       {item.spec}

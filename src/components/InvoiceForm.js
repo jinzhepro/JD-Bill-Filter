@@ -76,6 +76,11 @@ export function InvoiceForm() {
       return "请添加开票内容明细";
     }
 
+    const unmatchedIndex = lineItems.findIndex((item) => item.unmatched);
+    if (unmatchedIndex !== -1) {
+      return `第 ${unmatchedIndex + 1} 行 SKU 未匹配到商品，请在商品管理中完善映射后重新导入`;
+    }
+
     const incompleteIndex = lineItems.findIndex(
       (item) =>
         !item.name ||

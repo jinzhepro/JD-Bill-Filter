@@ -83,24 +83,33 @@ export function InvoiceImportModal({
           if (sku && quantity > 0 && amount > 0) {
             const product = products.find((p) => p.sku === sku);
 
+            const price = new Decimal(amount)
+              .div(new Decimal(quantity))
+              .toFixed(2);
+            const baseItem = {
+              sku: sku,
+              orderId: order.orderId,
+              spec: product?.spec || "",
+              unit: "箱",
+              quantity,
+              price: parseFloat(price),
+              taxRate: 0.13,
+              date: finishTime
+                ? formatTimestamp(finishTime)
+                : new Date().toISOString().split("T")[0],
+            };
+
             if (product) {
-              const price = new Decimal(amount)
-                .div(new Decimal(quantity))
-                .toFixed(2);
               items.push({
-                sku: sku,
-                orderId: order.orderId,
+                ...baseItem,
                 name: product.invoice_name || "其他",
-                spec: product.spec || "",
-                unit: "箱",
-                quantity,
-                price: parseFloat(price),
-                taxRate: 0.13,
-                date: finishTime
-                  ? formatTimestamp(finishTime)
-                  : new Date().toISOString().split("T")[0],
               });
             } else {
+              items.push({
+                ...baseItem,
+                name: "",
+                unmatched: true,
+              });
               unmatchedSkus.push(sku);
             }
           }
@@ -135,21 +144,30 @@ export function InvoiceImportModal({
         if (sku && quantity > 0 && totalAmount > 0) {
           const product = products.find((p) => p.sku === sku);
 
+          const price = new Decimal(totalAmount)
+            .div(new Decimal(quantity))
+            .toFixed(2);
+          const baseItem = {
+            sku: sku,
+            spec: product?.spec || "",
+            unit: "箱",
+            quantity,
+            price: parseFloat(price),
+            taxRate: 0.13,
+            date: parseDate(date),
+          };
+
           if (product) {
-            const price = new Decimal(totalAmount)
-              .div(new Decimal(quantity))
-              .toFixed(2);
             items.push({
-              sku: sku,
+              ...baseItem,
               name: product.invoice_name || "其他",
-              spec: product.spec || "",
-              unit: "箱",
-              quantity,
-              price: parseFloat(price),
-              taxRate: 0.13,
-              date: parseDate(date),
             });
           } else {
+            items.push({
+              ...baseItem,
+              name: "",
+              unmatched: true,
+            });
             unmatchedSkus.push(sku);
           }
         }
