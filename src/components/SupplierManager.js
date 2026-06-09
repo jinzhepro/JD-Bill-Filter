@@ -1,19 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { useSupplier } from "@/context/SupplierContext";
+import { SUPPLIERS, convertTextToSuppliers } from "@/data/suppliers";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  ChevronDown, 
-  RefreshCcw, 
-  Trash2, 
-  Copy 
-} from "lucide-react";
+import { ChevronDown, RefreshCcw, Trash2, Copy } from "lucide-react";
 
 export default function SupplierManager() {
-  const { suppliers, convertTextToSuppliers } = useSupplier();
+  const suppliers = SUPPLIERS;
   const { toast } = useToast();
 
   const [inputText, setInputText] = useState("");
@@ -82,7 +77,11 @@ export default function SupplierManager() {
               供应商列表（共 {suppliers.length} 个）
             </h3>
             <p className="text-xs text-muted-foreground mt-1">
-              数据在 <code className="bg-muted px-1.5 py-0.5 rounded text-xs">src/data/suppliers.js</code> 维护
+              数据在{" "}
+              <code className="bg-muted px-1.5 py-0.5 rounded text-xs">
+                src/data/suppliers.js
+              </code>{" "}
+              维护
             </p>
           </div>
           <ChevronDown
@@ -91,7 +90,7 @@ export default function SupplierManager() {
             }`}
           />
         </button>
-        
+
         {showSuppliers && (
           <div className="px-4 pb-4 pt-0">
             <div className="max-h-64 overflow-y-auto border-t border-border pt-4">
@@ -107,7 +106,10 @@ export default function SupplierManager() {
                     <div className="text-muted-foreground">
                       <div>ID: {supplier.supplierId}</div>
                     </div>
-                    <div className="text-muted-foreground mt-1 truncate" title={supplier.matchString}>
+                    <div
+                      className="text-muted-foreground mt-1 truncate"
+                      title={supplier.matchString}
+                    >
                       匹配: {supplier.matchString}
                     </div>
                   </div>
@@ -157,7 +159,12 @@ export default function SupplierManager() {
                   <h4 className="text-xs font-medium text-foreground">
                     转换结果（{results.length} 条）
                   </h4>
-                  <Button onClick={handleCopyResults} variant="outline" size="sm" className="h-7 text-xs px-2">
+                  <Button
+                    onClick={handleCopyResults}
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs px-2"
+                  >
                     <Copy className="w-3 h-3 mr-1" />
                     复制
                   </Button>
@@ -175,9 +182,7 @@ export default function SupplierManager() {
                       </span>
                       <span
                         className={`font-medium shrink-0 ${
-                          result.matched
-                            ? "text-primary"
-                            : "text-destructive"
+                          result.matched ? "text-primary" : "text-destructive"
                         }`}
                       >
                         {result.matched

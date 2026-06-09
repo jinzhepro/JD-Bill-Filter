@@ -31,6 +31,7 @@
 **App Router vs Pages Router 的决策**：
 
 我们选择 App Router 的关键原因是：
+
 - Server Components 可以减少客户端 JS bundle 大小
 - 更符合 React 的未来发展方向
 - 虽然 API 稍有不同，但学习成本可控
@@ -41,21 +42,23 @@
 
 这是最关键的决策之一。虽然 Vercel 是 Next.js 的官方推荐平台，但我们最终选择了 Cloudflare：
 
-| 对比维度 | Cloudflare Pages | Vercel |
-|---------|-----------------|--------|
-| 数据库方案 | D1 (Edge SQLite，免费) | 需要第三方数据库服务 |
-| 成本 | 免费额度高，适合中小项目 | 免费额度有限，生产环境成本较高 |
-| Edge Runtime | 天生支持，性能优异 | 支持，但部分功能受限 |
-| 全球 CDN | Cloudflare 的核心优势 | 同样优秀 |
+| 对比维度     | Cloudflare Pages         | Vercel                         |
+| ------------ | ------------------------ | ------------------------------ |
+| 数据库方案   | D1 (Edge SQLite，免费)   | 需要第三方数据库服务           |
+| 成本         | 免费额度高，适合中小项目 | 免费额度有限，生产环境成本较高 |
+| Edge Runtime | 天生支持，性能优异       | 支持，但部分功能受限           |
+| 全球 CDN     | Cloudflare 的核心优势    | 同样优秀                       |
 
 **D1 SQLite 的限制与应对策略**：
 
 D1 是 Cloudflare 推出的 Edge SQLite 数据库，有以下限制：
+
 - 不支持部分高级 SQL 特性（如部分 JOIN 操作）
 - 数据库大小限制（目前 500MB）
 - Edge Runtime 环境限制（不能使用 Node.js API）
 
 我们的应对策略：
+
 - 简化数据模型，避免复杂查询
 - 将大部分计算逻辑放在前端（Client Side）
 - 只在数据库存储必要的映射配置和历史记录
@@ -65,16 +68,17 @@ D1 是 Cloudflare 推出的 Edge SQLite 数据库，有以下限制：
 **为什么不用 Redux/Zustand？**
 
 在这个项目中，我们选择了 React Context + useReducer，原因是：
+
 - 业务场景相对简单，主要是文件上传、数据处理、结果展示
 - Context API 已经足够应对
 - 减少第三方依赖，降低 bundle 大小
 
 **多个 Context 的职责划分**：
 
-我们设计了 4 个独立的 Context，职责清晰：
+我们设计了 3 个独立的 Context，职责清晰：
+
 - `SettlementContext`：结算单核心状态（文件上传、处理逻辑）
 - `InvoiceContext`：发票开具状态（明细管理、导出逻辑）
-- `SupplierContext`：供应商转换状态
 - `AuthContext`：认证状态管理
 
 每个 Context 都遵循 `useReducer` 模式，禁止直接修改 state，必须通过 actions：
@@ -113,7 +117,6 @@ processedData.push(newItem); // 禁止！
 │   State Management (Context)             │
 │   - SettlementContext                   │
 │   - InvoiceContext                      │
-│   - SupplierContext                     │
 │   - AuthContext                         │
 ├─────────────────────────────────────────┤
 │   Business Logic (Lib)                   │
@@ -133,6 +136,7 @@ processedData.push(newItem); // 禁止！
 **架构图说明**：
 
 这个分层架构的核心思想是：
+
 1. **UI Layer** 只负责展示和交互，不包含业务逻辑
 2. **State Management** 管理应用状态，提供统一的数据流
 3. **Business Logic** 处理核心业务算法，独立于 UI 和数据层
@@ -143,6 +147,7 @@ processedData.push(newItem); // 禁止！
 **结算单处理模块** (`settlementProcessor.js`)：
 
 这是系统的核心，负责：
+
 - 数据验证（检查必需列）
 - 数据合并算法（相同 SKU 累加）
 - 服务费计算（直营服务费、交易服务费）
@@ -151,6 +156,7 @@ processedData.push(newItem); // 禁止！
 **发票管理模块** (`InvoiceContext.js` + `invoiceExporter.js`)：
 
 负责发票开具流程：
+
 - 发票明细数据结构设计
 - 多月份分组导出（当前月单独文件，其他月合并）
 - 历史记录管理（存储到 D1）
@@ -158,6 +164,7 @@ processedData.push(newItem); // 禁止！
 **文件处理模块** (`excelHandler.js`)：
 
 处理文件导入导出：
+
 - Excel/CSV 解析（编码自动检测）
 - 导出格式化（商品编号设为文本格式）
 
@@ -177,15 +184,16 @@ Context State 的更新遵循 `Action → Reducer → New State` 的单向数据
 
 页面路由与功能模块一一对应：
 
-| 页面路由 | 功能模块 | 核心 Context |
-|---------|---------|-------------|
-| `/` | 结算单处理 | SettlementContext |
-| `/invoice` | 发票开具 | InvoiceContext |
-| `/suppliers` | 供应商转换 | SupplierContext |
-| `/products` | 商品映射管理 | 无（API 直接调用） |
-| `/brands` | 品牌映射管理 | 无 |
+| 页面路由     | 功能模块     | 核心 Context       |
+| ------------ | ------------ | ------------------ |
+| `/`          | 结算单处理   | SettlementContext  |
+| `/invoice`   | 发票开具     | InvoiceContext     |
+| `/suppliers` | 供应商转换   | 无（静态数据）     |
+| `/products`  | 商品映射管理 | 无（API 直接调用） |
+| `/brands`    | 品牌映射管理 | 无                 |
 
 API Routes 都遵循 RESTful 设计：
+
 - `GET /api/products` - 获取商品列表
 - `POST /api/products` - 新增商品
 - `PUT /api/products/:id` - 更新商品
@@ -194,7 +202,7 @@ API Routes 都遵循 RESTful 设计：
 所有 API Routes 必须添加 Edge Runtime 标记：
 
 ```javascript
-export const runtime = 'edge';  // 必须在文件第一行
+export const runtime = "edge"; // 必须在文件第一行
 
 export async function GET(request) {
   const { env } = getRequestContext();
@@ -214,6 +222,7 @@ export async function GET(request) {
 **问题分析**：
 
 Cloudflare Edge Runtime 不支持 Node.js API，这带来了几个限制：
+
 - 不能使用 `fs` 模块访问文件系统
 - 部分 npm 包依赖 Node.js API，无法直接使用
 - 执行时间有限制（不能长时间阻塞）
@@ -225,16 +234,16 @@ Cloudflare Edge Runtime 不支持 Node.js API，这带来了几个限制：
 传统 Next.js 项目可能使用 `fs` 读取上传文件，但在 Edge Runtime 中必须使用 FormData API：
 
 ```javascript
-export const runtime = 'edge';
+export const runtime = "edge";
 
 export async function POST(request) {
   const formData = await request.formData();
-  const file = formData.get('file');
-  
+  const file = formData.get("file");
+
   // 使用浏览器 API 而非 fs
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
-  
+
   // 使用 ExcelJS 解析
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer);
@@ -248,6 +257,7 @@ ExcelJS 默认依赖部分 Node.js API，我们通过配置使其兼容 Edge Run
 3. **API 设计优化**：
 
 避免单个 API 执行大量操作，改为批量接口：
+
 - 批量添加商品：一次请求添加多条，减少数据库操作次数
 - 批量更新发票明细：使用 `addLineItems(items)` 而非逐条添加
 
@@ -258,11 +268,12 @@ ExcelJS 默认依赖部分 Node.js API，我们通过配置使其兼容 Edge Run
 JavaScript 的浮点数精度问题是经典陷阱：
 
 ```javascript
-0.1 + 0.2  // 0.30000000000000004
-1.005.toFixed(2)  // "1.00" 而非 "1.01"
+0.1 + 0.2; // 0.30000000000000004
+(1.005).toFixed(2); // "1.00" 而非 "1.01"
 ```
 
 在财务系统中，这种误差是不可接受的，尤其是：
+
 - 多次累加后的误差放大
 - 分摊计算涉及除法，精度问题更严重
 - 用户对账时会发现金额不一致
@@ -283,7 +294,7 @@ const total = amounts.reduce((sum, val) => sum + parseFloat(val), 0);
 // 正确做法：使用 Decimal.js
 const total = amounts.reduce(
   (sum, val) => sum.plus(new Decimal(cleanAmountString(val))),
-  new Decimal(0)
+  new Decimal(0),
 );
 ```
 
@@ -299,12 +310,13 @@ export function cleanAmountString(value) {
 }
 
 // 使用示例
-new Decimal(cleanAmountString("¥1,234.56"))  // 精确保留 1234.56
+new Decimal(cleanAmountString("¥1,234.56")); // 精确保留 1234.56
 ```
 
 2. **所有金额计算都使用 Decimal**：
 
 在项目中，我们严格规定：
+
 - 任何金额累加、相减、相乘、相除都必须使用 Decimal
 - 禁止直接使用 `parseFloat` 或 `Number` 进行金额计算
 - 最终展示时转换为字符串 `toString()`
@@ -316,6 +328,7 @@ new Decimal(cleanAmountString("¥1,234.56"))  // 精确保留 1234.56
 **问题分析**：
 
 文件处理涉及三个难点：
+
 - 大文件上传（系统限制 50MB）
 - CSV 编码自动检测（可能是 UTF-8 或 GBK）
 - Excel 公式前缀处理（Excel 自动添加 `="..."`）
@@ -325,6 +338,7 @@ new Decimal(cleanAmountString("¥1,234.56"))  // 精确保留 1234.56
 1. **分块读取文件**：
 
 虽然目前系统支持的最大文件是 50MB，但我们采用了流式处理思路：
+
 - 使用 ArrayBuffer 一次性读取，但避免多次解析
 - 处理逻辑尽量高效，避免内存泄漏
 
@@ -340,7 +354,7 @@ let data = parseCSV(text);
 // 如果解析失败（出现乱码），尝试 GBK
 if (hasInvalidChars(data)) {
   const buffer = await file.arrayBuffer();
-  const decoder = new TextDecoder('gbk');
+  const decoder = new TextDecoder("gbk");
   text = decoder.decode(buffer);
   data = parseCSV(text);
 }
@@ -356,9 +370,9 @@ export function cleanProductCode(value) {
     return "";
   }
   const strValue = String(value);
-  
+
   // 处理格式：="123456" 或="数字"
-  if (strValue.startsWith('=') && strValue.includes('"')) {
+  if (strValue.startsWith("=") && strValue.includes('"')) {
     const match = strValue.match(/^="([^"]+)"$/);
     if (match) {
       return match[1];
@@ -368,15 +382,15 @@ export function cleanProductCode(value) {
 }
 
 // 使用示例
-cleanProductCode('="123456"')  // "123456"
-cleanProductCode(789012)       // "789012"
+cleanProductCode('="123456"'); // "123456"
+cleanProductCode(789012); // "789012"
 ```
 
 同时，导出 Excel 时将商品编号列设置为文本格式，避免再次被 Excel 自动转换：
 
 ```javascript
-worksheet.getColumn('商品编号').eachCell(cell => {
-  cell.numFmt = '@';  // 文本格式
+worksheet.getColumn("商品编号").eachCell((cell) => {
+  cell.numFmt = "@"; // 文本格式
 });
 ```
 
@@ -385,6 +399,7 @@ worksheet.getColumn('商品编号').eachCell(cell => {
 **问题分析**：
 
 结算单处理的核心业务逻辑非常复杂：
+
 - 相同 SKU 的货款需要合并累加（金额 + 数量）
 - 售后赔付费需要按货款比例分摊到每个 SKU
 - 多种服务费类型（直营服务费、交易服务费）需要单独统计
@@ -426,42 +441,47 @@ worksheet.getColumn('商品编号').eachCell(cell => {
 
 ```javascript
 // 步骤1：过滤出货款记录
-const paymentRecords = data.filter(row => row["费用名称"] === "货款");
+const paymentRecords = data.filter((row) => row["费用名称"] === "货款");
 
 // 步骤2：按 SKU 分组合并
 const groupedBySku = {};
-paymentRecords.forEach(row => {
+paymentRecords.forEach((row) => {
   const sku = cleanProductCode(row["商品编号"]);
   if (!groupedBySku[sku]) {
     groupedBySku[sku] = { amount: new Decimal(0), quantity: 0 };
   }
-  groupedBySku[sku].amount = groupedBySku[sku].amount
-    .plus(new Decimal(cleanAmountString(row["应结金额"])));
+  groupedBySku[sku].amount = groupedBySku[sku].amount.plus(
+    new Decimal(cleanAmountString(row["应结金额"])),
+  );
   groupedBySku[sku].quantity += parseInt(row["数量"] || 0);
 });
 
 // 步骤3：计算赔付费总额
-const compensationRecords = data.filter(row => 
-  row["费用名称"].includes("售后卖家赔付费")
+const compensationRecords = data.filter((row) =>
+  row["费用名称"].includes("售后卖家赔付费"),
 );
 const totalCompensation = compensationRecords.reduce(
   (sum, row) => sum.plus(new Decimal(cleanAmountString(row["应结金额"]))),
-  new Decimal(0)
+  new Decimal(0),
 );
 
 // 步骤4：按比例分摊
-const totalPayment = Object.values(groupedBySku)
-  .reduce((sum, item) => sum.plus(item.amount), new Decimal(0));
+const totalPayment = Object.values(groupedBySku).reduce(
+  (sum, item) => sum.plus(item.amount),
+  new Decimal(0),
+);
 
-Object.keys(groupedBySku).forEach(sku => {
+Object.keys(groupedBySku).forEach((sku) => {
   const ratio = groupedBySku[sku].amount.dividedBy(totalPayment);
   const allocatedCompensation = totalCompensation.times(ratio);
-  groupedBySku[sku].finalAmount = groupedBySku[sku].amount
-    .minus(allocatedCompensation);
+  groupedBySku[sku].finalAmount = groupedBySku[sku].amount.minus(
+    allocatedCompensation,
+  );
 });
 ```
 
 这种分步骤的设计优势：
+
 - 每个步骤职责清晰，易于理解和维护
 - 可以单独测试每个步骤
 - 新增服务费类型时只需在相应步骤添加逻辑
@@ -493,6 +513,7 @@ npx wrangler d1 migrations apply jd --remote
 3. **环境变量配置**：
 
 在 Cloudflare Pages 设置中配置：
+
 - `AUTH_PASSWORD`：认证密码
 
 4. **自动部署**：
@@ -502,16 +523,19 @@ npx wrangler d1 migrations apply jd --remote
 ### 5.2 性能优化策略
 
 **前端优化**：
+
 - React 19 自动优化并发渲染
 - shadcn/ui 组件体积小，性能好
 - 大数据量表格考虑虚拟滚动（未来优化方向）
 
 **后端优化**：
+
 - Edge Runtime 的冷启动极快（几十毫秒）
 - API 批量操作减少请求次数
 - D1 数据库查询简单高效
 
 **文件处理优化**：
+
 - 流式读取避免内存占用过大
 - 一次解析，避免重复处理
 
@@ -547,6 +571,7 @@ toast({
 ### 6.1 项目成果
 
 通过这个项目，我们实现了：
+
 - **效率提升**：从手工处理数小时缩短到几分钟
 - **准确性保障**：高精度计算彻底消除金额误差
 - **可维护性**：清晰的架构设计，易于扩展和维护
@@ -554,6 +579,7 @@ toast({
 ### 6.2 技术收获
 
 在技术层面，我们获得了宝贵的实践经验：
+
 - **Next.js 15 App Router**：理解了 Server Components 和 Client Components 的边界
 - **Edge Runtime 开发**：掌握了 Edge Runtime 的限制和应对策略
 - **架构设计**：学会了如何设计可维护的业务系统架构
@@ -562,6 +588,7 @@ toast({
 ### 6.3 未来优化方向
 
 项目仍有改进空间：
+
 - **引入测试框架**：目前只有手动测试，需要自动化测试保障质量
 - **性能监控**：添加性能指标监控，及时发现瓶颈
 - **移动端适配**：目前主要面向桌面端，未来可考虑移动端

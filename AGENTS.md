@@ -66,9 +66,9 @@
 | `src/lib/constants.js`             | 常量（文件大小限制、列名映射、默认公司信息等）                                           |
 | `src/lib/utils.js`                 | `cn()`、`cleanAmountString()`/`cleanAmount()`、`cleanProductCode()`、`formatAmount()` 等 |
 
-## Context（共 4 个）
+## Context（共 3 个）
 
-`AuthContext`（登录认证）、`SettlementContext`（结算单处理）、`InvoiceContext`（发票信息）、`SupplierContext`（供应商列表与查找）。均通过 `useReducer` + `useMemo(actions)` 管理，暴露 `useXxx()` hook（含存在性检查）。不可直接修改 state。
+`AuthContext`（登录认证）、`SettlementContext`（结算单处理）、`InvoiceContext`（发票信息）。均通过 `useReducer` + `useMemo(actions)` 管理，暴露 `useXxx()` hook（含存在性检查）。不可直接修改 state。
 
 ### Context 模式（所有 4 个统一范式）
 

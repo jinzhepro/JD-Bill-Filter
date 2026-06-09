@@ -386,7 +386,7 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
       const res = await fetch(`/api/canteen-purchase-orders?${params}`);
       const data = await res.json();
       setSearchResults(data.success ? data.data : []);
-    } catch (error) {
+    } catch {
       setSearchResults([]);
     }
     setSearching(false);
@@ -400,7 +400,7 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
       const res = await fetch(`/api/canteen-purchase-orders?${params}`);
       const data = await res.json();
       setSearchResults(data.success ? data.data : []);
-    } catch (error) {
+    } catch {
       setSearchResults([]);
     }
     setSearching(false);

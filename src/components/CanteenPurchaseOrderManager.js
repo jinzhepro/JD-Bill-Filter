@@ -324,7 +324,7 @@ export function CanteenPurchaseOrderManager() {
       } else {
         toast({ title: data.error, variant: "destructive" });
       }
-    } catch (error) {
+    } catch {
       toast({ title: "导入失败", variant: "destructive" });
     }
 
@@ -347,7 +347,7 @@ export function CanteenPurchaseOrderManager() {
       } else {
         toast({ title: data.error, variant: "destructive" });
       }
-    } catch (error) {
+    } catch {
       toast({ title: "删除失败", variant: "destructive" });
     }
   };
