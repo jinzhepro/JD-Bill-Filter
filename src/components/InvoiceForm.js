@@ -30,6 +30,8 @@ export function InvoiceForm() {
     clearLineItems,
     addLineItems,
     setInvoiceDate,
+    setInvoiceType,
+    setExpectedAmount,
   } = useInvoice();
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
@@ -174,7 +176,7 @@ export function InvoiceForm() {
         );
       }
 
-      // 导出成功后清空客户信息和开票内容
+      // 导出成功后清空客户信息、开票内容、发票日期等
       setCustomerInfo({
         customerName: "",
         taxId: "",
@@ -184,6 +186,9 @@ export function InvoiceForm() {
         phone: "",
       });
       clearLineItems();
+      setInvoiceDate("");
+      setInvoiceType("专票");
+      setExpectedAmount("");
 
       toast({
         title:

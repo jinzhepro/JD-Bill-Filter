@@ -8,6 +8,5 @@ export default function SuppliersPage() {
     <SimpleLayout>
       <SupplierManager />
     </SimpleLayout>
-    </SupplierProvider>
   );
 }
