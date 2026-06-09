@@ -2,18 +2,29 @@
 
 import React, { useState, useEffect } from "react";
 import Decimal from "decimal.js";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { formatTimestamp } from "@/lib/utils";
 
-export function InvoiceImportModal({ open, onOpenChange, onImport, onSetInvoiceDate }) {
+export function InvoiceImportModal({
+  open,
+  onOpenChange,
+  onImport,
+  onSetInvoiceDate,
+}) {
   const [pasteText, setPasteText] = useState("");
   const [products, setProducts] = useState([]);
   const { toast } = useToast();
 
-useEffect(() => {
+  useEffect(() => {
     const fetchProducts = async () => {
       try {
         const res = await fetch("/api/products?pageSize=1000");
@@ -32,8 +43,8 @@ useEffect(() => {
     const parts = dateStr.split(/[\/\-]/);
     if (parts.length === 3) {
       const year = parts[0];
-      const month = parts[1].padStart(2, '0');
-      const day = parts[2].padStart(2, '0');
+      const month = parts[1].padStart(2, "0");
+      const day = parts[2].padStart(2, "0");
       return `${year}-${month}-${day}`;
     }
     return dateStr;
@@ -55,23 +66,27 @@ useEffect(() => {
           continue;
         }
 
-        const paymentRecords = order.billDetailDoList.filter(detail => detail.feeCode === 30);
-        
+        const paymentRecords = order.billDetailDoList.filter(
+          (detail) => detail.feeCode === 30,
+        );
+
         for (const paymentRecord of paymentRecords) {
           const sku = paymentRecord.skuId;
           const quantity = paymentRecord.num || 1;
           const amount = paymentRecord.bal || paymentRecord.settleBal || 0;
           const finishTime = paymentRecord.finishTime;
-          
+
           if (!firstDate && finishTime) {
             firstDate = formatTimestamp(finishTime);
           }
 
           if (sku && quantity > 0 && amount > 0) {
-            const product = products.find(p => p.sku === sku);
-            
+            const product = products.find((p) => p.sku === sku);
+
             if (product) {
-              const price = new Decimal(amount).div(new Decimal(quantity)).toFixed(2);
+              const price = new Decimal(amount)
+                .div(new Decimal(quantity))
+                .toFixed(2);
               items.push({
                 sku: sku,
                 orderId: order.orderId,
@@ -81,7 +96,9 @@ useEffect(() => {
                 quantity,
                 price: parseFloat(price),
                 taxRate: 0.13,
-                date: finishTime ? formatTimestamp(finishTime) : new Date().toISOString().split("T")[0],
+                date: finishTime
+                  ? formatTimestamp(finishTime)
+                  : new Date().toISOString().split("T")[0],
               });
             } else {
               unmatchedSkus.push(sku);
@@ -110,16 +127,18 @@ useEffect(() => {
         const rawQuantity = parts[2].trim().replace(/^~/, "");
         const quantity = parseFloat(rawQuantity) || 0;
         const totalAmount = parseFloat(parts[3]) || 0;
-        
+
         if (!firstDate && date) {
           firstDate = parseDate(date);
         }
-        
+
         if (sku && quantity > 0 && totalAmount > 0) {
-          const product = products.find(p => p.sku === sku);
-          
+          const product = products.find((p) => p.sku === sku);
+
           if (product) {
-            const price = new Decimal(totalAmount).div(new Decimal(quantity)).toFixed(2);
+            const price = new Decimal(totalAmount)
+              .div(new Decimal(quantity))
+              .toFixed(2);
             items.push({
               sku: sku,
               name: product.invoice_name || "其他",
@@ -152,7 +171,7 @@ useEffect(() => {
     }
 
     let result = parseJsonData(pasteText);
-    
+
     if (!result) {
       result = parseTabData(pasteText);
     }
@@ -162,20 +181,22 @@ useEffect(() => {
       return;
     }
 
-    if (result.unmatchedSkus.length > 0) {
-      toast({ 
-        title: `以下 SKU 未找到商品：${result.unmatchedSkus.join(", ")}`, 
-        variant: "destructive" 
-      });
-      return;
-    }
-
     if (result.firstDate && onSetInvoiceDate) {
       onSetInvoiceDate(result.firstDate);
     }
 
     onImport(result.items);
-    toast({ title: `成功导入 ${result.items.length} 条数据` });
+
+    let toastMessage = `成功导入 ${result.items.length} 条数据`;
+    if (result.unmatchedSkus.length > 0) {
+      const skuList =
+        result.unmatchedSkus.length > 3
+          ? result.unmatchedSkus.slice(0, 3).join(", ") +
+            ` 等 ${result.unmatchedSkus.length} 个`
+          : result.unmatchedSkus.join(", ");
+      toastMessage += `，${result.unmatchedSkus.length} 个 SKU 未匹配（${skuList}）`;
+    }
+    toast({ title: toastMessage });
     setPasteText("");
     onOpenChange(false);
   };
