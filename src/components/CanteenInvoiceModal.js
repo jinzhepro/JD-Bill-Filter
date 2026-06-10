@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Search, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { exportInvoice } from "@/lib/invoiceExporter";
+import { CANTEEN_COMPANY_INFO } from "@/lib/constants";
 import { cleanAmountString } from "@/lib/utils";
 import {
   Select,
@@ -286,11 +287,9 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
     const applyDate = now.toISOString().split("T")[0];
 
     const basicInfo = {
-      companyName: "青岛青云通公共服务有限公司",
+      ...CANTEEN_COMPANY_INFO,
       contractNo: `JK-GQ-250041-${contractNo || "32"}`,
       applyDate,
-      department: "青云通",
-      applicant: "刘雅超",
     };
 
     const monthNum = parseInt(selectedMonth.split("-")[1]);

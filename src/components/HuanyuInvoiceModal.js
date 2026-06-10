@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Search, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { exportInvoice } from "@/lib/invoiceExporter";
+import { HUANYU_COMPANY_INFO, CANTEEN_COMPANY_INFO } from "@/lib/constants";
 import Decimal from "decimal.js";
 import { cleanAmountString } from "@/lib/utils";
 
@@ -591,12 +592,11 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
         if (adjustedItems.length === 0) continue;
 
         const basicInfo = {
-          companyName: "青岛青云通公共服务有限公司",
+          ...HUANYU_COMPANY_INFO,
           contractNo:
-            CUSTOMER_INFO_MAP[customerName]?.contractNo || "JK-GQ-250041-32",
+            CUSTOMER_INFO_MAP[customerName]?.contractNo ||
+            CANTEEN_COMPANY_INFO.contractNo,
           applyDate,
-          department: "青云通",
-          applicant: "刘雅超",
         };
 
         const totalAmountD = adjustedItems.reduce(

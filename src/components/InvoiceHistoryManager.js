@@ -18,6 +18,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { DEFAULT_COMPANY_INFO } from "@/lib/constants";
 import {
   Eye,
   FileDown,
@@ -101,11 +102,8 @@ export function InvoiceHistoryManager() {
     setExporting(true);
     try {
       const basicInfo = {
-        companyName: "青岛青云通公共服务有限公司",
-        contractNo: "JK-GQ-250117",
+        ...DEFAULT_COMPANY_INFO,
         applyDate: history.export_date,
-        department: "青云通",
-        applicant: "付冰清",
       };
 
       const customerInfo = {

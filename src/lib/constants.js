@@ -45,7 +45,13 @@ export const SETTLEMENT_TRANSACTION_FEE = "交易服务费";
 /**
  * 数值列名称（用于 Excel 导出时的格式化）
  */
-export const NUMERIC_COLUMNS = ["商品数量", "单价", "总价", "直营服务费", "交易服务费"];
+export const NUMERIC_COLUMNS = [
+  "商品数量",
+  "单价",
+  "总价",
+  "直营服务费",
+  "交易服务费",
+];
 
 /**
  * 商品编码/编号列名称
@@ -63,11 +69,33 @@ export const EXPORT_NUMERIC_FORMAT = "0.00";
 export const PRODUCT_CODE_FORMAT = "@";
 
 /**
- * 发票默认公司信息
+ * 京东万商发票默认公司信息
+ * applicant: 付冰清 | contractNo: JK-GQ-250117
  */
 export const DEFAULT_COMPANY_INFO = {
   companyName: "青岛青云通公共服务有限公司",
   contractNo: "JK-GQ-250117",
   department: "青云通",
   applicant: "付冰清",
+};
+
+/**
+ * 食堂发票默认公司信息
+ * applicant: 刘雅超 | contractNo: JK-GQ-250041-32
+ */
+export const CANTEEN_COMPANY_INFO = {
+  companyName: "青岛青云通公共服务有限公司",
+  contractNo: "JK-GQ-250041-32",
+  department: "青云通",
+  applicant: "刘雅超",
+};
+
+/**
+ * 寰宇发票默认公司信息
+ * applicant: 刘雅超 | 合同号按客户在 CUSTOMER_INFO_MAP 中配置
+ */
+export const HUANYU_COMPANY_INFO = {
+  companyName: "青岛青云通公共服务有限公司",
+  department: "青云通",
+  applicant: "刘雅超",
 };
