@@ -61,7 +61,7 @@ export function ProductManager() {
       if (data.success) {
         setBrandMappings(data.data);
       }
-    } catch (error) {
+    } catch {
       setBrandMappings([]);
     }
   }, []);
@@ -78,7 +78,7 @@ export function ProductManager() {
       } else {
         toast({ title: data.error, variant: "destructive" });
       }
-    } catch (error) {
+    } catch {
       toast({ title: "获取数据失败", variant: "destructive" });
     }
     setLoading(false);
@@ -139,7 +139,7 @@ export function ProductManager() {
       } else {
         toast({ title: data.error, variant: "destructive" });
       }
-    } catch (error) {
+    } catch {
       toast({ title: "删除失败", variant: "destructive" });
     }
   };
@@ -196,7 +196,7 @@ export function ProductManager() {
       } else {
         toast({ title: data.error, variant: "destructive" });
       }
-    } catch (error) {
+    } catch {
       toast({ title: "操作失败", variant: "destructive" });
     }
   };
@@ -300,7 +300,7 @@ export function ProductManager() {
       } else {
         toast({ title: data.error, variant: "destructive" });
       }
-    } catch (error) {
+    } catch {
       toast({ title: "导入失败", variant: "destructive" });
     }
 
@@ -326,7 +326,7 @@ export function ProductManager() {
       } else {
         toast({ title: data.error, variant: "destructive" });
       }
-    } catch (error) {
+    } catch {
       toast({ title: "更新失败", variant: "destructive" });
     }
 

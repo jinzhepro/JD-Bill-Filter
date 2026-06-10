@@ -1,11 +1,17 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Decimal from "decimal.js";
 import Modal from "./ui/modal";
 import { Textarea } from "./ui/textarea";
 import { Button } from "./ui/button";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import { useSettlement } from "@/context/SettlementContext";
 import { useToast } from "@/hooks/use-toast";
 import { Check, Calendar } from "lucide-react";
@@ -25,7 +31,15 @@ import { cleanAmountString, getCurrentMonth } from "@/lib/utils";
  * @param {Function} props.onClose - 关闭Modal的回调
  */
 export default function SettlementProcessModal({ isOpen, onClose }) {
-  const { processedData, setProcessedData, addProcessingHistory, addDataChange, pasteHistory, setPasteHistory, saveBeforeProcessing } = useSettlement();
+  const {
+    processedData,
+    setProcessedData,
+    addProcessingHistory,
+    addDataChange,
+    pasteHistory,
+    setPasteHistory,
+    saveBeforeProcessing,
+  } = useSettlement();
   const { toast } = useToast();
 
   const [pasteContent, setPasteContent] = useState("");
@@ -45,7 +59,7 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
   }
   monthOptions.reverse();
 
-  const fetchCurrentMonthHistory = async () => {
+  const fetchCurrentMonthHistory = useCallback(async () => {
     setLoadingHistory(true);
     try {
       const res = await fetch(`/api/invoice-history?month=${selectedMonth}`);
@@ -53,18 +67,17 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
       if (data.success) {
         setCurrentMonthHistory(data.data || []);
       }
-    } catch (error) {
-      console.error('操作失败:', error);
+    } catch {
       toast({ title: "获取发票历史失败", variant: "destructive" });
     }
     setLoadingHistory(false);
-  };
+  }, [selectedMonth, toast]);
 
   useEffect(() => {
     if (isOpen) {
       fetchCurrentMonthHistory();
     }
-  }, [isOpen, selectedMonth]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen, fetchCurrentMonthHistory]);
 
   const handlePasteContentChange = (e) => {
     setPasteContent(e.target.value);
@@ -76,7 +89,7 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
 
   const handleLoadFromHistory = (historyItem) => {
     setPasteContent(historyItem.content);
-    
+
     toast({
       title: "已加载历史记录",
       description: `已将 ${historyItem.rowCount} 行数据填充到输入框`,
@@ -89,14 +102,16 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
       return;
     }
 
-    const allItems = currentMonthHistory.flatMap(history => history.items || []);
-    
+    const allItems = currentMonthHistory.flatMap(
+      (history) => history.items || [],
+    );
+
     if (allItems.length === 0) {
       toast({ title: "当前月份发票历史无明细数据", variant: "destructive" });
       return;
     }
 
-    const lines = allItems.map(item => {
+    const lines = allItems.map((item) => {
       const sku = item.sku || "";
       const quantity = item.quantity || 0;
       const price = item.price || 0;
@@ -115,7 +130,7 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
     if (!processedData || processedData.length === 0) return -1;
     return processedData.findIndex(
       (row) =>
-        String(row["商品编号"] || row["SKU"] || "").trim() === sku.trim()
+        String(row["商品编号"] || row["SKU"] || "").trim() === sku.trim(),
     );
   };
 
@@ -193,7 +208,9 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
     const currentData = {
       数量: toNumber(newQuantity),
       应结金额: toNumber(cleanDecimalValue(updatedData[skuIndex]["应结金额"])),
-      直营服务费: toNumber(cleanDecimalValue(updatedData[skuIndex]["直营服务费"])),
+      直营服务费: toNumber(
+        cleanDecimalValue(updatedData[skuIndex]["直营服务费"]),
+      ),
     };
 
     const changes = {
@@ -236,7 +253,7 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
 
     // 保存到历史记录
     const existingIndex = pasteHistory.findIndex(
-      item => item.content === pasteContent
+      (item) => item.content === pasteContent,
     );
 
     let newHistory = [...pasteHistory];
@@ -249,7 +266,11 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
       timestamp: new Date().toISOString(),
       content: pasteContent,
       rowCount: parsedRows.length,
-      preview: parsedRows.slice(0, 3).map(r => r.sku).join(", ") + (parsedRows.length > 3 ? "..." : ""),
+      preview:
+        parsedRows
+          .slice(0, 3)
+          .map((r) => r.sku)
+          .join(", ") + (parsedRows.length > 3 ? "..." : ""),
     };
 
     newHistory.push(historyItem);
@@ -304,11 +325,15 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
       const skuIndex = findSkuIndex(row.sku);
       if (skuIndex !== -1) {
         const targetRow = processedData[skuIndex];
-        const currentQuantity = new Decimal(cleanAmountString(targetRow["数量"]));
+        const currentQuantity = new Decimal(
+          cleanAmountString(targetRow["数量"]),
+        );
         const deductQuantity = cleanDecimalValue(row.quantity);
 
         if (currentQuantity.lt(deductQuantity)) {
-          insufficientSKUs.push(`${row.sku} (当前：${currentQuantity.toNumber()}, 需要：${deductQuantity.toNumber()})`);
+          insufficientSKUs.push(
+            `${row.sku} (当前：${currentQuantity.toNumber()}, 需要：${deductQuantity.toNumber()})`,
+          );
         }
       }
     }
@@ -325,7 +350,7 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
     // 所有验证通过，开始处理
     // 先保存当前数据状态，用于撤回
     saveBeforeProcessing();
-    
+
     setIsProcessing(true);
 
     let updatedData = [...processedData];
@@ -374,12 +399,7 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={handleClose}
-      title="开票处理"
-      size="lg"
-    >
+    <Modal isOpen={isOpen} onClose={handleClose} title="开票处理" size="lg">
       <div className="space-y-4">
         {/* 粘贴输入区域 */}
         <div>
@@ -413,26 +433,44 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
               <div className="flex flex-wrap gap-4 text-sm">
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground">行数:</span>
-                  <span className="font-semibold">{pasteContent.trim().split('\n').filter(l => l.trim()).length}</span>
+                  <span className="font-semibold">
+                    {
+                      pasteContent
+                        .trim()
+                        .split("\n")
+                        .filter((l) => l.trim()).length
+                    }
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground">货款合计:</span>
                   <span className="font-semibold text-green-600">
-                    ¥{pasteContent.trim().split('\n').filter(l => l.trim()).reduce((sum, line) => {
-                      const parts = line.split(/[\s\t,|]+/);
-                      const amount = parseFloat(parts[2]) || 0;
-                      return sum + amount;
-                    }, 0).toFixed(2)}
+                    ¥
+                    {pasteContent
+                      .trim()
+                      .split("\n")
+                      .filter((l) => l.trim())
+                      .reduce((sum, line) => {
+                        const parts = line.split(/[\s\t,|]+/);
+                        const amount = parseFloat(parts[2]) || 0;
+                        return sum + amount;
+                      }, 0)
+                      .toFixed(2)}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground">数量合计:</span>
                   <span className="font-semibold">
-                    {pasteContent.trim().split('\n').filter(l => l.trim()).reduce((sum, line) => {
-                      const parts = line.split(/[\s\t,|]+/);
-                      const qty = parseFloat(parts[1]) || 0;
-                      return sum + qty;
-                    }, 0).toFixed(0)}
+                    {pasteContent
+                      .trim()
+                      .split("\n")
+                      .filter((l) => l.trim())
+                      .reduce((sum, line) => {
+                        const parts = line.split(/[\s\t,|]+/);
+                        const qty = parseFloat(parts[1]) || 0;
+                        return sum + qty;
+                      }, 0)
+                      .toFixed(0)}
                   </span>
                 </div>
               </div>
@@ -457,7 +495,8 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
                   ))}
                 </SelectContent>
               </Select>
-              {currentMonthHistory.length > 0 && `- ${currentMonthHistory.length} 条记录`}
+              {currentMonthHistory.length > 0 &&
+                `- ${currentMonthHistory.length} 条记录`}
             </h3>
           </div>
           {loadingHistory ? (
@@ -468,7 +507,12 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
             <div className="bg-muted/30 rounded-lg border border-border p-3">
               <div className="flex justify-between items-center">
                 <div className="text-xs text-muted-foreground">
-                  共 {currentMonthHistory.reduce((sum, h) => sum + (h.items_count || 0), 0)} 项明细
+                  共{" "}
+                  {currentMonthHistory.reduce(
+                    (sum, h) => sum + (h.items_count || 0),
+                    0,
+                  )}{" "}
+                  项明细
                 </div>
                 <Button
                   size="sm"
@@ -498,27 +542,30 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
           </div>
           {pasteHistory.length > 0 ? (
             <div className="bg-muted/30 rounded-lg border border-border">
-              {pasteHistory.slice().reverse().map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between p-2 border-b border-border last:border-b-0 hover:bg-muted/50 transition-colors cursor-pointer"
-                  onClick={() => handleLoadFromHistory(item)}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-foreground">
-                        {item.rowCount} 行
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(item.timestamp).toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="text-xs text-muted-foreground truncate">
-                      {item.preview}
+              {pasteHistory
+                .slice()
+                .reverse()
+                .map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between p-2 border-b border-border last:border-b-0 hover:bg-muted/50 transition-colors cursor-pointer"
+                    onClick={() => handleLoadFromHistory(item)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-foreground">
+                          {item.rowCount} 行
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(item.timestamp).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {item.preview}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
           ) : (
             <div className="bg-muted/30 rounded-lg border border-border p-4 text-center text-xs text-muted-foreground">

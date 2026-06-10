@@ -39,12 +39,17 @@ export function PurchaseOrderManager() {
       const data = await res.json();
       if (data.success) {
         setProducts(data.data);
+      } else {
+        toast({
+          title: data.error || "获取商品映射失败",
+          variant: "destructive",
+        });
       }
-    } catch (error) {
-      console.error("获取商品映射失败:", error);
+    } catch {
+      toast({ title: "获取商品映射失败", variant: "destructive" });
       setProducts([]);
     }
-  }, []);
+  }, [toast]);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
