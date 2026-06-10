@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Search, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { exportInvoice } from "@/lib/invoiceExporter";
+import { cleanAmountString } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -104,13 +105,13 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
 
       const name = parts[0]?.trim();
       const unit = parts[1]?.trim();
-      const quantity = parseFloat(parts[2]?.replace(/[^\d.]/g, "")) || 0;
-      const amount = parseFloat(parts[4]?.replace(/[^\d.]/g, "")) || 0;
+      const quantity = parseFloat(cleanAmountString(parts[2])) || 0;
+      const amount = parseFloat(cleanAmountString(parts[4])) || 0;
       // 严格按照粘贴的金额 ÷ 数量计算单价，忽略粘贴的单价列
       const unitPrice =
         amount > 0 && quantity > 0
           ? amount / quantity
-          : parseFloat(parts[3]?.replace(/[^\d.]/g, "")) || 0;
+          : parseFloat(cleanAmountString(parts[3])) || 0;
 
       if (!name || quantity <= 0) continue;
 

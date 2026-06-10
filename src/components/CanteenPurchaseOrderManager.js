@@ -16,6 +16,7 @@ import { Trash2, Search, Copy, Download, FileText } from "lucide-react";
 import Decimal from "decimal.js";
 import mammoth from "mammoth";
 import { CANTEEN_SUPPLIERS } from "@/data/canteenSuppliers";
+import { cleanAmountString } from "@/lib/utils";
 
 export function CanteenPurchaseOrderManager() {
   const [orders, setOrders] = useState([]);
@@ -175,34 +176,34 @@ export function CanteenPurchaseOrderManager() {
             spec = cleanSpec(cellValues[1] || "");
             unit = cellValues[2] || "";
             quantity = parseFloat(cleanNumberStr(cellValues[3])) || 0;
-            unitPrice = parseFloat(cleanNumberStr(cellValues[4])) || 0;
+            unitPrice = parseFloat(cleanAmountString(cellValues[4])) || 0;
             totalAmountWithoutTax =
-              parseFloat(cleanNumberStr(cellValues[5])) || 0;
+              parseFloat(cleanAmountString(cellValues[5])) || 0;
 
             const taxRateStr = cellValues[6] || "";
             if (taxRateStr.includes("%")) {
               taxRateNum = parseFloat(taxRateStr.replace("%", "")) / 100;
             } else {
-              taxRateNum = parseFloat(cleanNumberStr(taxRateStr)) / 100 || 0;
+              taxRateNum = parseFloat(cleanAmountString(taxRateStr)) / 100 || 0;
             }
 
-            taxAmount = parseFloat(cleanNumberStr(cellValues[7])) || 0;
+            taxAmount = parseFloat(cleanAmountString(cellValues[7])) || 0;
           } else if (cellValues.length >= 7) {
             spec = "";
             unit = cellValues[1] || "";
             quantity = parseFloat(cleanNumberStr(cellValues[2])) || 0;
-            unitPrice = parseFloat(cleanNumberStr(cellValues[3])) || 0;
+            unitPrice = parseFloat(cleanAmountString(cellValues[3])) || 0;
             totalAmountWithoutTax =
-              parseFloat(cleanNumberStr(cellValues[4])) || 0;
+              parseFloat(cleanAmountString(cellValues[4])) || 0;
 
             const taxRateStr = cellValues[5] || "";
             if (taxRateStr.includes("%")) {
               taxRateNum = parseFloat(taxRateStr.replace("%", "")) / 100;
             } else {
-              taxRateNum = parseFloat(cleanNumberStr(taxRateStr)) / 100 || 0;
+              taxRateNum = parseFloat(cleanAmountString(taxRateStr)) / 100 || 0;
             }
 
-            taxAmount = parseFloat(cleanNumberStr(cellValues[6])) || 0;
+            taxAmount = parseFloat(cleanAmountString(cellValues[6])) || 0;
           } else {
             errors.push(`表格${tableIndex + 1}第${rowIndex + 1}行：列数不足`);
             continue;

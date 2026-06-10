@@ -13,7 +13,8 @@ export function cn(...inputs) {
 
 /**
  * 清理金额字符串，移除货币符号和千位分隔符
- * 支持处理包含 ¥、￥、$、逗号和空格的金额字符串
+ * ⚠️ 内部使用 parseFloat，仅用于近似显示
+ * 金额计算请使用 cleanAmountString() + new Decimal()
  * @param {string|number} value - 金额值
  * @returns {number} 清理后的数字
  * @example
@@ -113,6 +114,7 @@ export function formatAmountJSX(value, forcePositive = false) {
 
 /**
  * 计算列总和（使用 Decimal.js 保证精度）
+ * 内部通过 cleanAmountString 清洗数据，避免 parseFloat 精度丢失
  * @param {Array<Object>} data - 数据数组
  * @param {Array<string>} columns - 需要计算的列名数组
  * @returns {Object.<string, number>} 各列的总和
@@ -124,8 +126,8 @@ export function calculateColumnTotals(
   return columns.reduce((totals, col) => {
     totals[col] = data
       .reduce((sum, row) => {
-        const cleanStr = String(row[col] || 0).replace(/[^\d.-]/g, "");
-        return sum.plus(new Decimal(cleanStr || "0"));
+        const cleanStr = cleanAmountString(row[col]);
+        return sum.plus(new Decimal(cleanStr));
       }, new Decimal(0))
       .toNumber();
     return totals;

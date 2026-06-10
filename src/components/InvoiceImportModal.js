@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { formatTimestamp } from "@/lib/utils";
+import { formatTimestamp, cleanAmountString } from "@/lib/utils";
 
 export function InvoiceImportModal({
   open,
@@ -135,7 +135,8 @@ export function InvoiceImportModal({
         const sku = parts[1].trim();
         const rawQuantity = parts[2].trim().replace(/^~/, "");
         const quantity = parseFloat(rawQuantity) || 0;
-        const totalAmount = parseFloat(parts[3]) || 0;
+        const totalAmountStr = cleanAmountString(parts[3]);
+        const totalAmount = parseFloat(totalAmountStr) || 0;
 
         if (!firstDate && date) {
           firstDate = parseDate(date);
@@ -144,7 +145,7 @@ export function InvoiceImportModal({
         if (sku && quantity > 0 && totalAmount > 0) {
           const product = products.find((p) => p.sku === sku);
 
-          const price = new Decimal(totalAmount)
+          const price = new Decimal(totalAmountStr)
             .div(new Decimal(quantity))
             .toFixed(2);
           const baseItem = {

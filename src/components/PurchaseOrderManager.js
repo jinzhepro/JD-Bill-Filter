@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { cleanAmountString } from "@/lib/utils";
 import {
   Upload,
   Trash2,
@@ -100,8 +101,8 @@ export function PurchaseOrderManager() {
           product_name: productName,
           tax_rate: taxRate,
           quantity: parseFloat(parts[3]) || 0,
-          unit_price: parseFloat(parts[4]) || 0,
-          total_amount: parseFloat(parts[5]) || 0,
+          unit_price: parseFloat(cleanAmountString(parts[4])) || 0,
+          total_amount: parseFloat(cleanAmountString(parts[5])) || 0,
         });
       }
     }

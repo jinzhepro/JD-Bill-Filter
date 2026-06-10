@@ -1,3 +1,6 @@
+import Decimal from "decimal.js";
+import { cleanAmountString } from "./utils";
+
 function cleanProductName(str) {
   return str
     .replace(/\s+/g, "")
@@ -31,16 +34,22 @@ export function reconcileOrderWithInvoice(orderItems, invoiceItems) {
   for (const orderItem of orderItems) {
     let matchedInvoiceItem = null;
 
-    const orderQuantity = orderItem.quantity || 0;
-    const orderAmountWithTax = orderItem.amount_with_tax || 0;
+    const orderQuantity = new Decimal(cleanAmountString(orderItem.quantity));
+    const orderAmount = new Decimal(
+      cleanAmountString(orderItem.amount_with_tax),
+    );
 
     for (const invoiceItem of invoiceItems) {
-      const invoiceQuantity = invoiceItem.quantity || 0;
-      const invoiceAmountWithTax = invoiceItem.amount_with_tax || 0;
+      const invoiceQuantity = new Decimal(
+        cleanAmountString(invoiceItem.quantity),
+      );
+      const invoiceAmount = new Decimal(
+        cleanAmountString(invoiceItem.amount_with_tax),
+      );
 
       if (
-        Math.abs(orderQuantity - invoiceQuantity) < 0.01 &&
-        Math.abs(orderAmountWithTax - invoiceAmountWithTax) < 0.01
+        orderQuantity.minus(invoiceQuantity).abs().lt(0.01) &&
+        orderAmount.minus(invoiceAmount).abs().lt(0.01)
       ) {
         matchedInvoiceItem = invoiceItem;
         break;
@@ -57,16 +66,21 @@ export function reconcileOrderWithInvoice(orderItems, invoiceItems) {
     if (matchedInvoiceItem) {
       result.status = "matched";
 
-      const quantityDiff = orderItem.quantity - matchedInvoiceItem.quantity;
-      if (Math.abs(quantityDiff) > 0.01) {
-        result.differences.quantity = quantityDiff;
+      const matchedQuantity = new Decimal(
+        cleanAmountString(matchedInvoiceItem.quantity),
+      );
+      const matchedAmount = new Decimal(
+        cleanAmountString(matchedInvoiceItem.amount_with_tax),
+      );
+
+      const quantityDiff = orderQuantity.minus(matchedQuantity);
+      if (quantityDiff.abs().gt(0.01)) {
+        result.differences.quantity = quantityDiff.toNumber();
       }
 
-      const invoiceAmountWithTax = matchedInvoiceItem.amount_with_tax || 0;
-      const orderAmountWithTax = orderItem.amount_with_tax || 0;
-      const amountDiff = orderAmountWithTax - invoiceAmountWithTax;
-      if (Math.abs(amountDiff) > 0.01) {
-        result.differences.amount = amountDiff;
+      const amountDiff = orderAmount.minus(matchedAmount);
+      if (amountDiff.abs().gt(0.01)) {
+        result.differences.amount = amountDiff.toNumber();
       }
 
       if (Object.keys(result.differences).length > 0) {

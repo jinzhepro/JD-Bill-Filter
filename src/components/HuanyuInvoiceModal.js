@@ -15,6 +15,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Search, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { exportInvoice } from "@/lib/invoiceExporter";
+import Decimal from "decimal.js";
+import { cleanAmountString } from "@/lib/utils";
 
 const HUANYU_CUSTOMERS = [
   "山东省兴邦人力资源集团有限公司",
@@ -232,16 +234,21 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
     (items) => {
       const preview = [];
 
-      // 商品结构
-      const goodsList = items.map((item) => ({
-        name: item.name,
-        unit: item.unit,
-        price: item.price,
-        taxRate: item.taxRate,
-        totalQty: item.quantity,
-        totalAmt: parseFloat((item.quantity * item.price).toFixed(2)),
-        allowDecimal: item.unit === "斤",
-      }));
+      // 商品结构（使用 Decimal 确保精度）
+      const goodsList = items.map((item) => {
+        const qty = new Decimal(item.quantity || 0);
+        const price = new Decimal(cleanAmountString(item.price));
+        return {
+          name: item.name,
+          unit: item.unit,
+          price: item.price,
+          taxRate: item.taxRate,
+          totalQty: item.quantity,
+          totalAmtD: qty.times(price),
+          totalAmt: parseFloat(qty.times(price).toFixed(2)),
+          allowDecimal: item.unit === "斤",
+        };
+      });
 
       // 开票单位结构（筛选有效客户）
       const activeCustomers = selectedCustomers.filter(
@@ -249,12 +256,13 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
       );
       const companyList = activeCustomers.map((name) => ({
         name,
-        targetAmt: parseFloat(customerAmounts[name].replace(/[^\d.]/g, "")),
+        targetAmtD: new Decimal(cleanAmountString(customerAmounts[name])),
+        targetAmt: parseFloat(cleanAmountString(customerAmounts[name])),
       }));
 
       // 分配结果：companyIndex -> [{商品名称, 数量, 金额}]
       const assignResult = companyList.map(() => []);
-      const usedAmt = companyList.map(() => 0);
+      const usedAmtD = companyList.map(() => new Decimal(0));
 
       // 第一步：处理不可拆分商品（整体分配给金额最大的客户）
       const sortedCompanyIndices = companyList
@@ -265,10 +273,10 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
       for (const goods of goodsList) {
         if (!goods.allowDecimal && goods.totalQty > 0) {
           for (const cIndex of sortedCompanyIndices) {
-            const needAmt = parseFloat(
-              (companyList[cIndex].targetAmt - usedAmt[cIndex]).toFixed(2),
+            const needAmt = companyList[cIndex].targetAmtD.minus(
+              usedAmtD[cIndex],
             );
-            if (goods.totalAmt <= needAmt + 0.01) {
+            if (goods.totalAmtD.lte(needAmt.plus(0.01))) {
               assignResult[cIndex].push({
                 name: goods.name,
                 quantity: goods.totalQty,
@@ -276,11 +284,10 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
                 unit: goods.unit,
                 amount: goods.totalAmt,
               });
-              usedAmt[cIndex] = parseFloat(
-                (usedAmt[cIndex] + goods.totalAmt).toFixed(2),
-              );
+              usedAmtD[cIndex] = usedAmtD[cIndex].plus(goods.totalAmtD);
               goods.totalQty = 0;
               goods.totalAmt = 0;
+              goods.totalAmtD = new Decimal(0);
               break;
             }
           }
@@ -293,16 +300,16 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
       );
 
       for (let cIndex = 0; cIndex < companyList.length; cIndex++) {
-        let remainAmt = parseFloat(
-          (companyList[cIndex].targetAmt - usedAmt[cIndex]).toFixed(2),
-        );
+        let remainAmt = companyList[cIndex].targetAmtD.minus(usedAmtD[cIndex]);
 
         for (const goods of splitGoodsList) {
-          if (remainAmt < 0.01) break;
-          if (goods.totalAmt < 0.01) continue;
+          if (remainAmt.lt(0.01)) break;
+          if (goods.totalAmtD.lt(0.01)) continue;
 
-          const useAmt = Math.min(remainAmt, goods.totalAmt);
-          const useQty = useAmt / goods.price;
+          const useAmt = Decimal.min(remainAmt, goods.totalAmtD);
+          const useQty = useAmt.div(
+            new Decimal(cleanAmountString(goods.price)),
+          );
           const roundedQty = parseFloat(useQty.toFixed(2));
 
           assignResult[cIndex].push({
@@ -313,27 +320,32 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
             amount: parseFloat(useAmt.toFixed(2)),
           });
 
-          usedAmt[cIndex] = parseFloat((usedAmt[cIndex] + useAmt).toFixed(2));
-          remainAmt = parseFloat((remainAmt - useAmt).toFixed(2));
+          usedAmtD[cIndex] = usedAmtD[cIndex].plus(useAmt);
+          remainAmt = remainAmt.minus(useAmt);
 
-          goods.totalQty = parseFloat((goods.totalQty - roundedQty).toFixed(2));
-          goods.totalAmt = parseFloat((goods.totalAmt - useAmt).toFixed(2));
+          goods.totalQty = parseFloat(
+            new Decimal(goods.totalQty || 0)
+              .minus(new Decimal(roundedQty || 0))
+              .toFixed(2),
+          );
+          goods.totalAmtD = goods.totalAmtD.minus(useAmt);
+          goods.totalAmt = parseFloat(goods.totalAmtD.toFixed(2));
         }
       }
 
       // 构建预览结果
       for (let cIndex = 0; cIndex < companyList.length; cIndex++) {
-        const actualAmt = assignResult[cIndex].reduce(
-          (sum, item) => sum + item.amount,
-          0,
+        const actualAmtD = assignResult[cIndex].reduce(
+          (sum, item) => sum.plus(new Decimal(cleanAmountString(item.amount))),
+          new Decimal(0),
         );
         preview.push({
           customerName: companyList[cIndex].name,
           targetAmount: companyList[cIndex].targetAmt,
-          actualAmount: parseFloat(actualAmt.toFixed(2)),
+          actualAmount: parseFloat(actualAmtD.toFixed(2)),
           items: assignResult[cIndex],
           shortfall: parseFloat(
-            (companyList[cIndex].targetAmt - actualAmt).toFixed(2),
+            companyList[cIndex].targetAmtD.minus(actualAmtD).toFixed(2),
           ),
         });
       }
@@ -405,21 +417,32 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
   };
 
   const getOriginalTotalAmount = useCallback(() => {
-    return previewItems.reduce(
-      (sum, item) => sum + item.quantity * item.price,
-      0,
-    );
+    return previewItems
+      .reduce((sum, item) => {
+        const qty = new Decimal(item.quantity || 0);
+        const price = new Decimal(cleanAmountString(item.price));
+        return sum.plus(qty.times(price));
+      }, new Decimal(0))
+      .toNumber();
   }, [previewItems]);
 
   const getCustomerTotalAmount = useCallback(() => {
-    return selectedCustomers.reduce((sum, customer) => {
-      const amount = customerAmounts[customer];
-      if (!amount || amount.trim() === "") return sum;
-      const cleaned = amount.replace(/[^\d.]/g, "");
-      if (cleaned === "") return sum;
-      return sum + parseFloat(cleaned);
-    }, 0);
+    return selectedCustomers
+      .reduce((sum, customer) => {
+        const amount = customerAmounts[customer];
+        if (!amount || amount.trim() === "") return sum;
+        const cleaned = cleanAmountString(amount);
+        if (cleaned === "0") return sum;
+        return sum.plus(new Decimal(cleaned));
+      }, new Decimal(0))
+      .toNumber();
   }, [selectedCustomers, customerAmounts]);
+
+  const amountDiffers = useCallback(() => {
+    const original = new Decimal(getOriginalTotalAmount());
+    const customer = new Decimal(getCustomerTotalAmount());
+    return !original.minus(customer).abs().lt(0.01);
+  }, [getOriginalTotalAmount, getCustomerTotalAmount]);
 
   const handleExport = useCallback(async () => {
     if (previewItems.length === 0) {
@@ -440,8 +463,7 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
       return;
     }
 
-    const diff = Math.abs(originalTotal - customerTotal);
-    if (diff > 0.01) {
+    if (amountDiffers()) {
       toast({
         title: "金额不匹配",
         description: `物料总金额 ${originalTotal.toFixed(2)} 与客户总金额 ${customerTotal.toFixed(2)} 不相等`,
@@ -457,29 +479,36 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
     const exportLabel = `${monthNum}月`;
 
     try {
-      // 商品结构
-      const goodsList = previewItems.map((item) => ({
-        name: item.name,
-        unit: item.unit,
-        price: item.price,
-        taxRate: item.taxRate,
-        totalQty: item.quantity,
-        totalAmt: parseFloat((item.quantity * item.price).toFixed(2)),
-        allowDecimal: item.unit === "斤",
-      }));
+      // 商品结构（使用 Decimal 确保精度）
+      const goodsList = previewItems.map((item) => {
+        const qty = new Decimal(item.quantity || 0);
+        const price = new Decimal(cleanAmountString(item.price));
+        const totalAmt = qty.times(price);
+        return {
+          name: item.name,
+          unit: item.unit,
+          price: item.price,
+          taxRate: item.taxRate,
+          totalQty: item.quantity,
+          totalAmtD: totalAmt,
+          totalAmt: totalAmt.toNumber(),
+          allowDecimal: item.unit === "斤",
+        };
+      });
 
-      // 开票单位结构
+      // 开票单位结构（使用 Decimal 确保精度）
       const activeCustomers = selectedCustomers.filter(
         (c) => customerAmounts[c] && customerAmounts[c].trim() !== "",
       );
       const companyList = activeCustomers.map((name) => ({
         name,
-        targetAmt: parseFloat(customerAmounts[name].replace(/[^\d.]/g, "")),
+        targetAmtD: new Decimal(cleanAmountString(customerAmounts[name])),
+        targetAmt: parseFloat(cleanAmountString(customerAmounts[name])),
       }));
 
       // 分配结果
       const assignResult = companyList.map(() => []);
-      const usedAmt = companyList.map(() => 0);
+      const usedAmtD = companyList.map(() => new Decimal(0));
 
       // 第一步：处理不可拆分商品
       const sortedCompanyIndices = companyList
@@ -490,10 +519,10 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
       for (const goods of goodsList) {
         if (!goods.allowDecimal && goods.totalQty > 0) {
           for (const cIndex of sortedCompanyIndices) {
-            const needAmt = parseFloat(
-              (companyList[cIndex].targetAmt - usedAmt[cIndex]).toFixed(2),
+            const needAmt = companyList[cIndex].targetAmtD.minus(
+              usedAmtD[cIndex],
             );
-            if (goods.totalAmt <= needAmt + 0.01) {
+            if (goods.totalAmtD.lte(needAmt.plus(0.01))) {
               assignResult[cIndex].push({
                 name: goods.name,
                 unit: goods.unit,
@@ -503,11 +532,10 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
                 amount: goods.totalAmt,
                 spec: "",
               });
-              usedAmt[cIndex] = parseFloat(
-                (usedAmt[cIndex] + goods.totalAmt).toFixed(2),
-              );
+              usedAmtD[cIndex] = usedAmtD[cIndex].plus(goods.totalAmtD);
               goods.totalQty = 0;
               goods.totalAmt = 0;
+              goods.totalAmtD = new Decimal(0);
               break;
             }
           }
@@ -520,16 +548,16 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
       );
 
       for (let cIndex = 0; cIndex < companyList.length; cIndex++) {
-        let remainAmt = parseFloat(
-          (companyList[cIndex].targetAmt - usedAmt[cIndex]).toFixed(2),
-        );
+        let remainAmt = companyList[cIndex].targetAmtD.minus(usedAmtD[cIndex]);
 
         for (const goods of splitGoodsList) {
-          if (remainAmt < 0.01) break;
-          if (goods.totalAmt < 0.01) continue;
+          if (remainAmt.lt(0.01)) break;
+          if (goods.totalAmtD.lt(0.01)) continue;
 
-          const useAmt = Math.min(remainAmt, goods.totalAmt);
-          const useQty = useAmt / goods.price;
+          const useAmt = Decimal.min(remainAmt, goods.totalAmtD);
+          const useQty = useAmt.div(
+            new Decimal(cleanAmountString(goods.price)),
+          );
           const roundedQty = parseFloat(useQty.toFixed(2));
 
           assignResult[cIndex].push({
@@ -542,11 +570,16 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
             spec: "",
           });
 
-          usedAmt[cIndex] = parseFloat((usedAmt[cIndex] + useAmt).toFixed(2));
-          remainAmt = parseFloat((remainAmt - useAmt).toFixed(2));
+          usedAmtD[cIndex] = usedAmtD[cIndex].plus(useAmt);
+          remainAmt = remainAmt.minus(useAmt);
 
-          goods.totalQty = parseFloat((goods.totalQty - roundedQty).toFixed(2));
-          goods.totalAmt = parseFloat((goods.totalAmt - useAmt).toFixed(2));
+          goods.totalQty = parseFloat(
+            new Decimal(goods.totalQty || 0)
+              .minus(new Decimal(roundedQty || 0))
+              .toFixed(2),
+          );
+          goods.totalAmtD = goods.totalAmtD.minus(useAmt);
+          goods.totalAmt = parseFloat(goods.totalAmtD.toFixed(2));
         }
       }
 
@@ -566,27 +599,26 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
           applicant: "刘雅超",
         };
 
-        const totalAmount = adjustedItems.reduce(
-          (sum, item) => sum + item.amount,
-          0,
+        const totalAmountD = adjustedItems.reduce(
+          (sum, item) => sum.plus(new Decimal(cleanAmountString(item.amount))),
+          new Decimal(0),
         );
 
         const itemsForHistory = adjustedItems.map((item) => {
-          const totalAmount = item.amount;
-          const amountVal = parseFloat(
-            (totalAmount / (1 + item.taxRate)).toFixed(2),
-          );
-          const taxVal = parseFloat((totalAmount - amountVal).toFixed(2));
+          const totalD = new Decimal(cleanAmountString(item.amount));
+          const rate = new Decimal(item.taxRate || 0);
+          const amountVal = totalD.div(new Decimal(1).plus(rate));
+          const taxVal = totalD.minus(amountVal);
           return {
             name: item.name,
             spec: "",
             unit: item.unit,
-            quantity: parseFloat(item.quantity.toFixed(2)),
+            quantity: parseFloat(new Decimal(item.quantity || 0).toFixed(2)),
             price: item.price,
             taxRate: item.taxRate,
-            amount: amountVal,
-            tax: taxVal,
-            total: totalAmount,
+            amount: parseFloat(amountVal.toFixed(2)),
+            tax: parseFloat(taxVal.toFixed(2)),
+            total: parseFloat(totalD.toFixed(2)),
           };
         });
 
@@ -614,7 +646,7 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
             canteenName: `${exportLabel}-${customerName}`,
             customerInfo,
             items: itemsForHistory,
-            totalAmount: parseFloat(totalAmount.toFixed(2)),
+            totalAmount: parseFloat(totalAmountD.toFixed(2)),
             contractNo: basicInfo.contractNo,
           }),
         });
@@ -644,6 +676,7 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
     selectedMonth,
     toast,
     onOpenChange,
+    amountDiffers,
     getOriginalTotalAmount,
     getCustomerTotalAmount,
   ]);
