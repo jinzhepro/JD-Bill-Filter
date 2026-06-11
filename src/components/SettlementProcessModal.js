@@ -141,10 +141,10 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
     if (!row.sku.trim()) {
       return { id: row.id, message: "请输入SKU" };
     }
-    if (!row.amount.trim() || isNaN(parseFloat(row.amount))) {
+    if (!row.amount.trim() || isNaN(Number(cleanAmountString(row.amount)))) {
       return { id: row.id, message: "请输入有效的货款" };
     }
-    if (!row.quantity.trim() || isNaN(parseFloat(row.quantity))) {
+    if (!row.quantity.trim() || isNaN(Number(cleanAmountString(row.quantity)))) {
       return { id: row.id, message: "请输入有效的数量" };
     }
     return null;
@@ -452,9 +452,9 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
                       .filter((l) => l.trim())
                       .reduce((sum, line) => {
                         const parts = line.split(/[\s\t,|]+/);
-                        const amount = parseFloat(parts[2]) || 0;
-                        return sum + amount;
-                      }, 0)
+                        const amount = new Decimal(cleanAmountString(parts[2] || "0"));
+                        return sum.plus(amount);
+                      }, new Decimal(0))
                       .toFixed(2)}
                   </span>
                 </div>
@@ -467,9 +467,9 @@ export default function SettlementProcessModal({ isOpen, onClose }) {
                       .filter((l) => l.trim())
                       .reduce((sum, line) => {
                         const parts = line.split(/[\s\t,|]+/);
-                        const qty = parseFloat(parts[1]) || 0;
-                        return sum + qty;
-                      }, 0)
+                        const qty = new Decimal(cleanAmountString(parts[1] || "0"));
+                        return sum.plus(qty);
+                      }, new Decimal(0))
                       .toFixed(0)}
                   </span>
                 </div>

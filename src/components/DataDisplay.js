@@ -6,7 +6,8 @@ import { Input } from "./ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useSettlement } from "@/context/SettlementContext";
 import { useProductMatching } from "@/hooks/useProductMatching";
-import { formatAmountJSX } from "@/lib/utils";
+import Decimal from "decimal.js";
+import { formatAmountJSX, cleanAmountString } from "@/lib/utils";
 import {
   ArrowLeft,
   Download,
@@ -97,11 +98,12 @@ export default function DataDisplay({
       const aVal = a[sortConfig.key];
       const bVal = b[sortConfig.key];
       if (aVal === bVal) return 0;
-      const aNum = parseFloat(aVal);
-      const bNum = parseFloat(bVal);
-      const isNumeric = !isNaN(aNum) && !isNaN(bNum);
+      const aClean = cleanAmountString(aVal);
+      const bClean = cleanAmountString(bVal);
+      const isNumeric = /^-?\d+(\.\d+)?$/.test(aClean) && /^-?\d+(\.\d+)?$/.test(bClean);
       if (isNumeric) {
-        return sortConfig.direction === "asc" ? aNum - bNum : bNum - aNum;
+        const cmp = new Decimal(aClean).comparedTo(bClean);
+        return sortConfig.direction === "asc" ? cmp : -cmp;
       }
       return sortConfig.direction === "asc"
         ? String(aVal).localeCompare(String(bVal))
@@ -506,12 +508,12 @@ function TableRow({ row, rowIndex, amountFields, showRowNumber, showDataChanges,
     }
 
     const lastChange = changes;
-    const currentQuantity = parseFloat(row["数量"] || 0);
-    const originalQuantity = lastChange.original?.数量 || 0;
+    const currentQuantity = new Decimal(cleanAmountString(row["数量"] || "0"));
+    const originalQuantity = new Decimal(lastChange.original?.数量 || 0);
 
-    if (currentQuantity < originalQuantity) {
+    if (currentQuantity.lt(originalQuantity)) {
       return "bg-destructive/10 hover:bg-destructive/20";
-    } else if (currentQuantity > originalQuantity) {
+    } else if (currentQuantity.gt(originalQuantity)) {
       return "bg-primary/10 hover:bg-primary/20";
     } else {
       return rowIndex % 2 === 0 ? "bg-background" : "bg-muted/30";

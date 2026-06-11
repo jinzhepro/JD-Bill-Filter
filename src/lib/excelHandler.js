@@ -1,10 +1,11 @@
+import Decimal from "decimal.js";
 import ExcelJS from "exceljs";
 import {
   NUMERIC_COLUMNS,
   PRODUCT_CODE_COLUMNS,
   EXPORT_NUMERIC_FORMAT,
 } from "./constants";
-import { cleanProductCode, cleanAmount } from "./utils";
+import { cleanProductCode, cleanAmountString } from "./utils";
 
 function getCellValue(cell) {
   const value = cell.value;
@@ -293,7 +294,7 @@ export async function downloadExcel(data, fileName, totals = null, getProductDis
         if (PRODUCT_CODE_COLUMNS.includes(header)) {
           value = String(value || "");
         } else if (NUMERIC_COLUMNS.includes(header)) {
-          value = cleanAmount(value);
+          value = new Decimal(cleanAmountString(value)).toNumber();
         }
         rowValues.push(value);
       });
@@ -352,7 +353,7 @@ export async function downloadExcel(data, fileName, totals = null, getProductDis
         if (header === "商品编号") {
           totalRow.push("总计");
         } else if (totals[header] !== undefined) {
-          const value = cleanAmount(totals[header]);
+          const value = new Decimal(cleanAmountString(totals[header])).toNumber();
           totalRow.push(value);
         } else {
           totalRow.push("");

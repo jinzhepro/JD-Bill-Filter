@@ -140,11 +140,12 @@ export default function VirtualAssetResultDisplay({
       const aVal = a[sortConfig.key];
       const bVal = b[sortConfig.key];
       if (aVal === bVal) return 0;
-      const aNum = parseFloat(aVal);
-      const bNum = parseFloat(bVal);
-      const isNumeric = !isNaN(aNum) && !isNaN(bNum);
+      const aClean = cleanAmountString(aVal);
+      const bClean = cleanAmountString(bVal);
+      const isNumeric = /^-?\d+(\.\d+)?$/.test(aClean) && /^-?\d+(\.\d+)?$/.test(bClean);
       if (isNumeric) {
-        return sortConfig.direction === "asc" ? aNum - bNum : bNum - aNum;
+        const cmp = new Decimal(aClean).comparedTo(bClean);
+        return sortConfig.direction === "asc" ? cmp : -cmp;
       }
       return sortConfig.direction === "asc"
         ? String(aVal).localeCompare(String(bVal))

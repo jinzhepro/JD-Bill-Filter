@@ -1,4 +1,5 @@
 import Decimal from "decimal.js";
+import { cleanAmountString } from "@/lib/utils";
 
 /**
  * 生成唯一ID
@@ -17,7 +18,7 @@ export function cleanDecimalValue(value) {
   if (value instanceof Decimal) return value;
   if (typeof value === "number") return new Decimal(value);
   if (typeof value === "string") {
-    const cleaned = value.replace(/[^0-9.-]/g, "");
+    const cleaned = cleanAmountString(value);
     return new Decimal(cleaned || "0");
   }
   return new Decimal(0);
