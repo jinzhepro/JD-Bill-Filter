@@ -83,16 +83,14 @@ export function InvoiceImportModal({
           if (sku && quantity > 0 && amount > 0) {
             const product = products.find((p) => p.sku === sku);
 
-            const price = new Decimal(amount)
-              .div(new Decimal(quantity))
-              .toFixed(2);
             const baseItem = {
               sku: sku,
               orderId: order.orderId,
               spec: product?.spec || "",
               unit: "箱",
               quantity,
-              price: parseFloat(price),
+              total: amount,
+              price: new Decimal(amount).div(new Decimal(quantity)).toNumber(),
               taxRate: 0.13,
               date: finishTime
                 ? formatTimestamp(finishTime)
@@ -142,21 +140,19 @@ export function InvoiceImportModal({
           firstDate = parseDate(date);
         }
 
-        if (sku && quantity > 0 && totalAmount > 0) {
-          const product = products.find((p) => p.sku === sku);
+          if (sku && quantity > 0 && totalAmount > 0) {
+            const product = products.find((p) => p.sku === sku);
 
-          const price = new Decimal(totalAmountStr)
-            .div(new Decimal(quantity))
-            .toFixed(2);
-          const baseItem = {
-            sku: sku,
-            spec: product?.spec || "",
-            unit: "箱",
-            quantity,
-            price: parseFloat(price),
-            taxRate: 0.13,
-            date: parseDate(date),
-          };
+            const baseItem = {
+              sku: sku,
+              spec: product?.spec || "",
+              unit: "箱",
+              quantity,
+              total: totalAmount,
+              price: new Decimal(totalAmountStr).div(new Decimal(quantity)).toNumber(),
+              taxRate: 0.13,
+              date: parseDate(date),
+            };
 
           if (product) {
             items.push({

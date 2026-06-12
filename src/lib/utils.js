@@ -149,11 +149,16 @@ export function formatTimestamp(timestamp) {
 
 export function calculateRowAmount(item) {
   const quantity = new Decimal(item.quantity || 0);
-  const price = new Decimal(item.price || 0);
   const taxRate = new Decimal(item.taxRate || 0.13);
-  const amount = quantity.times(price).div(new Decimal(1).plus(taxRate));
-  const tax = amount.times(taxRate);
-  const total = amount.plus(tax);
+  let total;
+  if (item.total !== undefined) {
+    total = new Decimal(item.total);
+  } else {
+    const price = new Decimal(item.price || 0);
+    total = price.times(quantity);
+  }
+  const amount = total.div(new Decimal(1).plus(taxRate));
+  const tax = total.minus(amount);
   return {
     amount: amount.toFixed(2),
     tax: tax.toFixed(2),

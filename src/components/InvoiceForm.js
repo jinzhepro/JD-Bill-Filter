@@ -40,6 +40,9 @@ export function InvoiceForm() {
   const lineItemsTotal = useMemo(() => {
     if (lineItems.length === 0) return null;
     return lineItems.reduce((sum, item) => {
+      if (item.total !== undefined) {
+        return sum.plus(new Decimal(item.total));
+      }
       return sum.plus(
         new Decimal(item.quantity || 0).times(new Decimal(item.price || 0)),
       );
@@ -166,7 +169,10 @@ export function InvoiceForm() {
 
         const totalAmount = monthItems.reduce(
           (sum, item) =>
-            sum + new Decimal(item.quantity).times(item.price).toNumber(),
+            sum + (item.total !== undefined
+              ? new Decimal(item.total)
+              : new Decimal(item.quantity).times(item.price)
+            ).toNumber(),
           0,
         );
 
