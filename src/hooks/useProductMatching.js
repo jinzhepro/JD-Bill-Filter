@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import logger from "@/lib/logger";
 
 /**
  * 自定义 Hook：处理 SKU 与商品映射的匹配逻辑
@@ -17,7 +18,7 @@ export function useProductMatching(processedData) {
           setProducts(data.data || []);
         }
       } catch (error) {
-        console.error("获取商品映射失败:", error);
+        logger.error("获取商品映射失败:", error);
       }
     };
     fetchProducts();

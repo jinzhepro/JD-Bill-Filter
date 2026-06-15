@@ -16,6 +16,7 @@ import {
   groupItemsByMonth,
 } from "@/lib/utils";
 import Decimal from "decimal.js";
+import logger from "@/lib/logger";
 
 export function InvoiceForm() {
   const {
@@ -126,10 +127,10 @@ export function InvoiceForm() {
       });
       const data = await res.json();
       if (!data.success) {
-        console.error("保存历史失败:", data.error);
+        logger.error("保存历史失败:", data.error);
       }
     } catch (error) {
-      console.error("保存历史失败:", error);
+      logger.error("保存历史失败:", error);
     }
   };
 
@@ -169,7 +170,8 @@ export function InvoiceForm() {
 
         const totalAmount = monthItems.reduce(
           (sum, item) =>
-            sum + (item.total !== undefined
+            sum +
+            (item.total !== undefined
               ? new Decimal(item.total)
               : new Decimal(item.quantity).times(item.price)
             ).toNumber(),

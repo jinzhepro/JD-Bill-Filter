@@ -14,6 +14,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { cleanAmountString } from "@/lib/utils";
+import logger from "@/lib/logger";
 import {
   Upload,
   Trash2,
@@ -64,7 +65,7 @@ export function PurchaseOrderManager() {
         toast({ title: data.error, variant: "destructive" });
       }
     } catch (error) {
-      console.error("获取采购单数据失败:", error);
+      logger.error("获取采购单数据失败:", error);
       toast({ title: "获取数据失败", variant: "destructive" });
     }
     setLoading(false);
@@ -164,7 +165,7 @@ export function PurchaseOrderManager() {
         toast({ title: data.error, variant: "destructive" });
       }
     } catch (error) {
-      console.error("操作失败:", error);
+      logger.error("操作失败:", error);
       toast({ title: "导入失败", variant: "destructive" });
     }
 
@@ -187,7 +188,7 @@ export function PurchaseOrderManager() {
         toast({ title: data.error, variant: "destructive" });
       }
     } catch (error) {
-      console.error("操作失败:", error);
+      logger.error("操作失败:", error);
       toast({ title: "删除失败", variant: "destructive" });
     }
   };
@@ -219,7 +220,7 @@ export function PurchaseOrderManager() {
         toast({ title: data.error, variant: "destructive" });
       }
     } catch (error) {
-      console.error("操作失败:", error);
+      logger.error("操作失败:", error);
       toast({ title: "更新失败", variant: "destructive" });
     }
   };
@@ -266,7 +267,7 @@ export function PurchaseOrderManager() {
       await navigator.clipboard.writeText(values);
       toast({ title: `${columnName} 已复制` });
     } catch (error) {
-      console.error("操作失败:", error);
+      logger.error("操作失败:", error);
       toast({ title: "复制失败", variant: "destructive" });
     }
   };
@@ -276,7 +277,7 @@ export function PurchaseOrderManager() {
       await navigator.clipboard.writeText(batchNo);
       toast({ title: "批次号已复制" });
     } catch (error) {
-      console.error("操作失败:", error);
+      logger.error("操作失败:", error);
       toast({ title: "复制失败", variant: "destructive" });
     }
   };

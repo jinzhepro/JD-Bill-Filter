@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import logger from "@/lib/logger";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -83,7 +84,7 @@ export function InvoiceHistoryManager() {
         toast({ title: data.error, variant: "destructive" });
       }
     } catch (error) {
-      console.error("操作失败:", error);
+      logger.error("操作失败:", error);
       toast({ title: "获取历史数据失败", variant: "destructive" });
     }
     setLoading(false);
@@ -128,7 +129,7 @@ export function InvoiceHistoryManager() {
       await exportInvoice(basicInfo, customerInfo, lineItems);
       toast({ title: "发票重新导出成功" });
     } catch (error) {
-      console.error("操作失败:", error);
+      logger.error("操作失败:", error);
       toast({ title: `导出失败: ${error.message}`, variant: "destructive" });
     } finally {
       setExporting(false);
@@ -151,7 +152,7 @@ export function InvoiceHistoryManager() {
         toast({ title: data.error, variant: "destructive" });
       }
     } catch (error) {
-      console.error("操作失败:", error);
+      logger.error("操作失败:", error);
       toast({ title: "删除失败", variant: "destructive" });
     }
   };
@@ -171,7 +172,7 @@ export function InvoiceHistoryManager() {
         toast({ title: data.error, variant: "destructive" });
       }
     } catch (error) {
-      console.error("操作失败:", error);
+      logger.error("操作失败:", error);
       toast({ title: "更新发票名称失败", variant: "destructive" });
     } finally {
       setUpdating(false);
@@ -210,7 +211,7 @@ export function InvoiceHistoryManager() {
         toast({ title: data.error, variant: "destructive" });
       }
     } catch (error) {
-      console.error("操作失败:", error);
+      logger.error("操作失败:", error);
       toast({ title: "清空失败", variant: "destructive" });
     } finally {
       setClearingAll(false);
@@ -246,7 +247,7 @@ export function InvoiceHistoryManager() {
       await navigator.clipboard.writeText(values);
       toast({ title: `${columnName} 已复制` });
     } catch (error) {
-      console.error("操作失败:", error);
+      logger.error("操作失败:", error);
       toast({ title: "复制失败", variant: "destructive" });
     }
   };

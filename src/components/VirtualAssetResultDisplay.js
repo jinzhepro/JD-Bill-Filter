@@ -5,14 +5,24 @@ import Decimal from "decimal.js";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import {
-  ArrowLeft, Download, Search, X, ArrowUp, ArrowDown,
-  ChevronsUpDown, Info, FileText, AlertTriangle, Loader2,
+  ArrowLeft,
+  Download,
+  Search,
+  X,
+  ArrowUp,
+  ArrowDown,
+  ChevronsUpDown,
+  Info,
+  FileText,
+  AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { calculateVirtualAssetTotals } from "@/lib/virtualAssetProcessor";
 import { exportInvoice } from "@/lib/invoiceExporter";
 import { DEFAULT_COMPANY_INFO } from "@/lib/constants";
 import { cleanAmountString } from "@/lib/utils";
+import logger from "@/lib/logger";
 
 /**
  * 虚拟资产汇总结果展示组件
@@ -63,7 +73,7 @@ export default function VirtualAssetResultDisplay({
         if (cancelled) return;
 
         if (!data.success) {
-          console.error("获取商品映射失败");
+          logger.error("获取商品映射失败");
           setLoadingProducts(false);
           return;
         }
@@ -88,7 +98,7 @@ export default function VirtualAssetResultDisplay({
         setUnmatchedSkus(unmatched);
         setNamesLoaded(true);
       } catch (error) {
-        console.error("获取商品映射失败:", error);
+        logger.error("获取商品映射失败:", error);
       } finally {
         if (!cancelled) setLoadingProducts(false);
       }
@@ -96,7 +106,9 @@ export default function VirtualAssetResultDisplay({
 
     fetchAndMatch();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [processedData]);
 
   // 获取商品名称
@@ -110,7 +122,9 @@ export default function VirtualAssetResultDisplay({
   const getInvoiceName = (sku) => {
     if (!products || !sku) return null;
     const match = products.find((p) => p.sku === String(sku).trim());
-    return match && match.invoice_name ? match.invoice_name.replace(/\s+/g, "") : null;
+    return match && match.invoice_name
+      ? match.invoice_name.replace(/\s+/g, "")
+      : null;
   };
 
   // 获取规格
@@ -142,7 +156,8 @@ export default function VirtualAssetResultDisplay({
       if (aVal === bVal) return 0;
       const aClean = cleanAmountString(aVal);
       const bClean = cleanAmountString(bVal);
-      const isNumeric = /^-?\d+(\.\d+)?$/.test(aClean) && /^-?\d+(\.\d+)?$/.test(bClean);
+      const isNumeric =
+        /^-?\d+(\.\d+)?$/.test(aClean) && /^-?\d+(\.\d+)?$/.test(bClean);
       if (isNumeric) {
         const cmp = new Decimal(aClean).comparedTo(bClean);
         return sortConfig.direction === "asc" ? cmp : -cmp;
@@ -158,13 +173,15 @@ export default function VirtualAssetResultDisplay({
     const query = searchQuery.toLowerCase().trim();
     if (!query) return sortedData;
     return sortedData.filter((row) =>
-      Object.values(row).some((val) => String(val).toLowerCase().includes(query))
+      Object.values(row).some((val) =>
+        String(val).toLowerCase().includes(query),
+      ),
     );
   }, [sortedData, searchQuery]);
 
   const totals = useMemo(
     () => calculateVirtualAssetTotals(processedData),
-    [processedData]
+    [processedData],
   );
 
   const handleDownloadCSV = () => {
@@ -177,7 +194,13 @@ export default function VirtualAssetResultDisplay({
         const rawName = getProductName(sku) || row["虚拟资产名称"];
         const prodName = `${rawName.replace(/\s+/g, "")}_${sku}`;
         const taxRate = getTaxRate(sku);
-        return [sku, prodName, 1, `${(taxRate * 100).toFixed(0)}%`, row["实际金额"]]
+        return [
+          sku,
+          prodName,
+          1,
+          `${(taxRate * 100).toFixed(0)}%`,
+          row["实际金额"],
+        ]
           .map((v) => `"${String(v).replace(/"/g, '""')}"`)
           .join(",");
       });
@@ -238,7 +261,7 @@ export default function VirtualAssetResultDisplay({
           taxRate,
         };
       });
- 
+
       const now = new Date();
       const applyDate = `${now.getFullYear()}年${String(now.getMonth() + 1).padStart(2, "0")}月${String(now.getDate()).padStart(2, "0")}日`;
 
@@ -260,7 +283,7 @@ export default function VirtualAssetResultDisplay({
         },
         lineItems,
         now.toISOString().slice(0, 7),
-        false
+        false,
       );
 
       toast({
@@ -289,15 +312,22 @@ export default function VirtualAssetResultDisplay({
             <Info className="w-5 h-5 text-primary mt-0.5" />
             <div className="text-sm text-muted-foreground space-y-1">
               <p>
-                共处理 <strong className="text-foreground">{summary.总文件数}</strong> 个文件，
+                共处理{" "}
+                <strong className="text-foreground">{summary.总文件数}</strong>{" "}
+                个文件，
                 {summary.失败文件数 > 0 && (
                   <span className="text-destructive">
                     {summary.失败文件数} 个失败，
                   </span>
                 )}
-                读取 <strong className="text-foreground">{summary.总行数}</strong> 行数据，
-                合并为 <strong className="text-foreground">{summary.合并后SKU数}</strong> 条SKU记录，
-                汇总金额 <strong className="text-primary">¥{summary.总金额}</strong>
+                读取{" "}
+                <strong className="text-foreground">{summary.总行数}</strong>{" "}
+                行数据， 合并为{" "}
+                <strong className="text-foreground">
+                  {summary.合并后SKU数}
+                </strong>{" "}
+                条SKU记录， 汇总金额{" "}
+                <strong className="text-primary">¥{summary.总金额}</strong>
               </p>
             </div>
           </div>
@@ -345,13 +375,16 @@ export default function VirtualAssetResultDisplay({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-card rounded-lg border border-border p-5 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-muted-foreground">汇总金额</span>
+              <span className="text-sm font-medium text-muted-foreground">
+                汇总金额
+              </span>
               <div className="w-9 h-9 rounded-full bg-green-500/10 flex items-center justify-center">
                 <span className="text-green-600 font-bold text-base">¥</span>
               </div>
             </div>
             <div className="text-2xl font-bold text-green-600 font-mono">
-              ¥{Number(totals.实际金额).toLocaleString("zh-CN", {
+              ¥
+              {Number(totals.实际金额).toLocaleString("zh-CN", {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}
@@ -360,7 +393,9 @@ export default function VirtualAssetResultDisplay({
 
           <div className="bg-card rounded-lg border border-border p-5 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-muted-foreground">SKU数</span>
+              <span className="text-sm font-medium text-muted-foreground">
+                SKU数
+              </span>
               <div className="w-9 h-9 rounded-full bg-blue-500/10 flex items-center justify-center">
                 <span className="text-blue-600 font-bold text-base">#</span>
               </div>
@@ -418,8 +453,12 @@ export default function VirtualAssetResultDisplay({
 
         {searchQuery && (
           <p className="mb-4 text-sm text-muted-foreground">
-            找到 <span className="font-medium text-primary">{filteredData.length}</span> 条结果，
-            共 <span className="font-medium">{processedData.length}</span> 条数据
+            找到{" "}
+            <span className="font-medium text-primary">
+              {filteredData.length}
+            </span>{" "}
+            条结果， 共{" "}
+            <span className="font-medium">{processedData.length}</span> 条数据
           </p>
         )}
 
@@ -507,16 +546,32 @@ export default function VirtualAssetResultDisplay({
                     </td>
                     <td className="px-4 py-3 text-left border-b border-border/50">
                       {loadingProducts ? (
-                        <span className="text-muted-foreground text-xs">加载中...</span>
+                        <span className="text-muted-foreground text-xs">
+                          加载中...
+                        </span>
                       ) : (
-                        <span>{(getProductName(row["商品skuId"]) || row["虚拟资产名称"]).replace(/\s+/g, "")}_{row["商品skuId"]}</span>
+                        <span>
+                          {(
+                            getProductName(row["商品skuId"]) ||
+                            row["虚拟资产名称"]
+                          ).replace(/\s+/g, "")}
+                          _{row["商品skuId"]}
+                        </span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-left border-b border-border/50">
                       {loadingProducts ? (
-                        <span className="text-muted-foreground text-xs">加载中...</span>
+                        <span className="text-muted-foreground text-xs">
+                          加载中...
+                        </span>
                       ) : (
-                        <span className={getInvoiceName(row["商品skuId"]) ? "" : "text-muted-foreground"}>
+                        <span
+                          className={
+                            getInvoiceName(row["商品skuId"])
+                              ? ""
+                              : "text-muted-foreground"
+                          }
+                        >
                           {displayName}
                         </span>
                       )}

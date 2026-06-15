@@ -21,6 +21,7 @@ import { exportInvoice } from "@/lib/invoiceExporter";
 import { CANTEEN_COMPANY_INFO } from "@/lib/constants";
 import Decimal from "decimal.js";
 import { Input } from "@/components/ui/input";
+import logger from "@/lib/logger";
 import {
   Select,
   SelectContent,
@@ -73,7 +74,7 @@ export default function CanteenInvoicePage() {
         toast({ title: data.error, variant: "destructive" });
       }
     } catch (error) {
-      console.error("获取数据失败:", error);
+      logger.error("获取数据失败:", error);
       toast({ title: "获取数据失败", variant: "destructive" });
     }
   }, [toast]);
@@ -96,7 +97,7 @@ export default function CanteenInvoicePage() {
         toast({ title: data.error, variant: "destructive" });
       }
     } catch (error) {
-      console.error("获取历史记录失败:", error);
+      logger.error("获取历史记录失败:", error);
       toast({ title: "获取历史记录失败", variant: "destructive" });
     }
     setLoading(false);
@@ -123,7 +124,7 @@ export default function CanteenInvoicePage() {
         toast({ title: data.error, variant: "destructive" });
       }
     } catch (error) {
-      console.error("删除失败:", error);
+      logger.error("删除失败:", error);
       toast({ title: "删除失败", variant: "destructive" });
     }
   };
@@ -167,7 +168,7 @@ export default function CanteenInvoicePage() {
       await navigator.clipboard.writeText(values);
       toast({ title: `${columnName} 已复制` });
     } catch (error) {
-      console.error("操作失败:", error);
+      logger.error("操作失败:", error);
       toast({ title: "复制失败", variant: "destructive" });
     }
   };
@@ -241,7 +242,7 @@ export default function CanteenInvoicePage() {
         toast({ title: data.error, variant: "destructive" });
       }
     } catch (error) {
-      console.error("保存失败:", error);
+      logger.error("保存失败:", error);
       toast({ title: "保存失败", variant: "destructive" });
     }
   };
@@ -303,7 +304,7 @@ export default function CanteenInvoicePage() {
         toast({ title: data.error, variant: "destructive" });
       }
     } catch (error) {
-      console.error("保存失败:", error);
+      logger.error("保存失败:", error);
       toast({ title: "保存失败", variant: "destructive" });
     }
   };
@@ -348,7 +349,7 @@ export default function CanteenInvoicePage() {
       );
       toast({ title: "发票重新导出成功" });
     } catch (error) {
-      console.error("导出失败:", error);
+      logger.error("导出失败:", error);
       toast({ title: "导出失败", variant: "destructive" });
     }
   };

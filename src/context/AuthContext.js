@@ -1,7 +1,14 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
+import { useRouter } from "next/navigation";
+import logger from "@/lib/logger";
 
 const AuthContext = createContext(null);
 
@@ -12,14 +19,14 @@ export function AuthProvider({ children }) {
 
   const checkAuth = useCallback(async () => {
     try {
-      const res = await fetch('/api/check-auth');
+      const res = await fetch("/api/check-auth");
       const data = await res.json();
       setIsAuthenticated(data.authenticated);
       if (!data.authenticated) {
-        router.push('/login');
+        router.push("/login");
       }
     } catch (error) {
-      console.error('检查认证状态失败:', error);
+      logger.error("检查认证状态失败:", error);
       setIsAuthenticated(false);
     }
     setLoading(false);
@@ -30,9 +37,9 @@ export function AuthProvider({ children }) {
   }, [checkAuth]);
 
   const login = async (password) => {
-    const res = await fetch('/api/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const res = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password }),
     });
     const data = await res.json();
@@ -44,9 +51,9 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
-    await fetch('/api/login', { method: 'DELETE' });
+    await fetch("/api/login", { method: "DELETE" });
     setIsAuthenticated(false);
-    router.push('/login');
+    router.push("/login");
   };
 
   return (
@@ -59,7 +66,7 @@ export function AuthProvider({ children }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+    throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
 }

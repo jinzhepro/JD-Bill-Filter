@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
-export const runtime = 'edge';
+export const runtime = "edge";
 
-const AUTH_COOKIE = 'auth_token';
-const AUTH_PASSWORD = process.env.AUTH_PASSWORD || 'qingyun2026';
+const AUTH_COOKIE = "auth_token";
+const AUTH_PASSWORD = process.env.AUTH_PASSWORD || "qingyun2026";
 
 export async function POST(request) {
   try {
@@ -11,22 +12,28 @@ export async function POST(request) {
 
     if (password === AUTH_PASSWORD) {
       const response = NextResponse.json({ success: true });
-      
+
       response.cookies.set(AUTH_COOKIE, AUTH_PASSWORD, {
         httpOnly: true,
         secure: true,
-        sameSite: 'strict',
+        sameSite: "strict",
         maxAge: 60 * 60 * 24 * 30, // 30天
-        path: '/',
+        path: "/",
       });
 
       return response;
     }
 
-    return NextResponse.json({ success: false, error: '密码错误' }, { status: 401 });
+    return NextResponse.json(
+      { success: false, error: "密码错误" },
+      { status: 401 },
+    );
   } catch (error) {
-    console.error('登录请求处理失败:', error);
-    return NextResponse.json({ success: false, error: '请求处理失败' }, { status: 500 });
+    logger.error("登录请求处理失败:", error);
+    return NextResponse.json(
+      { success: false, error: "请求处理失败" },
+      { status: 500 },
+    );
   }
 }
 

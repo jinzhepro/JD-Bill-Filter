@@ -18,6 +18,7 @@ import { exportInvoice } from "@/lib/invoiceExporter";
 import { HUANYU_COMPANY_INFO, CANTEEN_COMPANY_INFO } from "@/lib/constants";
 import Decimal from "decimal.js";
 import { cleanAmountString } from "@/lib/utils";
+import logger from "@/lib/logger";
 
 const HUANYU_CUSTOMERS = [
   "山东省兴邦人力资源集团有限公司",
@@ -666,7 +667,7 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
       setCustomerAmounts(amounts);
       setAllocationPreview([]);
     } catch (error) {
-      console.error("导出发票失败:", error);
+      logger.error("导出发票失败:", error);
       toast({ title: "导出发票失败", variant: "destructive" });
     }
   }, [

@@ -17,6 +17,7 @@ import Decimal from "decimal.js";
 import mammoth from "mammoth";
 import { CANTEEN_SUPPLIERS } from "@/data/canteenSuppliers";
 import { cleanAmountString } from "@/lib/utils";
+import logger from "@/lib/logger";
 
 export function CanteenPurchaseOrderManager() {
   const [orders, setOrders] = useState([]);
@@ -57,7 +58,7 @@ export function CanteenPurchaseOrderManager() {
         toast({ title: data.error, variant: "destructive" });
       }
     } catch (error) {
-      console.error("获取食堂采购单数据失败:", error);
+      logger.error("获取食堂采购单数据失败:", error);
       toast({ title: "获取数据失败", variant: "destructive" });
     }
     setLoading(false);
@@ -477,7 +478,7 @@ export function CanteenPurchaseOrderManager() {
       await navigator.clipboard.writeText(values);
       toast({ title: `${columnName} 已复制` });
     } catch (error) {
-      console.error("操作失败:", error);
+      logger.error("操作失败:", error);
       toast({ title: "复制失败", variant: "destructive" });
     }
   };
@@ -488,7 +489,7 @@ export function CanteenPurchaseOrderManager() {
       await navigator.clipboard.writeText(contractNo);
       toast({ title: `${label}已复制` });
     } catch (error) {
-      console.error("操作失败:", error);
+      logger.error("操作失败:", error);
       toast({ title: "复制失败", variant: "destructive" });
     }
   };

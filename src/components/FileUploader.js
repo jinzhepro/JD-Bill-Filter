@@ -4,6 +4,7 @@ import React, { useState, useRef, useCallback } from "react";
 import { Button } from "./ui/button";
 import { isValidFileExtension } from "@/lib/fileValidation";
 import { useToast } from "@/hooks/use-toast";
+import logger from "@/lib/logger";
 import {
   Upload,
   Plus,
@@ -77,7 +78,7 @@ export default function FileUploader({
           onFilesSelected(filesWithPath);
         }
       } catch (error) {
-        console.error("文件选择错误:", error);
+        logger.error("文件选择错误:", error);
         toast({
           variant: "destructive",
           title: "文件选择失败",
@@ -117,7 +118,7 @@ export default function FileUploader({
           onFilesSelected(filesWithPath);
         }
       } catch (error) {
-        console.error("文件拖拽错误:", error);
+        logger.error("文件拖拽错误:", error);
         toast({
           variant: "destructive",
           title: "文件拖拽失败",

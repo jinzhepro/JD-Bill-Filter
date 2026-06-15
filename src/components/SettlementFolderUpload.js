@@ -11,6 +11,7 @@ import {
 import FileUploader from "./FileUploader";
 import { useErrorHandler } from "./ErrorBoundary";
 import { useToast } from "@/hooks/use-toast";
+import logger from "@/lib/logger";
 
 /**
  * 处理单个文件的读取和验证
@@ -28,7 +29,7 @@ async function processSingleFile(fileWithPath, index, totalFiles, addLog) {
   try {
     isValidFileSize(file);
   } catch (error) {
-    console.error('操作失败:', error);
+    logger.error("操作失败:", error);
     const errorMsg = `文件过大（超过50MB），已跳过: ${path}`;
     addLog(errorMsg, "warning");
     return { error: errorMsg };
@@ -58,7 +59,7 @@ async function processSingleFile(fileWithPath, index, totalFiles, addLog) {
     addLog(`已添加 ${data.length} 行数据到处理队列`, "info");
     return { data };
   } catch (error) {
-    console.error('操作失败:', error);
+    logger.error("操作失败:", error);
     const errorMsg = `${path}: ${error.message}`;
     addLog(`文件处理失败: ${errorMsg}`, "error");
     return { error: errorMsg };
@@ -76,7 +77,12 @@ async function processAllFiles(filesWithPath, addLog) {
   const errors = [];
 
   for (let i = 0; i < filesWithPath.length; i++) {
-    const result = await processSingleFile(filesWithPath[i], i, filesWithPath.length, addLog);
+    const result = await processSingleFile(
+      filesWithPath[i],
+      i,
+      filesWithPath.length,
+      addLog,
+    );
 
     if (result.data) {
       allData.push(...result.data);
@@ -114,27 +120,34 @@ export default function SettlementFolderUpload() {
 
         addLog(`开始处理 ${filesWithPath.length} 个文件...`, "info");
 
-        const { allData, errors } = await processAllFiles(filesWithPath, addLog);
+        const { allData, errors } = await processAllFiles(
+          filesWithPath,
+          addLog,
+        );
 
         addLog(`文件处理完成，共读取 ${allData.length} 行有效数据`, "info");
 
         if (allData.length === 0) {
           const errorMsg =
-            errors.length > 0
-              ? errors.join("\n")
-              : "没有找到有效的文件数据";
+            errors.length > 0 ? errors.join("\n") : "没有找到有效的文件数据";
 
           toast({
             variant: "destructive",
             title: "文件处理失败",
-            description: errorMsg.length > 100 ? errorMsg.substring(0, 100) + "..." : errorMsg,
+            description:
+              errorMsg.length > 100
+                ? errorMsg.substring(0, 100) + "..."
+                : errorMsg,
           });
           return;
         }
 
         // 如果有部分文件处理失败，给出警告
         if (errors.length > 0) {
-          addLog(`警告：${errors.length} 个文件处理失败，但继续处理剩余数据`, "warning");
+          addLog(
+            `警告：${errors.length} 个文件处理失败，但继续处理剩余数据`,
+            "warning",
+          );
         }
 
         addLog(`设置原始数据：${allData.length} 行`, "info");
@@ -143,17 +156,20 @@ export default function SettlementFolderUpload() {
         try {
           addLog("开始处理结算单数据...");
           const processedData = await processSettlementData(allData);
-          addLog(`结算单处理完成，合并为 ${processedData.length} 条记录`, "success");
+          addLog(
+            `结算单处理完成，合并为 ${processedData.length} 条记录`,
+            "success",
+          );
 
           setProcessedData(processedData);
           addLog("上传完成", "success");
-  } catch (error) {
-    console.error('操作失败:', error);
+        } catch (error) {
+          logger.error("操作失败:", error);
           handleError(error, "结算单数据处理");
           throw error;
         }
       } catch (error) {
-        console.error('操作失败:', error);
+        logger.error("操作失败:", error);
         handleError(error, "文件上传处理");
         throw error;
       } finally {
@@ -168,7 +184,7 @@ export default function SettlementFolderUpload() {
       setProcessedData,
       handleError,
       toast,
-    ]
+    ],
   );
 
   return (

@@ -8,6 +8,7 @@ import { useSettlement } from "@/context/SettlementContext";
 import { useProductMatching } from "@/hooks/useProductMatching";
 import Decimal from "decimal.js";
 import { formatAmountJSX, cleanAmountString } from "@/lib/utils";
+import logger from "@/lib/logger";
 import {
   ArrowLeft,
   Download,
@@ -20,7 +21,7 @@ import {
   FileText,
   Clock,
   Info,
-  ChevronDown
+  ChevronDown,
 } from "lucide-react";
 
 export default function DataDisplay({
@@ -44,7 +45,8 @@ export default function DataDisplay({
   const [modalSku, setModalSku] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showTotals, setShowTotals] = useState(true);
-  const { unmatchedSkus, getProductDisplayName } = useProductMatching(processedData);
+  const { unmatchedSkus, getProductDisplayName } =
+    useProductMatching(processedData);
 
   /**
    * 关闭模态框的回调函数
@@ -58,30 +60,36 @@ export default function DataDisplay({
    * 处理键盘事件，支持 ESC 键关闭模态框
    * @param {KeyboardEvent} e - 键盘事件
    */
-  const handleKeyDown = useCallback((e) => {
-    if (e.key === 'Escape' && showModal) {
-      closeModal();
-    }
-  }, [showModal, closeModal]);
+  const handleKeyDown = useCallback(
+    (e) => {
+      if (e.key === "Escape" && showModal) {
+        closeModal();
+      }
+    },
+    [showModal, closeModal],
+  );
 
   // 监听 ESC 键关闭模态框
   useEffect(() => {
     if (showModal) {
-      document.addEventListener('keydown', handleKeyDown);
+      document.addEventListener("keydown", handleKeyDown);
       // 防止背景滚动
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     }
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
     };
   }, [showModal, handleKeyDown]);
 
   // 计算收入合计（货款 - 交易服务费的绝对值）
   const incomeTotal = React.useMemo(() => {
     if (!calculatedTotals) return 0;
-    return (calculatedTotals["应结金额"] || 0) - Math.abs(calculatedTotals["交易服务费"] || 0);
+    return (
+      (calculatedTotals["应结金额"] || 0) -
+      Math.abs(calculatedTotals["交易服务费"] || 0)
+    );
   }, [calculatedTotals]);
 
   const handleSort = (key) => {
@@ -100,7 +108,8 @@ export default function DataDisplay({
       if (aVal === bVal) return 0;
       const aClean = cleanAmountString(aVal);
       const bClean = cleanAmountString(bVal);
-      const isNumeric = /^-?\d+(\.\d+)?$/.test(aClean) && /^-?\d+(\.\d+)?$/.test(bClean);
+      const isNumeric =
+        /^-?\d+(\.\d+)?$/.test(aClean) && /^-?\d+(\.\d+)?$/.test(bClean);
       if (isNumeric) {
         const cmp = new Decimal(aClean).comparedTo(bClean);
         return sortConfig.direction === "asc" ? cmp : -cmp;
@@ -116,10 +125,10 @@ export default function DataDisplay({
     if (!searchQuery || !sortedData) return sortedData;
     const query = searchQuery.toLowerCase().trim();
     if (!query) return sortedData;
-    return sortedData.filter(row =>
-      Object.values(row).some(val =>
-        String(val).toLowerCase().includes(query)
-      )
+    return sortedData.filter((row) =>
+      Object.values(row).some((val) =>
+        String(val).toLowerCase().includes(query),
+      ),
     );
   }, [sortedData, searchQuery]);
 
@@ -136,7 +145,7 @@ export default function DataDisplay({
         title: `已复制列 "${columnName}" 的 ${dataToCopy.length} 条数据到剪贴板`,
       });
     } catch (error) {
-      console.error('复制列失败:', error);
+      logger.error("复制列失败:", error);
       toast({
         variant: "destructive",
         title: `复制列 "${columnName}" 失败`,
@@ -166,13 +175,17 @@ export default function DataDisplay({
           <div className="flex items-start gap-3">
             <Info className="w-5 h-5 text-destructive mt-0.5" />
             <div>
-              <h4 className="font-semibold text-destructive mb-1">未匹配到商品的SKU ({unmatchedSkus.length}个)</h4>
-              <p className="text-sm text-destructive/80">{unmatchedSkus.join("、")}</p>
+              <h4 className="font-semibold text-destructive mb-1">
+                未匹配到商品的SKU ({unmatchedSkus.length}个)
+              </h4>
+              <p className="text-sm text-destructive/80">
+                {unmatchedSkus.join("、")}
+              </p>
             </div>
           </div>
         </div>
       )}
-      
+
       <div className="flex justify-between items-center">
         <Button
           onClick={handleReset}
@@ -182,7 +195,9 @@ export default function DataDisplay({
           <ArrowLeft className="w-4 h-4 mr-2" />
           返回
         </Button>
-        <h1 className="text-2xl font-bold text-foreground tracking-tight">{title}</h1>
+        <h1 className="text-2xl font-bold text-foreground tracking-tight">
+          {title}
+        </h1>
         <div></div>
       </div>
 
@@ -195,18 +210,22 @@ export default function DataDisplay({
           >
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center">
-                <span className="text-muted-foreground font-bold text-sm">¥</span>
+                <span className="text-muted-foreground font-bold text-sm">
+                  ¥
+                </span>
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-foreground">
                   合计仪表盘
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  货款 ¥{Math.abs(calculatedTotals["应结金额"] || 0).toFixed(2)} · 
-                  直营服务费 ¥{Math.abs(calculatedTotals["直营服务费"] || 0).toFixed(2)} · 
-                  交易服务费 ¥{Math.abs(calculatedTotals["交易服务费"] || 0).toFixed(2)} · 
-                  收入 ¥{Math.abs(incomeTotal).toFixed(2)} · 
-                  数量 {(calculatedTotals["数量"] || 0).toFixed(0)}
+                  货款 ¥{Math.abs(calculatedTotals["应结金额"] || 0).toFixed(2)}{" "}
+                  · 直营服务费 ¥
+                  {Math.abs(calculatedTotals["直营服务费"] || 0).toFixed(2)} ·
+                  交易服务费 ¥
+                  {Math.abs(calculatedTotals["交易服务费"] || 0).toFixed(2)} ·
+                  收入 ¥{Math.abs(incomeTotal).toFixed(2)} · 数量{" "}
+                  {(calculatedTotals["数量"] || 0).toFixed(0)}
                 </p>
               </div>
             </div>
@@ -216,16 +235,20 @@ export default function DataDisplay({
               }`}
             />
           </button>
-          
+
           {showTotals && (
             <div className="px-6 pb-6 pt-2 border-t border-border/50">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 {/* 货款合计 */}
                 <div className="bg-card rounded-lg border border-border p-5 shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-muted-foreground">货款合计</span>
+                    <span className="text-sm font-medium text-muted-foreground">
+                      货款合计
+                    </span>
                     <div className="w-9 h-9 rounded-full bg-green-500/10 flex items-center justify-center">
-                      <span className="text-green-600 font-bold text-base">¥</span>
+                      <span className="text-green-600 font-bold text-base">
+                        ¥
+                      </span>
                     </div>
                   </div>
                   <div className="text-2xl font-bold text-green-600 font-mono">
@@ -236,9 +259,13 @@ export default function DataDisplay({
                 {/* 直营服务费合计 */}
                 <div className="bg-card rounded-lg border border-border p-5 shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-muted-foreground">直营服务费合计</span>
+                    <span className="text-sm font-medium text-muted-foreground">
+                      直营服务费合计
+                    </span>
                     <div className="w-9 h-9 rounded-full bg-blue-500/10 flex items-center justify-center">
-                      <span className="text-blue-600 font-bold text-base">¥</span>
+                      <span className="text-blue-600 font-bold text-base">
+                        ¥
+                      </span>
                     </div>
                   </div>
                   <div className="text-2xl font-bold text-blue-600 font-mono">
@@ -249,9 +276,13 @@ export default function DataDisplay({
                 {/* 交易服务费合计 */}
                 <div className="bg-card rounded-lg border border-border p-5 shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-muted-foreground">交易服务费合计</span>
+                    <span className="text-sm font-medium text-muted-foreground">
+                      交易服务费合计
+                    </span>
                     <div className="w-9 h-9 rounded-full bg-indigo-500/10 flex items-center justify-center">
-                      <span className="text-indigo-600 font-bold text-base">¥</span>
+                      <span className="text-indigo-600 font-bold text-base">
+                        ¥
+                      </span>
                     </div>
                   </div>
                   <div className="text-2xl font-bold text-indigo-600 font-mono">
@@ -262,9 +293,13 @@ export default function DataDisplay({
                 {/* 收入合计 */}
                 <div className="bg-card rounded-lg border border-border p-5 shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-muted-foreground">收入合计</span>
+                    <span className="text-sm font-medium text-muted-foreground">
+                      收入合计
+                    </span>
                     <div className="w-9 h-9 rounded-full bg-orange-500/10 flex items-center justify-center">
-                      <span className="text-orange-600 font-bold text-base">¥</span>
+                      <span className="text-orange-600 font-bold text-base">
+                        ¥
+                      </span>
                     </div>
                   </div>
                   <div className="text-2xl font-bold text-orange-600 font-mono">
@@ -275,9 +310,13 @@ export default function DataDisplay({
                 {/* 数量合计 */}
                 <div className="bg-card rounded-lg border border-border p-5 shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-muted-foreground">数量合计</span>
+                    <span className="text-sm font-medium text-muted-foreground">
+                      数量合计
+                    </span>
                     <div className="w-9 h-9 rounded-full bg-purple-500/10 flex items-center justify-center">
-                      <span className="text-purple-600 font-bold text-base">#</span>
+                      <span className="text-purple-600 font-bold text-base">
+                        #
+                      </span>
                     </div>
                   </div>
                   <div className="text-2xl font-bold text-purple-600 font-mono">
@@ -328,83 +367,87 @@ export default function DataDisplay({
 
         {searchQuery && (
           <p className="mb-4 text-sm text-muted-foreground">
-            找到 <span className="font-medium text-primary">{filteredData.length}</span> 条结果，
-            共 <span className="font-medium">{processedData.length}</span> 条数据
+            找到{" "}
+            <span className="font-medium text-primary">
+              {filteredData.length}
+            </span>{" "}
+            条结果， 共{" "}
+            <span className="font-medium">{processedData.length}</span> 条数据
           </p>
         )}
 
         <div className="border border-border rounded-xl overflow-hidden shadow-sm">
           <table className="w-full border-collapse text-sm">
             <thead className="bg-gradient-to-r from-muted/95 to-muted/80 backdrop-blur supports-[backdrop-filter]:bg-muted/80 border-b border-border">
-                <tr>
-                  {showRowNumber && (
-                    <th className="px-4 py-3.5 text-left font-semibold text-foreground w-20 bg-muted/30">
-                      序号
-                    </th>
-                  )}
-                  {processedData.length > 0 &&
-                    Object.keys(processedData[0]).map((header) => {
-                      const displayHeader = columnMapping?.[header] || header;
-
-                      return (
-                        <th
-                          key={header}
-                          className="px-4 py-3.5 text-left font-semibold text-foreground whitespace-nowrap bg-muted/30"
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-1">
-                              <span>{displayHeader}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => handleSort(header)}
-                                className="p-1 rounded hover:bg-muted/50 transition-colors"
-                                title={`点击排序 "${displayHeader}"`}
-                              >
-                                {sortConfig.key === header ? (
-                                  sortConfig.direction === "asc" ? (
-                                    <ArrowUp className="w-4 h-4 text-primary" />
-                                  ) : (
-                                    <ArrowDown className="w-4 h-4 text-primary" />
-                                  )
-                                ) : (
-                                  <ChevronsUpDown className="w-4 h-4 text-muted-foreground" />
-                                )}
-                              </button>
-                              {showCopyColumn && (
-                                <button
-                                  onClick={() => handleCopyColumn(header)}
-                                  className="p-1 rounded hover:bg-muted/50 transition-colors"
-                                  title={`点击复制 "${displayHeader}" 列数据`}
-                                >
-                                  <Copy className="w-4 h-4 text-muted-foreground hover:text-primary transition-colors" />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        </th>
-                      );
-                    })}
-                  <th className="px-4 py-3 text-left font-semibold text-foreground whitespace-nowrap bg-muted/30">
-                    商品名称_sku
+              <tr>
+                {showRowNumber && (
+                  <th className="px-4 py-3.5 text-left font-semibold text-foreground w-20 bg-muted/30">
+                    序号
                   </th>
-                </tr>
-              </thead>
+                )}
+                {processedData.length > 0 &&
+                  Object.keys(processedData[0]).map((header) => {
+                    const displayHeader = columnMapping?.[header] || header;
 
-              <tbody>
-                {filteredData.map((row, rowIndex) => (
-                  <TableRow
-                    key={row["商品编号"] || rowIndex}
-                    row={row}
-                    rowIndex={rowIndex}
-                    amountFields={amountFields}
-                    showRowNumber={showRowNumber}
-                    showDataChanges={showDataChanges}
-                    getProductDisplayName={getProductDisplayName}
-                  />
-                ))}
-              </tbody>
-            </table>
+                    return (
+                      <th
+                        key={header}
+                        className="px-4 py-3.5 text-left font-semibold text-foreground whitespace-nowrap bg-muted/30"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1">
+                            <span>{displayHeader}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleSort(header)}
+                              className="p-1 rounded hover:bg-muted/50 transition-colors"
+                              title={`点击排序 "${displayHeader}"`}
+                            >
+                              {sortConfig.key === header ? (
+                                sortConfig.direction === "asc" ? (
+                                  <ArrowUp className="w-4 h-4 text-primary" />
+                                ) : (
+                                  <ArrowDown className="w-4 h-4 text-primary" />
+                                )
+                              ) : (
+                                <ChevronsUpDown className="w-4 h-4 text-muted-foreground" />
+                              )}
+                            </button>
+                            {showCopyColumn && (
+                              <button
+                                onClick={() => handleCopyColumn(header)}
+                                className="p-1 rounded hover:bg-muted/50 transition-colors"
+                                title={`点击复制 "${displayHeader}" 列数据`}
+                              >
+                                <Copy className="w-4 h-4 text-muted-foreground hover:text-primary transition-colors" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </th>
+                    );
+                  })}
+                <th className="px-4 py-3 text-left font-semibold text-foreground whitespace-nowrap bg-muted/30">
+                  商品名称_sku
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {filteredData.map((row, rowIndex) => (
+                <TableRow
+                  key={row["商品编号"] || rowIndex}
+                  row={row}
+                  rowIndex={rowIndex}
+                  amountFields={amountFields}
+                  showRowNumber={showRowNumber}
+                  showDataChanges={showDataChanges}
+                  getProductDisplayName={getProductDisplayName}
+                />
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
 
@@ -421,7 +464,10 @@ export default function DataDisplay({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-6">
-              <div id="modal-title" className="font-bold text-xl text-foreground flex items-center gap-3">
+              <div
+                id="modal-title"
+                className="font-bold text-xl text-foreground flex items-center gap-3"
+              >
                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                   <FileText className="w-5 h-5 text-primary" />
                 </div>
@@ -445,32 +491,57 @@ export default function DataDisplay({
               {(() => {
                 const changes = dataChanges[modalSku];
                 const { original, deducted, current } = changes;
-                const formatNumber = (num) => (num !== undefined ? num.toFixed(2) : "0.00");
+                const formatNumber = (num) =>
+                  num !== undefined ? num.toFixed(2) : "0.00";
                 return (
                   <>
                     <div className="grid grid-cols-4 gap-2 py-2">
                       <div className="font-medium">数量</div>
-                      <div className="text-right">{formatNumber(original?.数量)}</div>
-                      <div className="text-right text-destructive">-{formatNumber(deducted?.数量)}</div>
-                      <div className="text-right font-bold text-primary">{formatNumber(current?.数量)}</div>
+                      <div className="text-right">
+                        {formatNumber(original?.数量)}
+                      </div>
+                      <div className="text-right text-destructive">
+                        -{formatNumber(deducted?.数量)}
+                      </div>
+                      <div className="text-right font-bold text-primary">
+                        {formatNumber(current?.数量)}
+                      </div>
                     </div>
                     <div className="grid grid-cols-4 gap-2 py-2">
                       <div className="font-medium">货款</div>
-                      <div className="text-right">¥{formatNumber(original?.应结金额)}</div>
-                      <div className="text-right text-destructive">-¥{formatNumber(deducted?.应结金额)}</div>
-                      <div className="text-right font-bold text-primary">¥{formatNumber(current?.应结金额)}</div>
+                      <div className="text-right">
+                        ¥{formatNumber(original?.应结金额)}
+                      </div>
+                      <div className="text-right text-destructive">
+                        -¥{formatNumber(deducted?.应结金额)}
+                      </div>
+                      <div className="text-right font-bold text-primary">
+                        ¥{formatNumber(current?.应结金额)}
+                      </div>
                     </div>
                     <div className="grid grid-cols-4 gap-2 py-2">
                       <div className="font-medium">直营服务费</div>
-                      <div className="text-right">¥{Math.abs(original?.直营服务费 || 0).toFixed(2)}</div>
-                      <div className="text-right text-destructive">-¥{Math.abs(deducted?.直营服务费 || 0).toFixed(2)}</div>
-                      <div className="text-right font-bold text-primary">¥{Math.abs(current?.直营服务费 || 0).toFixed(2)}</div>
+                      <div className="text-right">
+                        ¥{Math.abs(original?.直营服务费 || 0).toFixed(2)}
+                      </div>
+                      <div className="text-right text-destructive">
+                        -¥{Math.abs(deducted?.直营服务费 || 0).toFixed(2)}
+                      </div>
+                      <div className="text-right font-bold text-primary">
+                        ¥{Math.abs(current?.直营服务费 || 0).toFixed(2)}
+                      </div>
                     </div>
                     <div className="grid grid-cols-4 gap-2 py-2">
                       <div className="font-medium">交易服务费</div>
-                      <div className="text-right">¥{Math.abs(original?.交易服务费 || 0).toFixed(2)}</div>
-                      <div className="text-right text-destructive">-¥{Math.abs(deducted?.交易服务费 || 0).toFixed(2)}</div>
-                      <div className="text-right font-bold text-primary">¥{Math.abs(current?.交易服务费 || 0).toFixed(2)}</div>
+                      <div className="text-right">
+                        ¥{Math.abs(original?.交易服务费 || 0).toFixed(2)}
+                      </div>
+                      <div className="text-right text-destructive">
+                        -¥{Math.abs(deducted?.交易服务费 || 0).toFixed(2)}
+                      </div>
+                      <div className="text-right font-bold text-primary">
+                        ¥{Math.abs(current?.交易服务费 || 0).toFixed(2)}
+                      </div>
                     </div>
                     <div className="pt-4 mt-4 border-t border-border text-xs text-muted-foreground flex items-center gap-2">
                       <Clock className="w-4 h-4" />
@@ -487,7 +558,14 @@ export default function DataDisplay({
   );
 }
 
-function TableRow({ row, rowIndex, amountFields, showRowNumber, showDataChanges, getProductDisplayName }) {
+function TableRow({
+  row,
+  rowIndex,
+  amountFields,
+  showRowNumber,
+  showDataChanges,
+  getProductDisplayName,
+}) {
   const { dataChanges } = useSettlement();
 
   const isAmountField = (key) => {
@@ -532,14 +610,23 @@ function TableRow({ row, rowIndex, amountFields, showRowNumber, showDataChanges,
         <td className="px-4 py-3 text-left border-b border-border/50 text-muted-foreground w-20 font-medium">
           {rowIndex + 1}
           {hasChanges && showDataChanges && (
-            <span className="ml-1.5 inline-block w-2 h-2 bg-destructive rounded-full" title="已处理"></span>
+            <span
+              className="ml-1.5 inline-block w-2 h-2 bg-destructive rounded-full"
+              title="已处理"
+            ></span>
           )}
         </td>
       )}
       {Object.entries(row).map(([key]) => (
-        <td key={key} className="px-4 py-3 text-left border-b border-border/50 whitespace-nowrap">
+        <td
+          key={key}
+          className="px-4 py-3 text-left border-b border-border/50 whitespace-nowrap"
+        >
           {isAmountField(key)
-            ? formatAmountJSX(row[key], key === "直营服务费" || key === "交易服务费")
+            ? formatAmountJSX(
+                row[key],
+                key === "直营服务费" || key === "交易服务费",
+              )
             : row[key]}
         </td>
       ))}

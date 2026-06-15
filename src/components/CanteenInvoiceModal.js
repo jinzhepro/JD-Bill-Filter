@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { exportInvoice } from "@/lib/invoiceExporter";
 import { CANTEEN_COMPANY_INFO } from "@/lib/constants";
 import { cleanAmountString } from "@/lib/utils";
+import logger from "@/lib/logger";
 import {
   Select,
   SelectContent,
@@ -352,7 +353,7 @@ export function CanteenInvoiceModal({ open, onOpenChange, products }) {
       setContractNo("");
       setSelectedMonth(getCurrentMonth());
     } catch (error) {
-      console.error("导出发票失败:", error);
+      logger.error("导出发票失败:", error);
       toast({ title: "导出发票失败", variant: "destructive" });
     }
   }, [
