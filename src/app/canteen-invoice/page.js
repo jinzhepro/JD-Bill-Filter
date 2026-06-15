@@ -221,8 +221,8 @@ export default function CanteenInvoicePage() {
           {
             id: itemId,
             tax_rate: value,
-            amount: Number(amount.toFixed(2)),
-            tax: Number(tax.toFixed(2)),
+            amount: amount.toDecimalPlaces(2).toNumber(),
+            tax: tax.toDecimalPlaces(2).toNumber(),
           },
         ],
       };

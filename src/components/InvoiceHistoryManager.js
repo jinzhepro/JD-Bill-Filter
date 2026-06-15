@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { exportInvoice } from "@/lib/invoiceExporter";
 import { getCurrentMonth } from "@/lib/utils";
+import Decimal from "decimal.js";
 
 const ThWithCopy = ({ items, columnKey, columnName, onCopy }) => (
   <th className="border border-border px-3 py-2 text-left">
@@ -234,7 +235,7 @@ export function InvoiceHistoryManager() {
     const values = items
       .map((item) => {
         if (columnKey === "price") {
-          return ((item.quantity || 0) * (item.price || 0)).toFixed(2);
+          return new Decimal(item.quantity || 0).times(item.price || 0).toFixed(2);
         } else if (columnKey === "quantity") {
           return item.quantity || 0;
         } else {

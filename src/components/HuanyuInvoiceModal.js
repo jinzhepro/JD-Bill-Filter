@@ -247,7 +247,7 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
           taxRate: item.taxRate,
           totalQty: item.quantity,
           totalAmtD: qty.times(price),
-          totalAmt: parseFloat(qty.times(price).toFixed(2)),
+          totalAmt: qty.times(price).toDecimalPlaces(2).toNumber(),
           allowDecimal: item.unit === "斤",
         };
       });
@@ -259,7 +259,7 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
       const companyList = activeCustomers.map((name) => ({
         name,
         targetAmtD: new Decimal(cleanAmountString(customerAmounts[name])),
-        targetAmt: parseFloat(cleanAmountString(customerAmounts[name])),
+        targetAmt: new Decimal(cleanAmountString(customerAmounts[name])).toNumber(),
       }));
 
       // 分配结果：companyIndex -> [{商品名称, 数量, 金额}]
@@ -312,26 +312,24 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
           const useQty = useAmt.div(
             new Decimal(cleanAmountString(goods.price)),
           );
-          const roundedQty = parseFloat(useQty.toFixed(2));
+          const roundedQty = useQty.toDecimalPlaces(2).toNumber();
 
           assignResult[cIndex].push({
             name: goods.name,
             quantity: roundedQty,
             price: goods.price,
             unit: goods.unit,
-            amount: parseFloat(useAmt.toFixed(2)),
+            amount: useAmt.toDecimalPlaces(2).toNumber(),
           });
 
           usedAmtD[cIndex] = usedAmtD[cIndex].plus(useAmt);
           remainAmt = remainAmt.minus(useAmt);
 
-          goods.totalQty = parseFloat(
-            new Decimal(goods.totalQty || 0)
+          goods.totalQty = new Decimal(goods.totalQty || 0)
               .minus(new Decimal(roundedQty || 0))
-              .toFixed(2),
-          );
+              .toDecimalPlaces(2).toNumber();
           goods.totalAmtD = goods.totalAmtD.minus(useAmt);
-          goods.totalAmt = parseFloat(goods.totalAmtD.toFixed(2));
+          goods.totalAmt = goods.totalAmtD.toDecimalPlaces(2).toNumber();
         }
       }
 
@@ -344,11 +342,9 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
         preview.push({
           customerName: companyList[cIndex].name,
           targetAmount: companyList[cIndex].targetAmt,
-          actualAmount: parseFloat(actualAmtD.toFixed(2)),
+          actualAmount: actualAmtD.toDecimalPlaces(2).toNumber(),
           items: assignResult[cIndex],
-          shortfall: parseFloat(
-            companyList[cIndex].targetAmtD.minus(actualAmtD).toFixed(2),
-          ),
+          shortfall: companyList[cIndex].targetAmtD.minus(actualAmtD).toDecimalPlaces(2).toNumber(),
         });
       }
 
@@ -505,7 +501,7 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
       const companyList = activeCustomers.map((name) => ({
         name,
         targetAmtD: new Decimal(cleanAmountString(customerAmounts[name])),
-        targetAmt: parseFloat(cleanAmountString(customerAmounts[name])),
+        targetAmt: new Decimal(cleanAmountString(customerAmounts[name])).toNumber(),
       }));
 
       // 分配结果
@@ -560,7 +556,7 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
           const useQty = useAmt.div(
             new Decimal(cleanAmountString(goods.price)),
           );
-          const roundedQty = parseFloat(useQty.toFixed(2));
+          const roundedQty = useQty.toDecimalPlaces(2).toNumber();
 
           assignResult[cIndex].push({
             name: goods.name,
@@ -568,20 +564,18 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
             quantity: roundedQty,
             price: goods.price,
             taxRate: goods.taxRate,
-            amount: parseFloat(useAmt.toFixed(2)),
+            amount: useAmt.toDecimalPlaces(2).toNumber(),
             spec: "",
           });
 
           usedAmtD[cIndex] = usedAmtD[cIndex].plus(useAmt);
           remainAmt = remainAmt.minus(useAmt);
 
-          goods.totalQty = parseFloat(
-            new Decimal(goods.totalQty || 0)
+          goods.totalQty = new Decimal(goods.totalQty || 0)
               .minus(new Decimal(roundedQty || 0))
-              .toFixed(2),
-          );
+              .toDecimalPlaces(2).toNumber();
           goods.totalAmtD = goods.totalAmtD.minus(useAmt);
-          goods.totalAmt = parseFloat(goods.totalAmtD.toFixed(2));
+          goods.totalAmt = goods.totalAmtD.toDecimalPlaces(2).toNumber();
         }
       }
 
@@ -614,12 +608,12 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
             name: item.name,
             spec: "",
             unit: item.unit,
-            quantity: parseFloat(new Decimal(item.quantity || 0).toFixed(2)),
+            quantity: new Decimal(item.quantity || 0).toDecimalPlaces(2).toNumber(),
             price: item.price,
             taxRate: item.taxRate,
-            amount: parseFloat(amountVal.toFixed(2)),
-            tax: parseFloat(taxVal.toFixed(2)),
-            total: parseFloat(totalD.toFixed(2)),
+            amount: amountVal.toDecimalPlaces(2).toNumber(),
+            tax: taxVal.toDecimalPlaces(2).toNumber(),
+            total: totalD.toDecimalPlaces(2).toNumber(),
           };
         });
 
@@ -647,7 +641,7 @@ export function HuanyuInvoiceModal({ open, onOpenChange, products }) {
             canteenName: `${exportLabel}-${customerName}`,
             customerInfo,
             items: itemsForHistory,
-            totalAmount: parseFloat(totalAmountD.toFixed(2)),
+            totalAmount: totalAmountD.toDecimalPlaces(2).toNumber(),
             contractNo: basicInfo.contractNo,
           }),
         });
