@@ -202,7 +202,21 @@ npx wrangler d1 migrations apply jd --remote  # 远程
 
 ### 认证
 
-系统使用简单密码保护，默认密码 `qingyun2026`。可通过环境变量 `AUTH_PASSWORD` 或修改 `src/context/AuthContext.js` 和 `src/app/api/login/route.js` 更改。
+密码存储在 D1 数据库中。首次部署需运行初始化脚本设置密码：
+
+```bash
+# 本地初始化
+npx wrangler d1 execute jd --local --command="INSERT INTO auth_settings (id, password_hash) VALUES (1, '你的密码哈希')"
+
+# 远程初始化
+npx wrangler d1 execute jd --remote --command="INSERT INTO auth_settings (id, password_hash) VALUES (1, '你的密码哈希')"
+```
+
+或使用提供的初始化脚本：
+
+```bash
+node scripts/init-password.mjs <你的密码>
+```
 
 ## 📝 开发规范
 

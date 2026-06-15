@@ -4,14 +4,14 @@
 
 ## 开发命令
 
-| 命令 | 说明 |
-|------|------|
-| `npm run dev` | Build + 启动 wrangler Pages 开发服务器 (端口 8788) |
-| `npm run lint` | ESLint 9 flat config (无需参数) |
-| `npm run pages:deploy` | 构建 + 部署到 Cloudflare Pages |
-| `npx wrangler d1 migrations apply jd --local` | 本地 D1 迁移 |
-| `npx wrangler d1 migrations apply jd --remote` | 远程 D1 迁移 |
-| `npx wrangler d1 execute jd --local --command="SQL"` | 本地 D1 直接 SQL 查询 |
+| 命令                                                 | 说明                                               |
+| ---------------------------------------------------- | -------------------------------------------------- |
+| `npm run dev`                                        | Build + 启动 wrangler Pages 开发服务器 (端口 8788) |
+| `npm run lint`                                       | ESLint 9 flat config (无需参数)                    |
+| `npm run pages:deploy`                               | 构建 + 部署到 Cloudflare Pages                     |
+| `npx wrangler d1 migrations apply jd --local`        | 本地 D1 迁移                                       |
+| `npx wrangler d1 migrations apply jd --remote`       | 远程 D1 迁移                                       |
+| `npx wrangler d1 execute jd --local --command="SQL"` | 本地 D1 直接 SQL 查询                              |
 
 无测试套件。
 
@@ -30,5 +30,5 @@
 - **金额计算**必须用 `Decimal.js`。先用 `cleanAmountString(value)` 去货币符号/千分符，再 `new Decimal()` 运算。不要用 `cleanAmount()`（内部用 `parseFloat`，有精度损失）
 - **金额显示**用 `formatAmountJSX(value)` 返回带语义颜色的 `<span>`；`formatAmount(value)` 返回纯文本字符串
 - **商品编号**必须调 `cleanProductCode()` 处理 Excel 的 `="..."` 前缀，确保为字符串格式
-- **登录**: 简单密码保护，默认密码 `qingyun2026`，可通过环境变量 `AUTH_PASSWORD` 覆盖
+- **登录**: 密码存储在 D1 数据库 `auth_settings` 表中，使用 session token 验证登录状态，token 有效期 30 天。密码哈希和 session 管理逻辑在 `src/lib/auth.js`。首次部署需运行初始化脚本设置密码
 - **D1 迁移文件**在 `migrations/` 目录，命名格式 `{序号}_{描述}.sql`
