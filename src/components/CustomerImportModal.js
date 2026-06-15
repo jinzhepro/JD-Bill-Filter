@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Copy } from "lucide-react";
+import { Copy, ExternalLink } from "lucide-react";
 
 const parseCustomerText = (text) => {
   const lines = text
@@ -87,6 +87,7 @@ export function CustomerImportModal({
 }) {
   const [pasteText, setPasteText] = useState("");
   const [parsedResult, setParsedResult] = useState(null);
+  const [importSuccess, setImportSuccess] = useState(false);
   const { toast } = useToast();
 
   const handleParse = () => {
@@ -122,11 +123,6 @@ export function CustomerImportModal({
     if (Object.keys(parsedResult.customerInfo).length > 0) {
       onImport(parsedResult.customerInfo);
 
-      const fields = [];
-      if (parsedResult.customerInfo.customerName) fields.push("客户名称");
-      if (parsedResult.customerInfo.taxId) fields.push("税号");
-      fields.push(`发票类型：${parsedResult.invoiceType}`);
-
       if (onInvoiceTypeChange) {
         onInvoiceTypeChange(parsedResult.invoiceType);
       }
@@ -134,18 +130,9 @@ export function CustomerImportModal({
       if (onTotalAmountChange) {
         onTotalAmountChange(parsedResult.totalAmount);
       }
-
-      toast({
-        title: `已导入: ${fields.join("、")}${parsedResult.orderNumbers.length > 0 && parsedResult.orderNumbers.length <= 20 ? `,订单号已复制` : ""}`,
-      });
-    } else if (
-      parsedResult.orderNumbers.length > 0 &&
-      parsedResult.orderNumbers.length <= 20
-    ) {
-      toast({ title: `订单号已复制 (${parsedResult.orderNumbers.length}个)` });
     }
 
-    handleClose();
+    setImportSuccess(true);
   };
 
   const handleCopyOrderNumbers = () => {
@@ -158,6 +145,7 @@ export function CustomerImportModal({
   const handleClose = () => {
     setPasteText("");
     setParsedResult(null);
+    setImportSuccess(false);
     onOpenChange(false);
   };
 
@@ -184,7 +172,46 @@ export function CustomerImportModal({
           />
         </div>
 
-        {parsedResult && (
+        {importSuccess && (
+          <div className="space-y-4 border-t pt-4">
+            <div className="flex flex-col items-center gap-4 py-6">
+              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                <svg
+                  className="w-6 h-6 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-medium">导入成功</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {parsedResult?.orderNumbers?.length > 0 &&
+                    `已复制 ${parsedResult.orderNumbers.length} 个订单号，`}
+                  请前往京东对账中心开票
+                </p>
+              </div>
+              <a
+                href="https://shop.jd.com/jdm/finance/reconciliationCenter/orderSettleBill"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                <ExternalLink className="w-4 h-4" />
+                前往京东对账中心
+              </a>
+            </div>
+          </div>
+        )}
+
+        {!importSuccess && parsedResult && (
           <div className="space-y-4 border-t pt-4">
             {Object.keys(customerInfo).length > 0 && (
               <div className="space-y-1">
@@ -292,11 +319,17 @@ export function CustomerImportModal({
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>
-            取消
-          </Button>
-          <Button onClick={handleParse}>识别</Button>
-          {parsedResult && <Button onClick={handleImport}>确认导入</Button>}
+          {importSuccess ? (
+            <Button onClick={handleClose}>关闭</Button>
+          ) : (
+            <>
+              <Button variant="outline" onClick={handleClose}>
+                取消
+              </Button>
+              <Button onClick={handleParse}>识别</Button>
+              {parsedResult && <Button onClick={handleImport}>确认导入</Button>}
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
